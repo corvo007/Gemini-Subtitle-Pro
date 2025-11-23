@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Upload, FileVideo, Download, History, Trash2, Play, CheckCircle, AlertCircle, Languages, Loader2, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Upload, FileVideo, Download, History, Trash2, Play, CheckCircle, AlertCircle, Languages, Loader2, Sparkles, Settings, X, Eye, EyeOff } from 'lucide-react';
 import { SubtitleItem, HistoryItem, GenerationStatus, OutputFormat } from './types';
 import { generateSrtContent, generateAssContent, downloadFile } from './utils';
 import { generateSubtitles, proofreadSubtitles } from './gemini';
@@ -14,8 +14,19 @@ export default function App() {
   const [subtitles, setSubtitles] = useState<SubtitleItem[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState(process.env.API_KEY || '');
+  
+  // API Keys State - initialized from env but mutable via Settings
+  const [apiKeys, setApiKeys] = useState({
+    gemini: process.env.API_KEY || '',
+    openai: process.env.OPENAI_API_KEY || ''
+  });
+
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
+  const [showOpenAIKey, setShowOpenAIKey] = useState(false);
+
+  const isProcessing = status === GenerationStatus.UPLOADING || status === GenerationStatus.PROCESSING || status === GenerationStatus.PROOFREADING;
 
   // --- Initialization ---
   useEffect(() => {
@@ -58,7 +69,6 @@ export default function App() {
       date: new Date().toLocaleString(),
       subtitles: subs
     };
-    // Remove if already exists to update it (optional, but keeps history clean)
     const existing = history.filter(h => h.fileName !== currentFile.name);
     const updatedHistory = [newItem, ...existing].slice(0, 10);
     setHistory(updatedHistory);
@@ -75,7 +85,6 @@ export default function App() {
       setSubtitles([]);
       setStatus(GenerationStatus.IDLE);
       
-      // Extract duration
       try {
         const d = await getFileDuration(selectedFile);
         setDuration(d);
@@ -87,11 +96,23 @@ export default function App() {
   };
 
   const handleGenerate = async () => {
-    if (!file) return;
-    const effectiveKey = apiKey || process.env.API_KEY;
+    // Input Validation
+    if (!file) {
+      setError("Please upload a video or audio file first.");
+      return;
+    }
 
-    if (!effectiveKey) {
-      setError("API Key not found. Please ensure the environment is configured correctly.");
+    const effectiveGeminiKey = apiKeys.gemini.trim();
+    const effectiveOpenaiKey = apiKeys.openai.trim();
+
+    if (!effectiveGeminiKey) {
+      setError("Gemini API Key is missing. Please configure it in Settings.");
+      setShowSettings(true);
+      return;
+    }
+    if (!effectiveOpenaiKey) {
+      setError("OpenAI API Key is missing. Please configure it in Settings.");
+      setShowSettings(true);
       return;
     }
 
@@ -99,17 +120,14 @@ export default function App() {
     setError(null);
 
     try {
-      // Step 1: Generate with segmented logic
-      const result = await generateSubtitles(file, duration, effectiveKey, (msg) => setProgressMsg(msg));
+      const result = await generateSubtitles(file, duration, effectiveGeminiKey, effectiveOpenaiKey, (msg) => setProgressMsg(msg));
       
       if (result.length === 0) {
-        throw new Error("AI returned no subtitles. The audio might be silent or unclear.");
+        throw new Error("No subtitles were generated.");
       }
 
       setSubtitles(result);
       setStatus(GenerationStatus.COMPLETED);
-
-      // Step 2: Save to History
       saveToHistory(result, file);
 
     } catch (err: any) {
@@ -120,8 +138,14 @@ export default function App() {
 
   const handleProofread = async () => {
     if (subtitles.length === 0 || !file) return;
-    const effectiveKey = apiKey || process.env.API_KEY;
+    const effectiveKey = apiKeys.gemini.trim();
     
+    if (!effectiveKey) {
+      setError("Gemini API Key is missing. Please configure it in Settings.");
+      setShowSettings(true);
+      return;
+    }
+
     setStatus(GenerationStatus.PROOFREADING);
     setError(null);
 
@@ -150,7 +174,7 @@ export default function App() {
   const loadFromHistory = (item: HistoryItem) => {
     setSubtitles(item.subtitles);
     setStatus(GenerationStatus.COMPLETED);
-    setFile({ name: item.fileName, size: 0 } as File); // Mock file obj for display
+    setFile({ name: item.fileName, size: 0 } as File); 
     setShowHistory(false);
     setError(null);
   };
@@ -161,8 +185,6 @@ export default function App() {
         localStorage.removeItem(STORAGE_KEY);
     }
   };
-
-  // --- Components ---
 
   const StatusBadge = () => {
     switch (status) {
@@ -185,7 +207,7 @@ export default function App() {
         return (
           <div className="flex items-center space-x-2 text-emerald-400 bg-emerald-400/10 px-4 py-2 rounded-full">
             <CheckCircle className="w-4 h-4" />
-            <span className="text-sm font-medium">Translation Complete</span>
+            <span className="text-sm font-medium">Complete</span>
           </div>
         );
       case GenerationStatus.ERROR:
@@ -212,16 +234,27 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight">Gemini Subtitle Pro</h1>
-              <p className="text-sm text-slate-400">Auto-bilingual subtitles with large file support</p>
+              <p className="text-sm text-slate-400">Whisper Transcription + Gemini Translation</p>
             </div>
           </div>
-          <button 
-            onClick={() => setShowHistory(!showHistory)}
-            className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-sm font-medium"
-          >
-            <History className="w-4 h-4" />
-            <span className="hidden sm:inline">History</span>
-          </button>
+          
+          <div className="flex items-center space-x-2">
+            <button 
+              onClick={() => setShowSettings(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group"
+              title="Configure API Keys"
+            >
+              <Settings className="w-4 h-4 text-slate-400 group-hover:text-emerald-400 transition-colors" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
+            <button 
+              onClick={() => setShowHistory(!showHistory)}
+              className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium"
+            >
+              <History className="w-4 h-4" />
+              <span className="hidden sm:inline">History</span>
+            </button>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -242,7 +275,7 @@ export default function App() {
                   accept="video/*,audio/*" 
                   onChange={handleFileChange}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  disabled={status !== GenerationStatus.IDLE && status !== GenerationStatus.COMPLETED && status !== GenerationStatus.ERROR}
+                  disabled={isProcessing}
                 />
                 <div className={`
                   border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300
@@ -277,43 +310,40 @@ export default function App() {
               <div className="mt-6">
                 <button
                   onClick={handleGenerate}
-                  disabled={!file || (status !== GenerationStatus.IDLE && status !== GenerationStatus.COMPLETED && status !== GenerationStatus.ERROR)}
+                  disabled={isProcessing}
                   className={`
                     w-full py-3 px-4 rounded-xl font-semibold text-white shadow-lg transition-all
                     flex items-center justify-center space-x-2
-                    ${!file 
-                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
-                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-indigo-500/25 hover:shadow-indigo-500/40'
+                    ${isProcessing
+                      ? 'bg-slate-700 text-slate-400 cursor-wait' 
+                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-indigo-500/25 hover:shadow-indigo-500/40 cursor-pointer'
                     }
                   `}
                 >
-                  {status === GenerationStatus.PROCESSING || status === GenerationStatus.UPLOADING ? (
+                  {isProcessing ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <Play className="w-5 h-5 fill-current" />
                   )}
-                  <span>{status === GenerationStatus.IDLE || status === GenerationStatus.COMPLETED || status === GenerationStatus.ERROR ? 'Generate Subtitles' : 'Generating...'}</span>
+                  <span>{status === GenerationStatus.IDLE || status === GenerationStatus.COMPLETED || status === GenerationStatus.ERROR ? 'Generate with Whisper' : 'Generating...'}</span>
                 </button>
               </div>
 
               {error && (
-                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400 flex items-start space-x-2">
+                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400 flex items-start space-x-2 animate-fade-in">
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>{error}</span>
+                  <span className="break-words w-full">{error}</span>
                 </div>
               )}
             </div>
 
-            {/* Download Options (Visible only when completed) */}
+            {/* Download Options */}
             {(status === GenerationStatus.COMPLETED || status === GenerationStatus.PROOFREADING) && (
               <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl animate-fade-in">
                 <h2 className="text-lg font-semibold text-white mb-4 flex items-center">
                   <Download className="w-5 h-5 mr-2 text-emerald-400" />
                   Download
                 </h2>
-                <p className="text-xs text-slate-400 mb-4">
-                   Files include UTF-8 BOM and Windows line endings for PotPlayer.
-                </p>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => handleDownload('srt')}
@@ -332,15 +362,6 @@ export default function App() {
                 </div>
               </div>
             )}
-
-            {/* Tip Box */}
-            <div className="bg-indigo-900/20 border border-indigo-500/20 rounded-xl p-4">
-              <h3 className="text-sm font-semibold text-indigo-300 mb-1">Auto-Split & Fix</h3>
-              <p className="text-xs text-indigo-200/70 leading-relaxed">
-                Large files are automatically uploaded and split into segments for processing. 
-                Output is merged and formatted for Windows players.
-              </p>
-            </div>
           </div>
 
           {/* Right Column: Preview & History */}
@@ -431,7 +452,7 @@ export default function App() {
                            <Languages className="w-6 h-6" />
                         </div>
                         <p className="font-medium">No subtitles generated yet</p>
-                        <p className="text-sm mt-2 max-w-xs text-center opacity-70">Upload a video or audio file to start the magic.</p>
+                        <p className="text-sm mt-2 max-w-xs text-center opacity-70">Upload a video or audio file to start.</p>
                      </div>
                   )}
                 </div>
@@ -439,9 +460,80 @@ export default function App() {
               
             </div>
           </div>
-          
         </div>
       </div>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+            <button 
+              onClick={() => setShowSettings(false)} 
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h2 className="text-xl font-bold text-white mb-6 flex items-center">
+              <Settings className="w-5 h-5 mr-2 text-indigo-400" />
+              API Settings
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Gemini API Key</label>
+                <div className="relative">
+                  <input 
+                    type={showGeminiKey ? "text" : "password"}
+                    value={apiKeys.gemini}
+                    onChange={(e) => setApiKeys({...apiKeys, gemini: e.target.value})}
+                    placeholder="Enter Gemini API Key"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 pr-10 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                  />
+                  <button 
+                    onClick={() => setShowGeminiKey(!showGeminiKey)}
+                    className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300"
+                  >
+                    {showGeminiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">OpenAI API Key (for Whisper)</label>
+                <div className="relative">
+                  <input 
+                    type={showOpenAIKey ? "text" : "password"}
+                    value={apiKeys.openai}
+                    onChange={(e) => setApiKeys({...apiKeys, openai: e.target.value})}
+                    placeholder="Enter OpenAI API Key"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 pr-10 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                  />
+                   <button 
+                    onClick={() => setShowOpenAIKey(!showOpenAIKey)}
+                    className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300"
+                  >
+                    {showOpenAIKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button 
+                  onClick={() => setShowSettings(false)}
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium py-2.5 rounded-lg shadow-lg shadow-indigo-500/25 transition-all"
+                >
+                  Save & Close
+                </button>
+              </div>
+              
+              <p className="text-xs text-slate-500 text-center pt-2">
+                Keys entered here override environment variables.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

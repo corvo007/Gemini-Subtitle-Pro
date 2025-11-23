@@ -1,84 +1,208 @@
-import { GoogleGenAI, Type } from "@google/genai";
-import { parseGeminiResponse, fileToBase64, formatTime } from "./utils";
+import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
+import { parseGeminiResponse, formatTime, extractAudioFromVideo, decodeAudio, sliceAudioBuffer, transcribeWithWhisper, timeToSeconds } from "./utils";
 import { SubtitleItem } from "./types";
 
-const SEGMENT_DURATION_SEC = 600; // 10 minutes per segment
-const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024; // 100MB
-const PROOFREAD_BATCH_SIZE = 50; // Number of lines to proofread per batch to avoid output token limits
+const PROOFREAD_BATCH_SIZE = 50; 
+const TRANSLATION_BATCH_SIZE = 20;
+const WHISPER_CHUNK_DURATION = 240; // 4 minutes per chunk (Approx 7.5MB WAV, safer for network stability)
 
-// Schema definition to force strict JSON structure
-const SUBTITLE_SCHEMA = {
+// --- SCHEMAS ---
+
+// Phase 2: Translation & Proofreading
+const TRANSLATION_SCHEMA = {
   type: Type.ARRAY,
   items: {
     type: Type.OBJECT,
     properties: {
-      start: { type: Type.STRING, description: "Start timestamp (HH:MM:SS,mmm)" },
-      end: { type: Type.STRING, description: "End timestamp (HH:MM:SS,mmm)" },
-      text_original: { type: Type.STRING, description: "Transcription of the audio" },
+      id: { type: Type.INTEGER },
+      text_original: { type: Type.STRING },
       text_translated: { type: Type.STRING, description: "Simplified Chinese translation" },
     },
-    required: ["start", "end", "text_original", "text_translated"],
+    required: ["id", "text_translated"],
   },
 };
 
-// Defined centrally to ensure consistency across both small and large file strategies
-const SYSTEM_INSTRUCTION = `
-You are a professional video subtitle generator.
-Your timestamps must be extremely accurate and strictly formatted.
+// --- SYSTEM INSTRUCTIONS ---
 
-CRITICAL RULES FOR TIMESTAMPS:
-1. Format MUST be "HH:MM:SS,mmm" (Hours:Minutes:Seconds,Milliseconds).
-2. SECONDS (SS) MUST NEVER EXCEED 59.
-3. MILLISECONDS (mmm) must be 3 digits (e.g. 500).
-4. START TIME MUST ALWAYS BE LESS THAN END TIME.
-5. SINGLE SUBTITLE DURATION:
-   - A single subtitle line usually lasts 1 to 6 seconds.
-   - If a subtitle lasts > 10 seconds, verify the timestamps.
-   - NEVER generate a subtitle that lasts minutes.
+const TRANSLATION_SYSTEM_INSTRUCTION = `
+You are a professional subtitle translator.
+Your task is to translate the provided subtitles into Simplified Chinese (Zh-CN).
 
-FINAL VERIFICATION STEP:
-Before outputting JSON, review every subtitle item:
-- Is start < end?
-- Is duration < 10s?
-- Is text accurate?
-If you find errors, CORRECT them immediately.
-
-Output strictly valid JSON matching the requested schema.
+RULES:
+1. Translate "text" to "text_translated" (Simplified Chinese).
+2. Keep the original meaning intact.
+3. Output strictly valid JSON.
+4. Maintain the "id" from the input.
+5. **LENGTH LIMIT**: Chinese lines MUST be strictly ≤ 10 characters. Simplify, condense, or split lines to fit this limit. This is a hard constraint.
 `;
 
 const PROOFREAD_SYSTEM_INSTRUCTION = `
-You are an expert subtitle editor and translator specializing in Simplified Chinese localization.
-Your task is to review and improve existing subtitles.
+You are an expert Subtitle Quality Assurance Specialist using Gemini 3 Pro.
+Your goal is to perfect the subtitles by fixing timestamps, formatting, transcription errors, and translation errors.
 
-RULES:
-1. Improve the "text_translated" field for natural flow, nuance, and grammatical correctness in Simplified Chinese.
-2. Do NOT change the "start" or "end" timestamps. They must remain exactly as provided.
-3. Do NOT change the "text_original" unless there is a blatant transcription error.
-4. Return the result strictly as a JSON array matching the input structure.
+### TASKS:
+
+1. **TIMESTAMP CALIBRATION**:
+   - Ensure logical flow and fix segment resets.
+
+2. **BILINGUAL CORRECTION**:
+   - **Source Language**: Fix transcription errors, typos, homophones, and grammar.
+   - **Target Language (Chinese)**: Fix mistranslations, unnatural phrasing, and ensure it matches the source tone.
+
+3. **ENTITY & TERMINOLOGY CHECK (CRITICAL)**:
+   - **Proper Nouns**: Correctly identify and standardize names of People, Places, Organizations, Game Terms, and Jargon.
+   - **Consistency**: Ensure specific terms are translated identically throughout the file.
+
+4. **FORMATTING RULES**:
+   - **Chinese Length**: MUST be ≤ 10 characters per line.
+   - Return valid JSON matching the input structure.
 `;
+
+const SAFETY_SETTINGS = [
+  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+];
+
+// --- MAIN FUNCTIONS ---
 
 export const generateSubtitles = async (
   file: File, 
   duration: number,
-  apiKey: string, 
+  geminiKey: string, 
+  openaiKey: string,
   onProgress?: (msg: string) => void
 ): Promise<SubtitleItem[]> => {
   
-  if (!apiKey) throw new Error("API Key is missing.");
-
-  const ai = new GoogleGenAI({ apiKey });
-  const mimeType = file.type || 'video/mp4';
-
-  // --- Strategy Selection ---
-  // If file is small (< 100MB), use inlineData (Fastest, no upload wait).
-  // If file is large (> 100MB), use Files API + Segmentation loop.
+  if (!geminiKey) throw new Error("Gemini API Key is missing.");
+  if (!openaiKey) throw new Error("OpenAI API Key is missing (Required for Whisper).");
   
-  if (file.size < LARGE_FILE_THRESHOLD) {
-    return generateSmallFile(ai, file, duration, mimeType, onProgress);
-  } else {
-    return generateLargeFile(ai, file, duration, mimeType, onProgress);
+  const ai = new GoogleGenAI({ apiKey: geminiKey });
+
+  // 1. Decode Audio
+  onProgress?.("Decoding audio track...");
+  let audioBuffer: AudioBuffer;
+  try {
+    audioBuffer = await decodeAudio(file);
+    onProgress?.(`Audio decoded. Duration: ${formatTime(audioBuffer.duration)}`);
+  } catch (e) {
+    throw new Error("Failed to decode audio. Please ensure the file is a valid video/audio format.");
   }
+
+  const totalDuration = audioBuffer.duration;
+  let cursor = 0;
+  let chunkIndex = 1;
+  const totalChunks = Math.ceil(totalDuration / WHISPER_CHUNK_DURATION);
+  let allSubtitles: SubtitleItem[] = [];
+
+  // 2. Loop: Slice -> Whisper -> Translate
+  while (cursor < totalDuration) {
+    const end = Math.min(cursor + WHISPER_CHUNK_DURATION, totalDuration);
+    onProgress?.(`Processing Chunk ${chunkIndex}/${totalChunks} (${formatTime(cursor)} - ${formatTime(end)})...`);
+    
+    // A. Slice Audio (Client-side)
+    const wavBlob = await sliceAudioBuffer(audioBuffer, cursor, end);
+    
+    // B. Transcribe with Whisper (OpenAI)
+    onProgress?.(`[Chunk ${chunkIndex}] Transcribing with Whisper API...`);
+    let chunkItems: SubtitleItem[] = [];
+    try {
+      chunkItems = await transcribeWithWhisper(wavBlob, openaiKey);
+    } catch (e: any) {
+      console.error(e);
+      throw new Error(`Whisper Transcription failed on chunk ${chunkIndex}: ${e.message}`);
+    }
+
+    // C. Adjust Timestamps (Offset by cursor)
+    if (cursor > 0) {
+      chunkItems = chunkItems.map(item => {
+        // Parse, add cursor, format back
+        const startSec = timeToSeconds(item.startTime) + cursor;
+        const endSec = timeToSeconds(item.endTime) + cursor;
+        return {
+          ...item,
+          startTime: formatTime(startSec),
+          endTime: formatTime(endSec)
+        };
+      });
+    }
+
+    // D. Translate with Gemini
+    if (chunkItems.length > 0) {
+      onProgress?.(`[Chunk ${chunkIndex}] Translating with Gemini...`);
+      // Batch translation to avoid huge context
+      const translatedChunk = await translateBatch(ai, chunkItems);
+      allSubtitles = [...allSubtitles, ...translatedChunk];
+    }
+
+    cursor += WHISPER_CHUNK_DURATION;
+    chunkIndex++;
+  }
+
+  // Renumber IDs
+  return allSubtitles.map((s, i) => ({ ...s, id: i + 1 }));
 };
+
+// --- HELPERS ---
+
+async function translateBatch(ai: GoogleGenAI, items: SubtitleItem[]): Promise<SubtitleItem[]> {
+  const result: SubtitleItem[] = [];
+  
+  for (let i = 0; i < items.length; i += TRANSLATION_BATCH_SIZE) {
+    const batch = items.slice(i, i + TRANSLATION_BATCH_SIZE);
+    
+    const payload = batch.map(item => ({
+      id: item.id,
+      text: item.original
+    }));
+
+    const prompt = `Translate the following subtitles to Simplified Chinese:\n${JSON.stringify(payload)}`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: { parts: [{ text: prompt }] },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: TRANSLATION_SCHEMA,
+          systemInstruction: TRANSLATION_SYSTEM_INSTRUCTION,
+          safetySettings: SAFETY_SETTINGS,
+        }
+      });
+
+      const text = response.text || "[]";
+      // Loose parse
+      let translatedData: any[] = [];
+      try {
+        const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        translatedData = JSON.parse(clean);
+        // Handle root array or object
+        if (!Array.isArray(translatedData) && (translatedData as any).items) translatedData = (translatedData as any).items;
+      } catch (e) {
+        console.warn("Translation JSON parse error, skipping batch translation.");
+      }
+
+      // Merge
+      const transMap = new Map(translatedData.map((t: any) => [t.id, t.text_translated]));
+      
+      batch.forEach(item => {
+        result.push({
+          ...item,
+          translated: transMap.get(item.id) || "" // Fallback to empty if missing
+        });
+      });
+
+    } catch (e) {
+      console.error("Translation batch failed", e);
+      // Fallback: append originals with empty translation
+      result.push(...batch);
+    }
+  }
+  return result;
+}
+
+// --- PROOFREADING ---
 
 export const proofreadSubtitles = async (
   subtitles: SubtitleItem[],
@@ -90,6 +214,7 @@ export const proofreadSubtitles = async (
   
   const totalBatches = Math.ceil(subtitles.length / PROOFREAD_BATCH_SIZE);
   let refinedSubtitles: SubtitleItem[] = [];
+  let lastEndTime = "00:00:00,000";
 
   for (let i = 0; i < totalBatches; i++) {
     const startIdx = i * PROOFREAD_BATCH_SIZE;
@@ -98,7 +223,6 @@ export const proofreadSubtitles = async (
 
     onProgress?.(`Proofreading batch ${i + 1}/${totalBatches}...`);
 
-    // Create a simplified payload to save tokens, but keep necessary fields
     const payload = batch.map(s => ({
       id: s.id,
       start: s.startTime,
@@ -108,233 +232,38 @@ export const proofreadSubtitles = async (
     }));
 
     const prompt = `
-      Refine the following subtitles (Batch ${i+1}/${totalBatches}).
-      Focus on making the Simplified Chinese translation (text_translated) sound professional, colloquial, and contextually accurate.
-      
-      Input JSON:
-      ${JSON.stringify(payload)}
+      Batch ${i+1}/${totalBatches}.
+      CONTEXT: The previous batch ended at timestamp: "${lastEndTime}".
+      Input JSON: ${JSON.stringify(payload)}
     `;
-
-    const responseSchema = {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          id: { type: Type.INTEGER },
-          start: { type: Type.STRING },
-          end: { type: Type.STRING },
-          text_original: { type: Type.STRING },
-          text_translated: { type: Type.STRING }
-        },
-        required: ["id", "start", "end", "text_original", "text_translated"]
-      }
-    };
 
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview', // Use the high-intelligence model for proofreading
+        model: 'gemini-3-pro-preview', 
         contents: { parts: [{ text: prompt }] },
         config: {
           responseMimeType: "application/json",
-          responseSchema: responseSchema,
           systemInstruction: PROOFREAD_SYSTEM_INSTRUCTION,
+          safetySettings: SAFETY_SETTINGS,
         }
       });
 
-      const jsonStr = response.text || "[]";
-      // Added robustness: remove markdown if present (3-Pro sometimes does this even with JSON mode)
-      const cleanJson = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
-      
-      let parsedBatch: any[] = [];
-      try {
-        parsedBatch = JSON.parse(cleanJson);
-      } catch (e) {
-        console.warn(`JSON parse failed for batch ${i+1}, attempting fallback`, e);
-        // Fallback: try to find array brackets
-        const match = cleanJson.match(/\[.*\]/s);
-        if (match) {
-           parsedBatch = JSON.parse(match[0]);
-        }
+      const text = response.text || "[]";
+      const processedBatch = parseGeminiResponse(text);
+
+      if (processedBatch.length > 0) {
+        lastEndTime = processedBatch[processedBatch.length - 1].endTime;
+        refinedSubtitles = [...refinedSubtitles, ...processedBatch];
+      } else {
+        refinedSubtitles = [...refinedSubtitles, ...batch];
       }
 
-      if (!Array.isArray(parsedBatch)) parsedBatch = [];
-
-      // Map back to SubtitleItem structure and filter empty lines
-      const processedBatch: SubtitleItem[] = parsedBatch
-        .filter(item => {
-           const o = item.text_original ? String(item.text_original).trim() : '';
-           const t = item.text_translated ? String(item.text_translated).trim() : '';
-           return o.length > 0 || t.length > 0;
-        })
-        .map(item => ({
-          id: item.id,
-          startTime: item.start,
-          endTime: item.end,
-          original: item.text_original,
-          translated: item.text_translated
-        }));
-
-      refinedSubtitles = [...refinedSubtitles, ...processedBatch];
-
     } catch (e) {
-      console.error(`Batch ${i+1} proofreading failed. Using original for this batch.`, e);
-      // Fallback: keep original if proofreading fails for a batch
+      console.error(`Batch ${i+1} proofreading failed.`, e);
       refinedSubtitles = [...refinedSubtitles, ...batch];
+      if (batch.length > 0) lastEndTime = batch[batch.length - 1].endTime;
     }
   }
 
   return refinedSubtitles;
 };
-
-/**
- * FAST PATH: For small files, send directly in the request.
- */
-async function generateSmallFile(
-  ai: GoogleGenAI, 
-  file: File, 
-  duration: number,
-  mimeType: string, 
-  onProgress?: (msg: string) => void
-): Promise<SubtitleItem[]> {
-  
-  onProgress?.("Processing small file (Direct Mode)...");
-  const base64Data = await fileToBase64(file);
-  
-  const durationStr = duration ? `The video is exactly ${formatTime(duration)} long.` : '';
-
-  const prompt = `
-    Task: Generate bilingual subtitles for this media file.
-    ${durationStr}
-    
-    STRICT REQUIREMENTS:
-    1. Transcribe the audio accurately in its original language.
-    2. Translate each segment into Simplified Chinese.
-    3. Timestamp Format: HH:MM:SS,mmm (Example: 00:00:05,123).
-    4. VERIFY: Ensure Seconds < 60. Ensure you don't confuse minutes (05:00) with seconds (00:05).
-    5. DOUBLE CHECK: No timestamp can exceed ${formatTime(duration)}. If you wrote "01:00:00" for a 2-minute video, CORRECT IT to "00:01:00".
-    6. SANITY CHECK: Ensure Start Time < End Time. If a subtitle is longer than 10 seconds, SHORTEN THE END TIME.
-    
-    FINAL CHECK: Review your output. If you see Start > End, SWAP them. If you see a duration > 10s, fix it.
-    
-    Ensure you capture all spoken dialogue.
-  `;
-
-  // We use gemini-2.5-flash for speed/cost, but instructions are reinforced
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: {
-      parts: [
-        { inlineData: { mimeType, data: base64Data } },
-        { text: prompt }
-      ]
-    },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: SUBTITLE_SCHEMA,
-      systemInstruction: SYSTEM_INSTRUCTION, 
-    }
-  });
-
-  onProgress?.("Parsing subtitles...");
-  return parseGeminiResponse(response.text, duration);
-}
-
-/**
- * ROBUST PATH: For large files, upload to Google, then process in segments.
- */
-async function generateLargeFile(
-  ai: GoogleGenAI, 
-  file: File, 
-  duration: number,
-  mimeType: string,
-  onProgress?: (msg: string) => void
-): Promise<SubtitleItem[]> {
-
-  onProgress?.("File is large. Uploading to Gemini Storage...");
-  
-  // 1. Upload File
-  const uploadResponse = await ai.files.upload({
-    file: file,
-    config: { mimeType, displayName: file.name }
-  });
-  
-  // Safety Check: Ensure the file was actually uploaded and URI exists
-  if (!uploadResponse.file || !uploadResponse.file.uri) {
-     throw new Error("File upload failed. Google Gemini did not return a valid file URI. Please try again or use a smaller file.");
-  }
-  
-  const fileUri = uploadResponse.file.uri;
-  const fileName = uploadResponse.file.name; // Resource name
-
-  // 2. Wait for processing (Active)
-  onProgress?.("Waiting for file processing...");
-  let state = uploadResponse.file.state;
-  while (state === 'PROCESSING') {
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    const fileStatus = await ai.files.get({ name: fileName });
-    state = fileStatus.file.state;
-    if (state === 'FAILED') throw new Error("File processing failed on server.");
-  }
-
-  // 3. Segmented Processing Loop
-  let allSubtitles: SubtitleItem[] = [];
-  let currentTime = 0;
-  let segmentIndex = 1;
-  const totalSegments = Math.ceil(duration / SEGMENT_DURATION_SEC);
-
-  try {
-    while (currentTime < duration) {
-      const endTime = Math.min(currentTime + SEGMENT_DURATION_SEC, duration);
-      const startStr = formatTime(currentTime);
-      const endStr = formatTime(endTime);
-      
-      onProgress?.(`Processing Segment ${segmentIndex}/${totalSegments} (${startStr} - ${endStr})...`);
-
-      const prompt = `
-        Task: Generate bilingual subtitles for the video segment from ${startStr} to ${endStr}.
-        Only generate subtitles for audio falling STRICTLY within this time range.
-        
-        STRICT REQUIREMENTS:
-        1. Timestamps MUST be relative to the START of the VIDEO (e.g. if segment starts at 10:00, first sub should be around 10:00, not 00:00).
-        2. Format: HH:MM:SS,mmm.
-        3. Double check: Start Time < End Time.
-        4. CAUTION: Do not make subtitles longer than 10 seconds.
-        5. VERIFY: Are your timestamps within ${startStr} and ${endStr}?
-        
-        FINAL CHECK: Review start/end times carefully. Fix any illogical timestamps before outputting.
-      `;
-
-      // Use 2.5 Flash for segments
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: {
-          parts: [
-            { fileData: { mimeType, fileUri } },
-            { text: prompt }
-          ]
-        },
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: SUBTITLE_SCHEMA,
-          systemInstruction: SYSTEM_INSTRUCTION
-        }
-      });
-
-      const segmentSubs = parseGeminiResponse(response.text, duration);
-      allSubtitles = [...allSubtitles, ...segmentSubs];
-
-      currentTime += SEGMENT_DURATION_SEC;
-      segmentIndex++;
-      
-      // Basic rate limit handling
-      await new Promise(r => setTimeout(r, 1000));
-    }
-  } finally {
-    // Cleanup: Delete file from Gemini Storage
-    // onProgress?.("Cleaning up...");
-    // await ai.files.delete({ name: fileName });
-  }
-
-  // Re-index IDs
-  return allSubtitles.map((sub, idx) => ({ ...sub, id: idx + 1 }));
-}

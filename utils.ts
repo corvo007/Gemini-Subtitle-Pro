@@ -1,4 +1,4 @@
-import { SubtitleItem, OutputFormat, GeminiSubtitleSchema } from './types';
+import { SubtitleItem, OutputFormat, GeminiSubtitleSchema, OpenAIWhisperSegment } from './types';
 
 // --- Time Formatting Utils ---
 
@@ -42,89 +42,42 @@ export const timeToSeconds = (timeStr: string): number => {
 
 /**
  * Normalizes timestamp to strictly HH:MM:SS,mmm format for SRT/PotPlayer compatibility.
- * Handles inputs like "00:12", "1:05.500", "12.3", "1:00".
- * Also mathematically fixes overflows (e.g. 69 seconds -> 1 minute 9 seconds).
- * 
- * @param maxDuration (Optional) Video duration in seconds. Used for heuristic correction.
  */
 export const normalizeTimestamp = (timeStr: string, maxDuration?: number): string => {
   if (!timeStr) return '00:00:00,000';
 
-  // Remove any non-digit/colon/dot/comma characters
   const cleanStr = timeStr.replace(/[^0-9:.,]/g, '').replace('.', ',');
-  
   let parts = cleanStr.split(':');
   
-  // Robust parsing logic to handle various depths (SS, MM:SS, HH:MM:SS)
   let secondsPart = parts.pop() || '0';
   let minutesPart = parts.pop() || '0';
   let hoursPart = parts.pop() || '0';
 
-  // Handle milliseconds
   let [secsStr, msStr] = secondsPart.split(',');
   if (!msStr) msStr = '000';
   
-  // Parse as integers to allow overflow math (e.g. AI outputting "69 seconds")
   let h = parseInt(hoursPart, 10) || 0;
   let m = parseInt(minutesPart, 10) || 0;
   let s = parseInt(secsStr, 10) || 0;
-  let ms = parseInt(msStr.padEnd(3, '0').slice(0, 3), 10) || 0; // Ensure max 3 digits for input ms
+  let ms = parseInt(msStr.padEnd(3, '0').slice(0, 3), 10) || 0;
 
-  // Normalize (Carry over seconds > 59 to minutes, etc.)
   m += Math.floor(s / 60);
   s = s % 60;
   h += Math.floor(m / 60);
   m = m % 60;
 
-  // --- HEURISTIC FIX ---
-  // If the parsed time significantly exceeds the video duration, 
-  // it is likely the AI used HH:MM:SS to represent MM:SS:ms (Unit Shift).
-  if (maxDuration && maxDuration > 0) {
-    const totalSeconds = h * 3600 + m * 60 + s;
-    
-    // If we are way past the duration (plus a small buffer for credits/slight errors)
-    if (totalSeconds > maxDuration + 30) {
-      // Logic: The AI likely outputted "01:30:15" meaning "1 minute, 30 seconds, 15 frames/ms"
-      // Instead of parsing as 1 hour, 30 mins...
-      // We SHIFT units down: H -> M, M -> S, S -> MS.
-      
-      // We use the ORIGINAL parsed integers before normalization (mostly)
-      // but using normalized h/m is safer for clean logic.
-      if (h > 0) {
-        // Shift H to M, M to S
-        // Note: The 's' (original seconds) becomes milliseconds. 
-        // We multiply by 10 just to be safe (e.g. 15 -> 150ms), usually AI writes 2 digits for frames.
-        const newM = h;
-        const newS = m;
-        const newMs = s * 10; 
-        
-        return `${p2(0)}:${p2(newM)}:${p2(newS)},${p3(newMs)}`;
-      }
-    }
-  }
-
-  return `${p2(h)}:${p2(m)}:${p2(s)},${p3(ms)}`;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
 };
-
-const p2 = (n: number) => n.toString().padStart(2, '0');
-const p3 = (n: number) => n.toString().padStart(3, '0');
 
 /**
  * Converts normalized HH:MM:SS,mmm to ASS format H:MM:SS.cc
- * Strictly formats to ensure PotPlayer compatibility.
  */
 export const toAssTime = (normalizedTime: string): string => {
-  // Input: 00:00:00,000
   const [hms, ms] = normalizedTime.split(',');
   const [h, m, s] = hms.split(':');
-  
-  // ASS uses centiseconds (2 digits)
   const cs = ms.slice(0, 2); 
-  
-  // Strict padding for minutes and seconds is crucial
   const p2 = (n: string) => n.padStart(2, '0').slice(-2);
-  const hours = parseInt(h, 10); // Single digit hour is standard for ASS, unless > 9
-
+  const hours = parseInt(h, 10);
   return `${hours}:${p2(m)}:${p2(s)}.${cs}`;
 };
 
@@ -136,7 +89,6 @@ export const fileToBase64 = (file: File): Promise<string> => {
     reader.readAsDataURL(file);
     reader.onload = () => {
       const result = reader.result as string;
-      // Remove the Data-URL declaration (e.g., "data:video/mp4;base64,")
       const base64 = result.split(',')[1];
       resolve(base64);
     };
@@ -149,14 +101,13 @@ export const fileToBase64 = (file: File): Promise<string> => {
 export const generateSrtContent = (subtitles: SubtitleItem[]): string => {
   return subtitles
     .map((sub, index) => {
-      // Clean text for SRT (ensure no weird control chars, but keep newlines)
       const text = `${sub.original}\n${sub.translated}`;
       return `${index + 1}
 ${sub.startTime} --> ${sub.endTime}
 ${text}
 `;
     })
-    .join('\n'); // Will be normalized to \r\n in downloadFile
+    .join('\n');
 };
 
 export const generateAssContent = (subtitles: SubtitleItem[], title: string): string => {
@@ -183,16 +134,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     .map((sub) => {
       const start = toAssTime(sub.startTime);
       const end = toAssTime(sub.endTime);
-      
-      // ASS Logic:
-      // 1. Escape standard newlines (\n) to ASS newlines (\N)
-      const cleanOriginal = sub.original.replace(/\n/g, '\\N').replace(/\r/g, '');
-      const cleanTranslated = sub.translated.replace(/\n/g, '\\N').replace(/\r/g, '');
-      
-      // Use proper Style Group switching (\rSecondary) instead of inline overrides (\c&H...)
-      // This defines the secondary style in the header and switches to it for the translation.
+      const originalText = sub.original || "";
+      const translatedText = sub.translated || "";
+      const cleanOriginal = originalText.replace(/\n/g, '\\N').replace(/\r/g, '');
+      const cleanTranslated = translatedText.replace(/\n/g, '\\N').replace(/\r/g, '');
       const text = `${cleanOriginal}\\N{\\rSecondary}${cleanTranslated}`;
-      
       return `Dialogue: 0,${start},${end},Default,,0,0,0,,${text}`;
     })
     .join('\n');
@@ -200,20 +146,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   return header + events;
 };
 
-// --- Download Helper (The Fixer) ---
-
 export const downloadFile = (filename: string, content: string, format: OutputFormat) => {
-  // FIX 2: Force Windows-style line endings (\r\n)
-  // This is critical for PotPlayer to read line breaks correctly
   const windowsContent = content.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
-
-  // FIX 1: Add Byte Order Mark (BOM) for UTF-8
-  // This helps Windows players (PotPlayer) recognize Chinese characters correctly
   const bom = '\uFEFF';
   const blob = new Blob([bom + windowsContent], {
     type: 'text/plain;charset=utf-8',
   });
-
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -224,88 +162,219 @@ export const downloadFile = (filename: string, content: string, format: OutputFo
   URL.revokeObjectURL(url);
 };
 
-export const parseGeminiResponse = (jsonResponse: string, maxDuration?: number): SubtitleItem[] => {
+export const parseGeminiResponse = (jsonResponse: string | null | undefined, maxDuration?: number): SubtitleItem[] => {
+  if (!jsonResponse) return [];
   try {
-    // 1. Clean Markdown
     const cleanJson = jsonResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-    
-    // 2. Extract Array if wrapped in text (Robustness fix)
     let jsonToParse = cleanJson;
     const firstBracket = cleanJson.indexOf('[');
     const lastBracket = cleanJson.lastIndexOf(']');
-    
-    // Only substring if brackets exist and strictly look like an array wrapper
     if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
         jsonToParse = cleanJson.substring(firstBracket, lastBracket + 1);
     }
 
-    const parsed: any = JSON.parse(jsonToParse);
-
     let items: GeminiSubtitleSchema[] = [];
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonToParse);
+    } catch(e) {
+      const match = cleanJson.match(/\[.*\]/s);
+      if (match) {
+         parsed = JSON.parse(match[0]);
+      } else {
+        throw e;
+      }
+    }
 
     if (Array.isArray(parsed)) {
         items = parsed;
     } else if (parsed && parsed.subtitles && Array.isArray(parsed.subtitles)) {
         items = parsed.subtitles;
     } else if (parsed && parsed.items && Array.isArray(parsed.items)) {
-         // Fallback for some schemas that wrap in "items"
         items = parsed.items;
     }
 
-    // Filter out empty items where both original and translated text are empty or whitespace
+    // Filter and map
     items = items.filter(item => {
-      const original = item.text_original ? String(item.text_original).trim() : '';
-      const translated = item.text_translated ? String(item.text_translated).trim() : '';
-      return original.length > 0 || translated.length > 0;
+      // Robust key access
+      const rawOriginal = item.text_original || (item as any).original_text || (item as any).original || item.text || '';
+      const rawTranslated = item.text_translated || (item as any).translated_text || (item as any).translated || (item as any).translation || '';
+      
+      // Mutate item to normalized keys for next step
+      item.text_original = String(rawOriginal).trim();
+      item.text_translated = String(rawTranslated).trim();
+      return item.text_original.length > 0 || item.text_translated.length > 0;
     });
 
     return items.map((item, index) => {
-      // 1. Normalize formatting
+      if (!item.start || !item.end) return null;
       let startStr = normalizeTimestamp(item.start, maxDuration);
       let endStr = normalizeTimestamp(item.end, maxDuration);
-
-      // 2. Sanity Check & Correction
+      
       let startSec = timeToSeconds(startStr);
       let endSec = timeToSeconds(endStr);
 
-      // Check for swapped times
       if (startSec > endSec) {
-        // Swap them back
-        const tempSec = startSec;
-        startSec = endSec;
-        endSec = tempSec;
-        
-        // Re-format after swap
-        startStr = formatTime(startSec);
-        endStr = formatTime(endSec);
+        const tempSec = startSec; startSec = endSec; endSec = tempSec;
+        startStr = formatTime(startSec); endStr = formatTime(endSec);
       }
-      
-      // Ensure Minimum Duration (0.5s)
       if (endSec - startSec < 0.5) {
-          endSec = startSec + 1.5;
-          endStr = formatTime(endSec);
+          endSec = startSec + 1.5; endStr = formatTime(endSec);
       }
-
-      // Check for excessive duration (e.g., > 10 seconds) which is likely an AI error
-      if ((endSec - startSec) > 10) {
-        // Clamp end time to start + 5 seconds (reasonable default)
-        endSec = startSec + 5;
-        endStr = formatTime(endSec);
-      }
-      
       return {
         id: index + 1,
         startTime: startStr,
         endTime: endStr,
-        original: item.text_original,
-        translated: item.text_translated
+        original: item.text_original || "",
+        translated: item.text_translated || ""
       };
-    });
+    }).filter(item => item !== null) as SubtitleItem[];
 
   } catch (e) {
     console.error("Failed to parse JSON from Gemini", e);
-    // If text exists but not JSON, maybe log it or try a different strategy?
-    // For now returning empty triggers the "AI returned no subtitles" error which is correct.
     return [];
   }
+};
+
+// --- Audio Extraction & Manipulation Utils ---
+
+export const decodeAudio = async (file: File): Promise<AudioBuffer> => {
+  const arrayBuffer = await file.arrayBuffer();
+  const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+  if (!AudioContext) throw new Error("Web Audio API not supported");
+  const ctx = new AudioContext();
+  return await ctx.decodeAudioData(arrayBuffer);
+};
+
+export const sliceAudioBuffer = async (originalBuffer: AudioBuffer, start: number, end: number): Promise<Blob> => {
+  const duration = originalBuffer.duration;
+  const safeStart = Math.max(0, start);
+  const safeEnd = Math.min(duration, end);
+  const length = safeEnd - safeStart;
+  
+  if (length <= 0) throw new Error("Invalid slice duration");
+
+  // 16kHz mono is standard for Whisper
+  const targetRate = 16000;
+  const offlineCtx = new OfflineAudioContext(1, length * targetRate, targetRate);
+  
+  const source = offlineCtx.createBufferSource();
+  source.buffer = originalBuffer;
+  source.connect(offlineCtx.destination);
+  
+  // Start playing the original buffer at the negative offset of our start time
+  // This effectively shifts the audio so that 'start' becomes 0 in the offline context
+  source.start(0, safeStart, length);
+  
+  const resampled = await offlineCtx.startRendering();
+  return audioBufferToWav(resampled);
+};
+
+// Legacy support for simple full extraction
+export const extractAudioFromVideo = async (file: File): Promise<File> => {
+  const LIMIT_MB = 1000; // Increased limit
+  if (file.size > LIMIT_MB * 1024 * 1024) {
+     // If too big, we might skip or warn. For now, try to process.
+     console.warn("Large file detected, extraction might take time.");
+  }
+  const buffer = await decodeAudio(file);
+  // Full resample
+  const blob = await sliceAudioBuffer(buffer, 0, buffer.duration);
+  return new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".wav", { type: "audio/wav" });
+};
+
+export function audioBufferToWav(buffer: AudioBuffer): Blob {
+  const numChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const format = 1; // PCM
+  const bitDepth = 16;
+  const bytesPerSample = bitDepth / 8;
+  const blockAlign = numChannels * bytesPerSample;
+  const dataByteCount = buffer.length * blockAlign;
+  const bufferLength = 44 + dataByteCount;
+  
+  const arrayBuffer = new ArrayBuffer(bufferLength);
+  const view = new DataView(arrayBuffer);
+  
+  const writeString = (view: DataView, offset: number, string: string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  };
+  
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + dataByteCount, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, format, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitDepth, true);
+  writeString(view, 36, 'data');
+  view.setUint32(40, dataByteCount, true);
+  
+  let offset = 44;
+  for (let i = 0; i < buffer.length; i++) {
+    for (let channel = 0; channel < numChannels; channel++) {
+      const sample = buffer.getChannelData(channel)[i];
+      const s = Math.max(-1, Math.min(1, sample));
+      const int16 = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      view.setInt16(offset, int16, true);
+      offset += 2;
+    }
+  }
+  return new Blob([arrayBuffer], { type: 'audio/wav' });
+}
+
+// --- OpenAI Whisper ---
+
+export const transcribeWithWhisper = async (audioBlob: Blob, apiKey: string): Promise<SubtitleItem[]> => {
+  const formData = new FormData();
+  formData.append('file', audioBlob, 'audio.wav');
+  formData.append('model', 'whisper-1');
+  formData.append('response_format', 'verbose_json');
+
+  let attempt = 0;
+  const maxRetries = 3;
+  let lastError: any;
+
+  while (attempt < maxRetries) {
+    try {
+      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Whisper API Error (${response.status}): ${errorData.error?.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      const segments = data.segments as OpenAIWhisperSegment[];
+      if (!segments) return [];
+
+      return segments.map((seg, idx) => ({
+        id: idx + 1,
+        startTime: formatTime(seg.start),
+        endTime: formatTime(seg.end),
+        original: seg.text.trim(),
+        translated: '' // Filled later by Gemini
+      }));
+    } catch (e: any) {
+      console.warn(`Whisper attempt ${attempt + 1} failed:`, e);
+      lastError = e;
+      attempt++;
+      // Exponential backoff: 1s, 2s, 4s
+      if (attempt < maxRetries) await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempt - 1)));
+    }
+  }
+
+  throw lastError || new Error("Failed to connect to Whisper API after multiple attempts. Please check your network and API key.");
 };

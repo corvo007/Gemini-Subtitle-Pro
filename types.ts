@@ -28,6 +28,20 @@ export type OutputFormat = 'srt' | 'ass';
 export interface GeminiSubtitleSchema {
   start: string; // Expecting "MM:SS" or "HH:MM:SS" or "SS.ms"
   end: string;
-  text_original: string;
-  text_translated: string;
+  text_original?: string;
+  text_translated?: string;
+  text?: string; // For transcription-only phase
+}
+
+export interface OpenAIWhisperSegment {
+  id: number;
+  seek: number;
+  start: number;
+  end: number;
+  text: string;
+  tokens: number[];
+  temperature: number;
+  avg_logprob: number;
+  compression_ratio: number;
+  no_speech_prob: number;
 }
