@@ -174,7 +174,7 @@ export default function App() {
 
   const handleDownload = (format: OutputFormat) => {
     if (!subtitles.length) return;
-    const fileNameBase = file?.name.split('.').slice(0, -1).join('.') || 'subtitles';
+    const fileNameBase = file?.name?.split('.').slice(0, -1).join('.') || 'subtitles';
     const content = format === 'srt' ? generateSrtContent(subtitles) : generateAssContent(subtitles, fileNameBase);
     downloadFile(`${fileNameBase}.${format}`, content, format);
   };
@@ -398,9 +398,9 @@ export default function App() {
             </div>
 
             {/* Main Content Area */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl relative h-[600px]">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl relative h-[600px] my-12 items-start">
               {showHistory ? (
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar w-full">
                   {history.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50">
                       <History className="w-12 h-12 mb-2" />
@@ -434,14 +434,14 @@ export default function App() {
                   )}
                 </div>
               ) : (
-                <div className="flex-1 overflow-y-auto custom-scrollbar relative" ref={(el) => { if (el && status === GenerationStatus.PROCESSING) el.scrollTop = el.scrollHeight; }}>
+                <div className="flex-1 overflow-y-auto custom-scrollbar relative w-full" ref={(el) => { if (el && status === GenerationStatus.PROCESSING) el.scrollTop = el.scrollHeight; }}>
                   {subtitles.length > 0 ? (
                     <div className="divide-y divide-slate-800">
                       {subtitles.map((sub) => (
                         <div key={sub.id} className="p-4 hover:bg-slate-800/30 transition-colors group">
                           <div className="flex items-start space-x-4">
                             <div className="text-xs font-mono text-slate-500 min-w-[80px] pt-1">
-                              {sub.startTime?.split(',')[0]}
+                              {(sub.startTime || '').split(',')[0]}
                             </div>
                             <div className="flex-1 space-y-1">
                               <p className="text-slate-300 leading-relaxed">{sub.original}</p>
@@ -494,7 +494,7 @@ export default function App() {
                     <input 
                       type={showGeminiKey ? "text" : "password"}
                       value={settings.geminiKey}
-                      onChange={(e) => updateSetting('geminiKey', e.target.value)}
+                      onChange={(e) => updateSetting('geminiKey', e.target.value.trim())}
                       placeholder="Enter Gemini API Key"
                       className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 pr-10 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
                     />
@@ -509,7 +509,7 @@ export default function App() {
                     <input 
                       type={showOpenAIKey ? "text" : "password"}
                       value={settings.openaiKey}
-                      onChange={(e) => updateSetting('openaiKey', e.target.value)}
+                      onChange={(e) => updateSetting('openaiKey', e.target.value.trim())}
                       placeholder="Enter OpenAI API Key"
                       className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 pr-10 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
                     />

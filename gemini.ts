@@ -122,10 +122,13 @@ export const generateSubtitles = async (
   onIntermediateResult?: (subs: SubtitleItem[]) => void
 ): Promise<SubtitleItem[]> => {
   
-  if (!settings.geminiKey) throw new Error("Gemini API Key is missing.");
-  if (!settings.openaiKey) throw new Error("OpenAI API Key is missing.");
+  const geminiKey = settings.geminiKey?.trim();
+  const openaiKey = settings.openaiKey?.trim();
+
+  if (!geminiKey) throw new Error("Gemini API Key is missing.");
+  if (!openaiKey) throw new Error("OpenAI API Key is missing.");
   
-  const ai = new GoogleGenAI({ apiKey: settings.geminiKey });
+  const ai = new GoogleGenAI({ apiKey: geminiKey });
 
   // 1. Decode Audio
   onProgress?.("Decoding audio track...");
@@ -157,7 +160,7 @@ export const generateSubtitles = async (
     onProgress?.(`[Chunk ${chunkIndex}] 1/3 Transcribing (${settings.transcriptionModel})...`);
     let rawSegments: SubtitleItem[] = [];
     try {
-      rawSegments = await transcribeAudio(wavBlob, settings.openaiKey, settings.transcriptionModel);
+      rawSegments = await transcribeAudio(wavBlob, openaiKey, settings.transcriptionModel);
     } catch (e: any) {
       console.warn(`Transcription warning on chunk ${chunkIndex}: ${e.message}`);
       throw new Error(`Transcription failed on chunk ${chunkIndex}: ${e.message}`);
@@ -306,9 +309,10 @@ export const proofreadSubtitles = async (
   settings: AppSettings,
   onProgress?: (msg: string) => void
 ): Promise<SubtitleItem[]> => {
-  if (!settings.geminiKey) throw new Error("API Key is missing.");
+  const geminiKey = settings.geminiKey?.trim();
+  if (!geminiKey) throw new Error("API Key is missing.");
   
-  const ai = new GoogleGenAI({ apiKey: settings.geminiKey });
+  const ai = new GoogleGenAI({ apiKey: geminiKey });
   
   onProgress?.("Loading audio for contextual proofreading...");
   let audioBuffer: AudioBuffer;
