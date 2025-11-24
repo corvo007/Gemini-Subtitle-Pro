@@ -126,9 +126,17 @@ export default function App() {
 
     setStatus(GenerationStatus.UPLOADING);
     setError(null);
+    setSubtitles([]); // Clear previous results before starting
 
     try {
-      const result = await generateSubtitles(file, duration, settings, (msg) => setProgressMsg(msg));
+      // Pass 'setSubtitles' as the 5th argument for streaming updates
+      const result = await generateSubtitles(
+        file, 
+        duration, 
+        settings, 
+        (msg) => setProgressMsg(msg),
+        (newSubs) => setSubtitles(newSubs) 
+      );
       
       if (result.length === 0) throw new Error("No subtitles were generated.");
 
@@ -238,7 +246,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight">Gemini Subtitle Pro</h1>
-              <p className="text-sm text-slate-400">Whisper / GPT-4o + Gemini 3 Pro</p>
+              <p className="text-sm text-slate-400">OpenAI Transcription + Gemini 2.5 Refine</p>
             </div>
           </div>
           
@@ -382,7 +390,7 @@ export default function App() {
                     className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-lg text-xs font-bold text-white shadow-md transition-all animate-fade-in"
                   >
                     <Sparkles className="w-3 h-3" />
-                    <span>Proofread with Gemini 3 Pro</span>
+                    <span>Deep Polish (Gemini 3 Pro)</span>
                   </button>
                 )}
               </div>
@@ -426,14 +434,14 @@ export default function App() {
                   )}
                 </div>
               ) : (
-                <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+                <div className="flex-1 overflow-y-auto custom-scrollbar relative" ref={(el) => { if (el && status === GenerationStatus.PROCESSING) el.scrollTop = el.scrollHeight; }}>
                   {subtitles.length > 0 ? (
                     <div className="divide-y divide-slate-800">
                       {subtitles.map((sub) => (
                         <div key={sub.id} className="p-4 hover:bg-slate-800/30 transition-colors group">
                           <div className="flex items-start space-x-4">
                             <div className="text-xs font-mono text-slate-500 min-w-[80px] pt-1">
-                              {sub.startTime.split(',')[0]}
+                              {sub.startTime?.split(',')[0]}
                             </div>
                             <div className="flex-1 space-y-1">
                               <p className="text-slate-300 leading-relaxed">{sub.original}</p>
@@ -461,8 +469,8 @@ export default function App() {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl relative my-8">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-2xl shadow-2xl relative my-12">
             <button 
               onClick={() => setShowSettings(false)} 
               className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
