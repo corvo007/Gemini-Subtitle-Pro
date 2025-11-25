@@ -5,13 +5,15 @@ export interface SubtitleItem {
   endTime: string;   // Format: HH:MM:SS,ms
   original: string;
   translated: string;
+  comment?: string; // User comment for specific correction
 }
 
-export interface HistoryItem {
+export interface SubtitleSnapshot {
   id: string;
-  fileName: string;
-  date: string;
+  timestamp: string;
+  description: string;
   subtitles: SubtitleItem[];
+  batchComments: Record<number, string>; // Store batch comments with snapshot
 }
 
 export enum GenerationStatus {

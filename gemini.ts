@@ -149,7 +149,9 @@ const getSystemInstruction = (
     5. **REMOVE FILLER WORDS**: Delete any remaining filler words (e.g., 呃, 嗯, 啊, eto, ano) that disrupt flow.
     6. **FIX TIMESTAMPS**: Ensure they are strictly within the audio range. 
     7. **FLUENCY**: Ensure the Chinese translation is natural and culturally appropriate for: ${genre}.
-    8. Return valid JSON matching input structure.`;
+    8. **USER COMMENTS**: If a "comment" field is present in the input for a specific line, YOU MUST ADDRESS IT. This is a manual correction request.
+    9. **PRESERVATION**: If specific lines have comments, fix those. For lines WITHOUT comments, preserve them unless there is a glaring error or the batch has a global instruction.
+    10. Return valid JSON matching input structure.`;
 };
 
 // --- MAIN FUNCTIONS ---
@@ -355,7 +357,8 @@ async function processBatch(
   systemInstruction: string,
   batchLabel: string,
   totalVideoDuration?: number,
-  mode: BatchOperationMode = 'proofread'
+  mode: BatchOperationMode = 'proofread',
+  batchComment?: string
 ): Promise<SubtitleItem[]> {
     if (batch.length === 0) return [];
 
@@ -385,16 +388,46 @@ async function processBatch(
       start: s.startTime,
       end: s.endTime,
       text_original: s.original,
-      text_translated: s.translated
+      text_translated: s.translated,
+      comment: s.comment // Include user comment
     }));
 
     let prompt = "";
+    const hasBatchComment = batchComment && batchComment.trim().length > 0;
+    const hasLineComments = batch.some(s => s.comment && s.comment.trim().length > 0);
+
+    let specificInstruction = "";
+    
+    if (hasLineComments && !hasBatchComment) {
+         // Case 1: Line Comments Only
+         specificInstruction = `
+    USER LINE INSTRUCTIONS:
+    1. Specific lines have "comment" fields. You MUST strictly follow these manual corrections.
+    2. CRITICAL: For lines WITHOUT comments, DO NOT MODIFY THEM. Preserve them exactly as is. Only change lines with comments.
+    `;
+    } else if (hasLineComments && hasBatchComment) {
+         // Case 2: Line Comments AND Batch Comment
+         specificInstruction = `
+    USER INSTRUCTIONS:
+    1. First, address the specific "comment" fields on individual lines.
+    2. Second, apply this GLOBAL BATCH INSTRUCTION to the whole segment: "${batchComment}".
+    3. You may modify any line to satisfy the global instruction or specific comments.
+    `;
+    } else if (hasBatchComment && !hasLineComments) {
+         // Case 3: Batch Comment Only
+         specificInstruction = `
+    USER BATCH INSTRUCTION (Apply to ALL lines in this batch): "${batchComment}"
+    `;
+    }
+    // Case 4: No Comments -> Default behavior (prompt below covers it)
 
     if (mode === 'retranslate') {
         prompt = `
         Batch ${batchLabel}.
         RE-TRANSLATE TASK.
         Ignore timestamps. Focus on Translation Quality.
+        ${specificInstruction}
+        
         Instructions:
         1. Translate the "text_original" to "text_translated" accurately.
         2. **CHECK FOR MISSED TRANSLATION**: Ensure no meaning is lost.
@@ -409,12 +442,13 @@ async function processBatch(
         Batch ${batchLabel}.
         FIX TIMESTAMPS & ALIGNMENT TASK.
         PREVIOUS END TIME: "${lastEndTime}".
+        ${specificInstruction}
         
         Instructions:
         1. Listen to audio. Align "start" and "end" perfectly.
         2. **MISSED AUDIO**: If you hear speech not in text, ADD IT.
         3. **SPLIT LONG LINES**: If a segment is > 4s or > 25 chars, SPLIT IT.
-        4. **LANGUAGE**: 'text_translated' MUST BE SIMPLIFIED CHINESE. Do not overwrite with English.
+        4. **LANGUAGE**: 'text_translated' MUST BE SIMPLIFIED CHINESE. Do not output English in this field.
         
         Input:
         ${JSON.stringify(payload)}
@@ -426,6 +460,7 @@ async function processBatch(
         DEEP PROOFREAD TASK.
         PREVIOUS END TIME: "${lastEndTime}".
         TOTAL VIDEO DURATION: ${totalVideoDuration ? formatTime(totalVideoDuration) : 'Unknown'}.
+        ${specificInstruction}
         
         Instructions:
         1. Listen to the audio.
@@ -470,9 +505,6 @@ async function processBatch(
       const processedBatch = parseGeminiResponse(text, totalVideoDuration);
 
       if (processedBatch.length > 0) {
-        // For retranslate mode, we might lose timestamps if the model isn't careful, 
-        // but our parseGeminiResponse tries to handle it. 
-        // If retranslate mode didn't return timestamps (unlikely given schema), we'd merge back.
         return processedBatch;
       }
     } catch (e) {
@@ -485,11 +517,12 @@ async function processBatch(
 // --- BATCH EXECUTION ---
 
 export const runBatchOperation = async (
-  file: File,
+  file: File | null,
   allSubtitles: SubtitleItem[],
   batchIndices: number[], // 0-based indices of chunks
   settings: AppSettings,
   mode: BatchOperationMode,
+  batchComments: Record<number, string> = {}, // Pass map of batch index -> comment
   onProgress?: (msg: string) => void
 ): Promise<SubtitleItem[]> => {
   const geminiKey = settings.geminiKey?.trim();
@@ -500,13 +533,16 @@ export const runBatchOperation = async (
   // Retranslate doesn't strictly need audio context loaded upfront if we aren't slicing, 
   // but processBatch logic for retranslate ignores audio anyway. 
   // However, Proofread and Fix Timestamps need it.
-  if (mode !== 'retranslate') {
+  if (mode !== 'retranslate' && file) {
       onProgress?.("Loading audio for context...");
       try {
          audioBuffer = await decodeAudio(file);
       } catch(e) {
          console.warn("Audio decode failed, proceeding with text-only mode.");
       }
+  } else if (mode !== 'retranslate' && !file) {
+      // If we are in Proofread mode but no file exists (SRT import), we fallback to text-only behavior inside processBatch (it handles null buffer)
+      console.log("No media file provided, running in text-only context.");
   }
   
   const systemInstruction = getSystemInstruction(
@@ -554,23 +590,12 @@ export const runBatchOperation = async (
         systemInstruction, 
         `${batchIdx + 1}`,
         audioBuffer?.duration,
-        mode
+        mode,
+        batchComments[batchIdx] // Pass the comment for this specific batch
      );
      
      chunks[batchIdx] = processed;
   }
   
   return chunks.flat().map((s, i) => ({ ...s, id: i + 1 }));
-};
-
-// Backward compatibility wrapper if needed, or just remove `proofreadSubtitles` if unused
-export const proofreadSubtitles = async (
-  file: File,
-  subtitles: SubtitleItem[],
-  settings: AppSettings,
-  onProgress?: (msg: string) => void
-): Promise<SubtitleItem[]> => {
-  const totalBatches = Math.ceil(subtitles.length / PROOFREAD_BATCH_SIZE);
-  const allIndices = Array.from({ length: totalBatches }, (_, i) => i);
-  return runBatchOperation(file, subtitles, allIndices, settings, 'proofread', onProgress);
 };

@@ -1,3 +1,4 @@
+
 import { SubtitleItem, OutputFormat, GeminiSubtitleSchema, OpenAIWhisperSegment } from './types';
 
 // --- Time Formatting Utils ---
@@ -93,6 +94,103 @@ export const toAssTime = (normalizedTime: string): string => {
   const p2 = (n: string) => n.padStart(2, '0').slice(-2);
   const hours = parseInt(h, 10);
   return `${hours}:${p2(m)}:${p2(s)}.${cs}`;
+};
+
+// --- Parsers ---
+
+export const parseSrt = (content: string): SubtitleItem[] => {
+  const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const blocks = normalized.split(/\n\n+/);
+  const items: SubtitleItem[] = [];
+  
+  blocks.forEach((block) => {
+    const lines = block.trim().split('\n');
+    if (lines.length < 3) return;
+
+    // Line 1: ID
+    // Line 2: Time
+    // Line 3+: Text
+    
+    // Sometimes index 0 is empty if file starts with newlines
+    let startIndex = 0;
+    if (!lines[0].match(/^\d+$/) && lines[1]?.match(/^\d+$/)) startIndex = 1;
+    
+    // Check if it looks like a valid block
+    const timeLine = lines[startIndex + 1];
+    if (!timeLine || !timeLine.includes('-->')) return;
+    
+    const [start, end] = timeLine.split('-->').map(t => t.trim());
+    const textLines = lines.slice(startIndex + 2);
+    // Rough heuristic for bilingual: if multiple lines, assume original/translated or just multiline
+    // For editing purposes, we put everything in "original" and let the user re-translate or fix
+    const fullText = textLines.join('\n');
+    
+    items.push({
+      id: items.length + 1,
+      startTime: normalizeTimestamp(start),
+      endTime: normalizeTimestamp(end),
+      original: fullText,
+      translated: '' // If importing existing SRT, we treat it as source to be processed/proofread
+    });
+  });
+  return items;
+};
+
+export const parseAss = (content: string): SubtitleItem[] => {
+  const lines = content.split(/\r?\n/);
+  const items: SubtitleItem[] = [];
+  let format: string[] = [];
+  
+  // Find Events section
+  let inEvents = false;
+  
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (trimmed === '[Events]') {
+      inEvents = true;
+      return;
+    }
+    if (!inEvents) return;
+    
+    if (trimmed.startsWith('Format:')) {
+      format = trimmed.substring(7).split(',').map(s => s.trim().toLowerCase());
+      return;
+    }
+    
+    if (trimmed.startsWith('Dialogue:')) {
+      if (format.length === 0) return; // Need format first
+      
+      const parts = trimmed.substring(9).split(',');
+      if (parts.length > format.length) {
+          // Join the last text parts back together because text can contain commas
+          const textPart = parts.slice(format.length - 1).join(',');
+          parts.splice(format.length - 1, parts.length - (format.length - 1), textPart);
+      }
+      
+      const startIdx = format.indexOf('start');
+      const endIdx = format.indexOf('end');
+      const textIdx = format.indexOf('text');
+      
+      if (startIdx === -1 || endIdx === -1 || textIdx === -1) return;
+      
+      let text = parts[textIdx] || "";
+      // Clean ASS tags like {\an8} or \N
+      text = text.replace(/{[^}]+}/g, '').replace(/\\N/g, '\n').trim();
+      
+      // ASS time is H:MM:SS.cc -> normalize to HH:MM:SS,mmm
+      // We rely on normalizeTimestamp to handle the colon/dot diffs mostly
+      // But we need to ensure 0:00:00.00 becomes suitable for parser
+      
+      items.push({
+        id: items.length + 1,
+        startTime: normalizeTimestamp(parts[startIdx]),
+        endTime: normalizeTimestamp(parts[endIdx]),
+        original: text,
+        translated: ''
+      });
+    }
+  });
+  return items;
 };
 
 // --- File & Base64 Utils ---
