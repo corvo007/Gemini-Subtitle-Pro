@@ -1,10 +1,10 @@
 
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import { parseGeminiResponse, formatTime, decodeAudio, sliceAudioBuffer, transcribeAudio, timeToSeconds, blobToBase64 } from "./utils";
+import { parseGeminiResponse, formatTime, decodeAudio, sliceAudioBuffer, transcribeAudio, timeToSeconds, blobToBase64, extractJsonArray } from "./utils";
 import { SubtitleItem, AppSettings, Genre, BatchOperationMode } from "./types";
 
 export const PROOFREAD_BATCH_SIZE = 20;
-const TRANSLATION_BATCH_SIZE = 10; // Reduced from 20 to improve stability
+const TRANSLATION_BATCH_SIZE = 20; // Reduced from 20 to improve stability
 const PROCESSING_CHUNK_DURATION = 300; // 5 minutes chunk
 
 // --- RATE LIMIT HELPER ---
@@ -68,8 +68,21 @@ async function generateContentWithLongOutput(
         // Try to parse the current full text
         // We remove markdown code blocks first just in case
         const clean = fullText.replace(/```json/g, '').replace(/```/g, '').trim();
-        JSON.parse(clean);
-        break; // If parse succeeds, we are done
+
+        // Use robust extractor to handle extra brackets/garbage
+        const extracted = extractJsonArray(clean);
+
+        if (extracted) {
+          JSON.parse(extracted);
+          // If parse succeeds with extracted content, we are done!
+          // We should update fullText to the clean extracted version to avoid passing garbage downstream
+          fullText = extracted;
+          break;
+        } else {
+          // If extraction failed, try direct parse (maybe it's an object, or maybe it's just valid as is)
+          JSON.parse(clean);
+          break;
+        }
       } catch (e) {
         // Parse failed, assume truncation
         console.warn("JSON parse failed, attempting to continue generation...", e);
@@ -672,17 +685,28 @@ export const runBatchOperation = async (
 
   // Group consecutive indices
   const groups: number[][] = [];
+
+  // Exception: If ALL batches are selected, do NOT group them. Process individually.
+  // This prevents sending the entire movie as one huge prompt which would definitely fail.
+  const isSelectAll = sortedIndices.length === chunks.length;
+
   if (sortedIndices.length > 0) {
-    let currentGroup = [sortedIndices[0]];
-    for (let i = 1; i < sortedIndices.length; i++) {
-      if (sortedIndices[i] === sortedIndices[i - 1] + 1) {
-        currentGroup.push(sortedIndices[i]);
-      } else {
-        groups.push(currentGroup);
-        currentGroup = [sortedIndices[i]];
+    if (isSelectAll) {
+      // 1-on-1 mapping
+      sortedIndices.forEach(idx => groups.push([idx]));
+    } else {
+      // Consecutive grouping logic
+      let currentGroup = [sortedIndices[0]];
+      for (let i = 1; i < sortedIndices.length; i++) {
+        if (sortedIndices[i] === sortedIndices[i - 1] + 1) {
+          currentGroup.push(sortedIndices[i]);
+        } else {
+          groups.push(currentGroup);
+          currentGroup = [sortedIndices[i]];
+        }
       }
+      groups.push(currentGroup);
     }
-    groups.push(currentGroup);
   }
 
   for (let i = 0; i < groups.length; i++) {
