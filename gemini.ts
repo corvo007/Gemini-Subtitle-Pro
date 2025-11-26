@@ -3,15 +3,9 @@ import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/gen
 import { parseGeminiResponse, formatTime, decodeAudio, sliceAudioBuffer, transcribeAudio, timeToSeconds, blobToBase64, extractJsonArray, mapInParallel } from "./utils";
 import { SubtitleItem, AppSettings, Genre, BatchOperationMode, ChunkStatus } from "./types";
 
-export const PROOFREAD_BATCH_SIZE = 20;
+export const PROOFREAD_BATCH_SIZE = 20; // Default fallback
 const TRANSLATION_BATCH_SIZE = 20; // Reduced from 20 to improve stability
 const PROCESSING_CHUNK_DURATION = 300; // 5 minutes chunk
-
-// --- CONFIGURATION ---
-export const CONCURRENCY_LIMITS = {
-  FLASH: 5, // High concurrency for Gemini 2.5 Flash (Generation, Fix Time, Retranslate)
-  PRO: 2    // Low concurrency for Gemini 3 Pro (Proofreading)
-};
 
 // --- RATE LIMIT HELPER ---
 
@@ -300,9 +294,10 @@ export const generateSubtitles = async (
   }
 
   const chunkResults: SubtitleItem[][] = new Array(chunksParams.length).fill([]);
+  const concurrency = settings.concurrencyFlash || 5;
 
   // Parallel Execution (Concurrency: Flash Limit)
-  await mapInParallel(chunksParams, CONCURRENCY_LIMITS.FLASH, async (chunk, i) => {
+  await mapInParallel(chunksParams, concurrency, async (chunk, i) => {
     const { index, start, end } = chunk;
 
     onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'transcribing', message: 'Transcribing...' });
@@ -374,7 +369,7 @@ export const generateSubtitles = async (
 
       const translateSystemInstruction = getSystemInstruction(settings.genre, settings.customTranslationPrompt, 'translation');
       // translateBatch is also parallelized now
-      const translatedItems = await translateBatch(ai, toTranslate, translateSystemInstruction);
+      const translatedItems = await translateBatch(ai, toTranslate, translateSystemInstruction, concurrency);
 
       finalChunkSubs = translatedItems.map(item => ({
         id: 0, // Placeholder, will re-index later
@@ -400,13 +395,13 @@ export const generateSubtitles = async (
 
 // --- HELPERS ---
 
-async function translateBatch(ai: GoogleGenAI, items: any[], systemInstruction: string): Promise<any[]> {
+async function translateBatch(ai: GoogleGenAI, items: any[], systemInstruction: string, concurrency: number): Promise<any[]> {
   const batches: any[][] = [];
   for (let i = 0; i < items.length; i += TRANSLATION_BATCH_SIZE) {
     batches.push(items.slice(i, i + TRANSLATION_BATCH_SIZE));
   }
 
-  const batchResults = await mapInParallel(batches, CONCURRENCY_LIMITS.FLASH, async (batch) => {
+  const batchResults = await mapInParallel(batches, concurrency, async (batch) => {
     const payload = batch.map(item => ({ id: item.id, text: item.original }));
 
     const prompt = `Task: Translate the following ${batch.length} items to Simplified Chinese.
@@ -697,8 +692,9 @@ export const runBatchOperation = async (
 
   const currentSubtitles = [...allSubtitles];
   const chunks: SubtitleItem[][] = [];
-  for (let i = 0; i < currentSubtitles.length; i += PROOFREAD_BATCH_SIZE) {
-    chunks.push(currentSubtitles.slice(i, i + PROOFREAD_BATCH_SIZE));
+  const batchSize = settings.proofreadBatchSize || PROOFREAD_BATCH_SIZE;
+  for (let i = 0; i < currentSubtitles.length; i += batchSize) {
+    chunks.push(currentSubtitles.slice(i, i + batchSize));
   }
 
   const sortedIndices = [...batchIndices].sort((a, b) => a - b);
@@ -732,7 +728,7 @@ export const runBatchOperation = async (
   // Determine concurrency based on mode
   // Proofread uses Gemini 3 Pro (Low RPM) -> Concurrency PRO
   // Others use Gemini 2.5 Flash (High RPM) -> Concurrency FLASH
-  const concurrency = mode === 'proofread' ? CONCURRENCY_LIMITS.PRO : CONCURRENCY_LIMITS.FLASH;
+  const concurrency = mode === 'proofread' ? (settings.concurrencyPro || 2) : (settings.concurrencyFlash || 5);
 
   await mapInParallel(groups, concurrency, async (group, i) => {
     const firstBatchIdx = group[0];

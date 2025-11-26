@@ -48,6 +48,9 @@ export interface AppSettings {
   customTranslationPrompt: string;
   customProofreadingPrompt: string;
   outputMode: 'bilingual' | 'target_only';
+  proofreadBatchSize: number;
+  concurrencyFlash: number;
+  concurrencyPro: number;
 }
 
 // Gemini Response Schema Helper Types
