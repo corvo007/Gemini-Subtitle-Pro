@@ -69,7 +69,7 @@ You can deploy this application to various serverless platforms.
 
 The easiest way to deploy is using Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fyour-username%2Fgemini-subtitle-pro&env=GEMINI_API_KEY,OPENAI_API_KEY)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcorvo007%2Fgemini-subtitle-pro&env=GEMINI_API_KEY,OPENAI_API_KEY)
 
 1. Click the button above.
 2. Connect your GitHub repository.
@@ -103,7 +103,7 @@ Deploy as a containerized application on Google Cloud Run.
 
 Deploy with Netlify using the configured `netlify.toml`.
 
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/your-username/gemini-subtitle-pro)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/corvo007/gemini-subtitle-pro)
 
 1. Click the button above.
 2. Connect your GitHub repository.
@@ -114,7 +114,7 @@ Deploy with Netlify using the configured `netlify.toml`.
 
 Deploy as a Static Site on Render.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/your-username/gemini-subtitle-pro)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/corvo007/gemini-subtitle-pro)
 
 1. Click the button above.
 2. Render will read the `render.yaml` file.

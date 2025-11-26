@@ -30,6 +30,84 @@ async function generateContentWithRetry(ai: GoogleGenAI, params: any, retries = 
   throw new Error("Gemini API request failed after retries.");
 }
 
+async function generateContentWithLongOutput(
+  ai: GoogleGenAI,
+  modelName: string,
+  systemInstruction: string,
+  parts: any[],
+  schema: any
+): Promise<string> {
+  let fullText = "";
+
+  // Initial message structure for chat-like behavior
+  // We use an array of contents to simulate history if needed
+  let messages: any[] = [
+    { role: 'user', parts: parts }
+  ];
+
+  try {
+    // Initial generation
+    let response = await generateContentWithRetry(ai, {
+      model: modelName,
+      contents: messages,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: schema,
+        systemInstruction: systemInstruction,
+        safetySettings: SAFETY_SETTINGS,
+      }
+    });
+
+    let text = response.text || "";
+    fullText += text;
+
+    // Check for truncation (simple heuristic: JSON parse fails)
+    let attempts = 0;
+    while (attempts < 3) {
+      try {
+        // Try to parse the current full text
+        // We remove markdown code blocks first just in case
+        const clean = fullText.replace(/```json/g, '').replace(/```/g, '').trim();
+        JSON.parse(clean);
+        break; // If parse succeeds, we are done
+      } catch (e) {
+        // Parse failed, assume truncation
+        console.warn("JSON parse failed, attempting to continue generation...", e);
+
+        // Append previous response to history
+        messages.push({ role: 'model', parts: [{ text: text }] });
+        // Append continue instruction
+        messages.push({ role: 'user', parts: [{ text: "The output was truncated. Please continue the JSON array from exactly where you left off. Do not repeat the last complete segment." }] });
+
+        const continueResponse = await generateContentWithRetry(ai, {
+          model: modelName,
+          contents: messages,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: schema,
+            systemInstruction: systemInstruction,
+            safetySettings: SAFETY_SETTINGS,
+          }
+        });
+
+        const newText = continueResponse.text || "";
+        if (!newText.trim()) break;
+
+        // Append
+        const cleanNew = newText.replace(/```json/g, '').replace(/```/g, '').trim();
+        fullText += cleanNew;
+        text = newText; // Update text for next iteration's history
+        attempts++;
+      }
+    }
+  } catch (e) {
+    console.error("Long output generation failed", e);
+    throw e;
+  }
+
+  return fullText;
+}
+
 // --- SCHEMAS ---
 
 const REFINEMENT_SCHEMA = {
@@ -95,6 +173,7 @@ const getSystemInstruction = (
     5. IGNORE FILLERS: Do not transcribe stuttering or meaningless filler words (uh, um, ah, eto, ano, 呃, 那个).
     6. SPLIT LINES: STRICT RULE. If a segment is longer than 4 seconds or > 25 characters, YOU MUST SPLIT IT into shorter, natural segments.
     7. FORMAT: Return a valid JSON array.
+    8. FINAL CHECK: Before outputting, strictly verify that ALL previous rules (1-7) have been perfectly followed. Correct any remaining errors.
     
     Genre Context: ${genre}`;
   }
@@ -117,6 +196,7 @@ const getSystemInstruction = (
     2. **REMOVE FILLER WORDS**: Completely ignore stuttering, hesitation, and filler words (e.g., "uh", "um", "ah", "eto", "ano", "呃", "这个", "那个").
     3. The translation must be fluent written Chinese, not a literal transcription of broken speech.
     4. Maintain the "id" exactly.
+    5. FINAL CHECK: Before outputting, strictly verify that ALL previous rules (1-4) have been perfectly followed. Correct any remaining errors.
     ${genreContext}`;
   }
 
@@ -151,7 +231,9 @@ const getSystemInstruction = (
     7. **FLUENCY**: Ensure the Chinese translation is natural and culturally appropriate for: ${genre}.
     8. **USER COMMENTS**: If a "comment" field is present in the input for a specific line, YOU MUST ADDRESS IT. This is a manual correction request.
     9. **PRESERVATION**: If specific lines have comments, fix those. For lines WITHOUT comments, preserve them unless there is a glaring error or the batch has a global instruction.
-    10. Return valid JSON matching input structure.`;
+    10. **REDISTRIBUTE**: If you find the input text is "bunched up" or compressed into a short time while the audio continues, YOU MUST SPREAD IT OUT to match the actual speech timing.
+    11. **FINAL CHECK**: Before outputting, strictly verify that ALL previous rules (1-10) have been perfectly followed. Correct any remaining errors.
+    12. Return valid JSON matching input structure.`;
 };
 
 // --- MAIN FUNCTIONS ---
@@ -371,11 +453,13 @@ async function processBatch(
   let base64Audio = "";
   const needsAudio = mode !== 'retranslate';
 
+  let audioOffset = 0;
   if (audioBuffer && needsAudio) {
     try {
       if (startSec < endSec) {
         // Add padding to context
-        const blob = await sliceAudioBuffer(audioBuffer, Math.max(0, startSec - 1), Math.min(audioBuffer.duration, endSec + 1));
+        audioOffset = Math.max(0, startSec - 1);
+        const blob = await sliceAudioBuffer(audioBuffer, audioOffset, Math.min(audioBuffer.duration, endSec + 1));
         base64Audio = await blobToBase64(blob);
       }
     } catch (e) {
@@ -447,8 +531,10 @@ async function processBatch(
         Instructions:
         1. Listen to audio. Align "start" and "end" perfectly.
         2. **MISSED AUDIO**: If you hear speech not in text, ADD IT.
-        3. **SPLIT LONG LINES**: If a segment is > 4s or > 25 chars, SPLIT IT.
-        4. **LANGUAGE**: 'text_translated' MUST BE SIMPLIFIED CHINESE. Do not output English in this field.
+        3. **REDISTRIBUTE**: If you find the input text is "bunched up" or compressed into a short time while the audio continues, YOU MUST SPREAD IT OUT to match the actual speech timing.
+        4. **SPLIT LONG LINES**: If a segment is > 4s or > 25 chars, SPLIT IT.
+        5. **LANGUAGE**: 'text_translated' MUST BE SIMPLIFIED CHINESE. Do not output English in this field.
+        6. **FINAL CHECK**: Before outputting, strictly verify that ALL previous rules (1-5) have been perfectly followed. Correct any remaining errors.
         
         Input:
         ${JSON.stringify(payload)}
@@ -491,20 +577,45 @@ async function processBatch(
     // Fix Timestamps / Retranslate -> Gemini 2.5 Flash (Fast/Efficient)
     const model = mode === 'proofread' ? 'gemini-3-pro-preview' : 'gemini-2.5-flash';
 
-    const response = await generateContentWithRetry(ai, {
-      model: model,
-      contents: { parts: parts },
-      config: {
-        responseMimeType: "application/json",
-        systemInstruction: systemInstruction,
-        safetySettings: SAFETY_SETTINGS,
-      }
-    });
+    // Use the new Long Output handler
+    const text = await generateContentWithLongOutput(
+      ai,
+      model,
+      systemInstruction,
+      parts,
+      undefined // Schema is flexible here as we parse manually or let the model decide, but we can enforce if needed. 
+      // Actually, processBatch uses parseGeminiResponse which expects JSON. 
+      // We should probably pass a schema if we want strict JSON, but the previous code didn't use a strict schema for processBatch (it used undefined in config? No, it used config but schema was not passed in the previous call? 
+      // Wait, let me check the previous call in processBatch.
+      // It passed `systemInstruction` and `safetySettings` but NO `responseSchema` in the previous code for `processBatch` (lines 496-504).
+      // So we pass undefined for schema.
+    );
 
-    const text = response.text || "[]";
-    const processedBatch = parseGeminiResponse(text, totalVideoDuration);
+
+    let processedBatch = parseGeminiResponse(text, totalVideoDuration);
 
     if (processedBatch.length > 0) {
+      // Fix: Detect if Gemini returned relative timestamps (starting from ~0) instead of absolute
+      // This happens because we sent a sliced audio file.
+      if (audioOffset > 0) {
+        const firstStart = timeToSeconds(processedBatch[0].startTime);
+        const expectedRelativeStart = startSec - audioOffset; // Should be around 1.0s
+        const expectedAbsoluteStart = startSec;
+
+        const diffRelative = Math.abs(firstStart - expectedRelativeStart);
+        const diffAbsolute = Math.abs(firstStart - expectedAbsoluteStart);
+
+        // If the timestamp is closer to the relative start (0-based) than the absolute start,
+        // we assume it's relative and add the offset.
+        if (diffRelative < diffAbsolute) {
+          processedBatch = processedBatch.map(item => ({
+            ...item,
+            startTime: formatTime(timeToSeconds(item.startTime) + audioOffset),
+            endTime: formatTime(timeToSeconds(item.endTime) + audioOffset)
+          }));
+        }
+      }
+
       return processedBatch;
     }
   } catch (e) {
@@ -559,16 +670,45 @@ export const runBatchOperation = async (
 
   const sortedIndices = [...batchIndices].sort((a, b) => a - b);
 
-  for (let i = 0; i < sortedIndices.length; i++) {
-    const batchIdx = sortedIndices[i];
-    if (batchIdx >= chunks.length) continue;
+  // Group consecutive indices
+  const groups: number[][] = [];
+  if (sortedIndices.length > 0) {
+    let currentGroup = [sortedIndices[0]];
+    for (let i = 1; i < sortedIndices.length; i++) {
+      if (sortedIndices[i] === sortedIndices[i - 1] + 1) {
+        currentGroup.push(sortedIndices[i]);
+      } else {
+        groups.push(currentGroup);
+        currentGroup = [sortedIndices[i]];
+      }
+    }
+    groups.push(currentGroup);
+  }
 
-    const batch = chunks[batchIdx];
+  for (let i = 0; i < groups.length; i++) {
+    const group = groups[i];
+    const firstBatchIdx = group[0];
+
+    // Merge batches in the group
+    let mergedBatch: SubtitleItem[] = [];
+    let mergedComment = "";
+
+    group.forEach(idx => {
+      if (idx < chunks.length) {
+        const batch = chunks[idx];
+        mergedBatch = [...mergedBatch, ...batch];
+
+        if (batchComments[idx] && batch.length > 0) {
+          const rangeLabel = `[IDs ${batch[0].id}-${batch[batch.length - 1].id}]`;
+          mergedComment += (mergedComment ? " | " : "") + `${rangeLabel}: ${batchComments[idx]}`;
+        }
+      }
+    });
 
     // Context for timestamps
     let lastEndTime = "00:00:00,000";
-    if (batchIdx > 0) {
-      const prevChunk = chunks[batchIdx - 1];
+    if (firstBatchIdx > 0) {
+      const prevChunk = chunks[firstBatchIdx - 1];
       if (prevChunk.length > 0) {
         lastEndTime = prevChunk[prevChunk.length - 1].endTime;
       }
@@ -579,22 +719,37 @@ export const runBatchOperation = async (
     else if (mode === 'fix_timestamps') actionLabel = "Aligning";
     else actionLabel = "Translating";
 
-    onProgress?.(`${actionLabel} Segment ${batchIdx + 1} (${i + 1}/${sortedIndices.length})...`);
+    const groupLabel = group.length > 1 ? `${group[0] + 1}-${group[group.length - 1] + 1}` : `${firstBatchIdx + 1}`;
+    onProgress?.(`${actionLabel} Segments ${groupLabel} (${i + 1}/${groups.length})...`);
 
     const processed = await processBatch(
       ai,
-      batch,
+      mergedBatch,
       audioBuffer,
       lastEndTime,
       settings,
       systemInstruction,
-      `${batchIdx + 1}`,
+      groupLabel,
       audioBuffer?.duration,
       mode,
-      batchComments[batchIdx] // Pass the comment for this specific batch
+      mergedComment
     );
 
-    chunks[batchIdx] = processed;
+    // Distribute result back to chunks?
+    // Actually, we can just put everything in the first chunk and empty the others.
+    // The flat() at the end will handle it.
+    if (processed.length > 0) {
+      chunks[firstBatchIdx] = processed;
+      for (let j = 1; j < group.length; j++) {
+        chunks[group[j]] = [];
+      }
+    } else {
+      // If failed, we might want to keep original?
+      // processBatch returns original on failure usually.
+      // But if it returns empty array (which it shouldn't unless input was empty), we should be careful.
+      // processBatch implementation returns `batch` (original) on catch.
+      // So we are safe.
+    }
   }
 
   return chunks.flat().map((s, i) => ({ ...s, id: i + 1 }));
