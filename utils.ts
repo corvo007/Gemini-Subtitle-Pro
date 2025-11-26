@@ -360,15 +360,63 @@ export const downloadFile = (filename: string, content: string, format: OutputFo
   URL.revokeObjectURL(url);
 };
 
+export const extractJsonArray = (text: string): string | null => {
+  const firstBracket = text.indexOf('[');
+  if (firstBracket === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  // Start scanning from the first bracket
+  for (let i = firstBracket; i < text.length; i++) {
+    const char = text[i];
+
+    if (escape) {
+      escape = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escape = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (!inString) {
+      if (char === '[') {
+        depth++;
+      } else if (char === ']') {
+        depth--;
+        if (depth === 0) {
+          return text.substring(firstBracket, i + 1);
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
 export const parseGeminiResponse = (jsonResponse: string | null | undefined, maxDuration?: number): SubtitleItem[] => {
   if (!jsonResponse) return [];
   try {
     const cleanJson = jsonResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-    let jsonToParse = cleanJson;
-    const firstBracket = cleanJson.indexOf('[');
-    const lastBracket = cleanJson.lastIndexOf(']');
-    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
-      jsonToParse = cleanJson.substring(firstBracket, lastBracket + 1);
+
+    // Robust extraction using state machine
+    let jsonToParse = extractJsonArray(cleanJson);
+
+    // Fallback to original behavior if extraction fails
+    if (!jsonToParse) {
+      if (cleanJson.startsWith('{')) {
+        jsonToParse = cleanJson;
+      } else {
+        jsonToParse = cleanJson;
+      }
     }
 
     let items: GeminiSubtitleSchema[] = [];
@@ -376,12 +424,10 @@ export const parseGeminiResponse = (jsonResponse: string | null | undefined, max
     try {
       parsed = JSON.parse(jsonToParse);
     } catch (e) {
-      const match = cleanJson.match(/\[.*\]/s);
-      if (match) {
-        parsed = JSON.parse(match[0]);
-      } else {
-        throw e;
-      }
+      // If strict parse fails, try to find the largest valid array-like structure?
+      // Actually, extractJsonArray should have handled the "extra garbage" case.
+      // If it failed, it means the JSON is likely truly broken or truncated.
+      throw e;
     }
 
     if (Array.isArray(parsed)) {
