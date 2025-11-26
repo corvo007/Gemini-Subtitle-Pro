@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { Upload, FileVideo, Download, Trash2, Play, CheckCircle, AlertCircle, Languages, Loader2, Sparkles, Settings, X, Eye, EyeOff, MessageSquareText, AudioLines, Clapperboard, Monitor, CheckSquare, Square, RefreshCcw, Type, Clock, Wand2, FileText, RotateCcw, MessageCircle, GitCommit, ArrowLeft, Plus } from 'lucide-react';
-import { SubtitleItem, GenerationStatus, OutputFormat, AppSettings, Genre, BatchOperationMode, SubtitleSnapshot } from './types';
+import { SubtitleItem, GenerationStatus, OutputFormat, AppSettings, Genre, BatchOperationMode, SubtitleSnapshot, ChunkStatus } from './types';
 import { generateSrtContent, generateAssContent, downloadFile, parseSrt, parseAss } from './utils';
 import { generateSubtitles, runBatchOperation, PROOFREAD_BATCH_SIZE } from './gemini';
 
@@ -32,6 +32,7 @@ export default function App() {
     const [duration, setDuration] = useState<number>(0);
     const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);
     const [progressMsg, setProgressMsg] = useState('');
+    const [chunkProgress, setChunkProgress] = useState<Record<string, ChunkStatus>>({});
     const [subtitles, setSubtitles] = useState<SubtitleItem[]>([]);
     const [snapshots, setSnapshots] = useState<SubtitleSnapshot[]>([]);
 
@@ -229,13 +230,19 @@ export default function App() {
         setSnapshots([]);
         setBatchComments({});
         setSelectedBatches(new Set());
+        setChunkProgress({});
 
         try {
+            // Wait for upload/processing start
+            setStatus(GenerationStatus.PROCESSING);
+
             const result = await generateSubtitles(
                 file,
                 duration,
                 settings,
-                (msg) => setProgressMsg(msg),
+                (update) => {
+                    setChunkProgress(prev => ({ ...prev, [update.id]: update }));
+                },
                 (newSubs) => setSubtitles(newSubs)
             );
 
@@ -268,6 +275,7 @@ export default function App() {
 
         setStatus(GenerationStatus.PROOFREADING);
         setError(null);
+        setChunkProgress({});
 
         try {
             const refined = await runBatchOperation(
@@ -277,7 +285,9 @@ export default function App() {
                 settings,
                 mode,
                 batchComments,
-                (msg) => setProgressMsg(msg)
+                (update) => {
+                    setChunkProgress(prev => ({ ...prev, [update.id]: update }));
+                }
             );
             setSubtitles(refined);
             setStatus(GenerationStatus.COMPLETED);
@@ -373,33 +383,97 @@ export default function App() {
 
     // --- Render Components ---
 
+    const ProgressOverlay = () => {
+        if (!isProcessing) return null;
+
+        const chunks = (Object.values(chunkProgress) as ChunkStatus[]).sort((a, b) => {
+            // Try to sort numerically if ids are numbers
+            const idA = Number(a.id);
+            const idB = Number(b.id);
+            if (!isNaN(idA) && !isNaN(idB)) return idA - idB;
+            return String(a.id).localeCompare(String(b.id));
+        });
+
+        // Calculate total progress
+        const total = chunks.length > 0 ? chunks[0].total : 0;
+        const completed = chunks.filter(c => c.status === 'completed').length;
+        const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+        return (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-[600px] max-h-[80vh] flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-bold text-white flex items-center">
+                            {status === GenerationStatus.PROOFREADING ? <Sparkles className="w-5 h-5 mr-2 text-purple-400 animate-pulse" /> : <Loader2 className="w-5 h-5 mr-2 text-blue-400 animate-spin" />}
+                            {status === GenerationStatus.PROOFREADING ? 'Batch Processing...' : 'Generating Subtitles...'}
+                        </h3>
+                        <span className="text-2xl font-mono font-bold text-slate-200">{percent}%</span>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar bg-slate-950/50 p-4 rounded-lg border border-slate-800">
+                        {chunks.length === 0 && (
+                            <div className="text-center text-slate-500 py-8">Initializing...</div>
+                        )}
+                        {chunks.map(chunk => (
+                            <div key={chunk.id} className="flex items-center justify-between bg-slate-800/80 p-3 rounded-lg border border-slate-700/50 hover:border-slate-600 transition-colors">
+                                <div className="flex items-center space-x-3 min-w-[120px]">
+                                    <div className={`w-2 h-2 rounded-full ${chunk.status === 'completed' ? 'bg-emerald-500' :
+                                        chunk.status === 'error' ? 'bg-red-500' :
+                                            'bg-blue-500 animate-pulse'
+                                        }`} />
+                                    <span className="text-slate-300 font-mono text-sm font-medium">
+                                        {typeof chunk.id === 'number' ? `Chunk ${chunk.id}` : chunk.id}
+                                    </span>
+                                </div>
+
+                                <div className="flex-1 flex items-center justify-end space-x-4">
+                                    <span className={`text-xs font-medium px-2 py-1 rounded-md ${chunk.stage === 'transcribing' ? 'bg-orange-500/10 text-orange-400' :
+                                        chunk.stage === 'refining' ? 'bg-purple-500/10 text-purple-400' :
+                                            chunk.stage === 'translating' ? 'bg-blue-500/10 text-blue-400' :
+                                                'text-slate-400'
+                                        }`}>
+                                        {chunk.message || chunk.status}
+                                    </span>
+                                    {chunk.status === 'processing' && <Loader2 className="w-3 h-3 animate-spin text-slate-500" />}
+                                    {chunk.status === 'completed' && <CheckCircle className="w-3 h-3 text-emerald-500" />}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-6">
+                        <div className="flex justify-between text-xs text-slate-400 mb-2 font-medium">
+                            <span>Progress</span>
+                            <span>{completed}/{total} Completed</span>
+                        </div>
+                        <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700/50">
+                            <div
+                                className={`h-full transition-all duration-500 ease-out ${status === GenerationStatus.PROOFREADING ? 'bg-purple-500' : 'bg-blue-500'}`}
+                                style={{ width: `${percent}%` }}
+                            ></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const StatusBadge = () => {
         switch (status) {
             case GenerationStatus.PROCESSING:
             case GenerationStatus.UPLOADING:
-                return (
-                    <div className="flex items-center space-x-2 text-blue-400 bg-blue-400/10 px-4 py-2 rounded-full animate-pulse">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-sm font-medium">{progressMsg || 'Processing...'}</span>
-                    </div>
-                );
             case GenerationStatus.PROOFREADING:
-                return (
-                    <div className="flex items-center space-x-2 text-purple-400 bg-purple-400/10 px-4 py-2 rounded-full animate-pulse">
-                        <Sparkles className="w-4 h-4 animate-spin" />
-                        <span className="text-sm font-medium">{progressMsg || 'Polishing...'}</span>
-                    </div>
-                );
+                return null;
             case GenerationStatus.COMPLETED:
                 return (
-                    <div className="flex items-center space-x-2 text-emerald-400 bg-emerald-400/10 px-4 py-2 rounded-full">
+                    <div className="flex items-center space-x-2 text-emerald-400 bg-emerald-400/10 px-4 py-2 rounded-full border border-emerald-500/20">
                         <CheckCircle className="w-4 h-4" />
                         <span className="text-sm font-medium">Complete</span>
                     </div>
                 );
             case GenerationStatus.ERROR:
                 return (
-                    <div className="flex items-center space-x-2 text-red-400 bg-red-400/10 px-4 py-2 rounded-full">
+                    <div className="flex items-center space-x-2 text-red-400 bg-red-400/10 px-4 py-2 rounded-full border border-red-500/20">
                         <AlertCircle className="w-4 h-4" />
                         <span className="text-sm font-medium">Error</span>
                     </div>
@@ -612,8 +686,6 @@ export default function App() {
         );
     };
 
-    // --- Main Views ---
-
     const renderHome = () => (
         <div className="min-h-screen bg-slate-950 flex flex-col p-4 md:p-8">
             <header className="flex justify-between items-center mb-12">
@@ -817,13 +889,13 @@ export default function App() {
                                 onClick={handleGenerate}
                                 disabled={isProcessing || !file}
                                 className={`
-                        w-full py-3 px-4 rounded-xl font-semibold text-white shadow-lg transition-all
-                        flex items-center justify-center space-x-2
-                        ${isProcessing || !file
+                            w-full py-3 px-4 rounded-xl font-semibold text-white shadow-lg transition-all
+                            flex items-center justify-center space-x-2
+                            ${isProcessing || !file
                                         ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                                         : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-indigo-500/25 hover:shadow-indigo-500/40 cursor-pointer'
                                     }
-                    `}
+                        `}
                             >
                                 {isProcessing ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -916,6 +988,9 @@ export default function App() {
                     </div>
                 </div>
             </div>
+
+            {/* Progress Overlay */}
+            <ProgressOverlay />
         </div>
     );
 

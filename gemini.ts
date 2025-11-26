@@ -1,11 +1,17 @@
 
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import { parseGeminiResponse, formatTime, decodeAudio, sliceAudioBuffer, transcribeAudio, timeToSeconds, blobToBase64, extractJsonArray } from "./utils";
-import { SubtitleItem, AppSettings, Genre, BatchOperationMode } from "./types";
+import { parseGeminiResponse, formatTime, decodeAudio, sliceAudioBuffer, transcribeAudio, timeToSeconds, blobToBase64, extractJsonArray, mapInParallel } from "./utils";
+import { SubtitleItem, AppSettings, Genre, BatchOperationMode, ChunkStatus } from "./types";
 
 export const PROOFREAD_BATCH_SIZE = 20;
 const TRANSLATION_BATCH_SIZE = 20; // Reduced from 20 to improve stability
 const PROCESSING_CHUNK_DURATION = 300; // 5 minutes chunk
+
+// --- CONFIGURATION ---
+export const CONCURRENCY_LIMITS = {
+  FLASH: 5, // High concurrency for Gemini 2.5 Flash (Generation, Fix Time, Retranslate)
+  PRO: 2    // Low concurrency for Gemini 3 Pro (Proofreading)
+};
 
 // --- RATE LIMIT HELPER ---
 
@@ -255,7 +261,7 @@ export const generateSubtitles = async (
   file: File,
   duration: number,
   settings: AppSettings,
-  onProgress?: (msg: string) => void,
+  onProgress?: (update: ChunkStatus) => void,
   onIntermediateResult?: (subs: SubtitleItem[]) => void
 ): Promise<SubtitleItem[]> => {
 
@@ -268,45 +274,57 @@ export const generateSubtitles = async (
   const ai = new GoogleGenAI({ apiKey: geminiKey });
 
   // 1. Decode Audio
-  onProgress?.("Decoding audio track...");
+  onProgress?.({ id: 'init', total: 0, status: 'processing', message: "Decoding audio track..." });
   let audioBuffer: AudioBuffer;
   try {
     audioBuffer = await decodeAudio(file);
-    onProgress?.(`Audio decoded. Duration: ${formatTime(audioBuffer.duration)}`);
+    onProgress?.({ id: 'init', total: 0, status: 'completed', message: `Audio decoded. Duration: ${formatTime(audioBuffer.duration)}` });
   } catch (e) {
     throw new Error("Failed to decode audio. Please ensure the file is a valid video/audio format.");
   }
 
   const totalDuration = audioBuffer.duration;
-  let cursor = 0;
-  let chunkIndex = 1;
   const totalChunks = Math.ceil(totalDuration / PROCESSING_CHUNK_DURATION);
-  let allSubtitles: SubtitleItem[] = [];
-  let globalIdCounter = 1;
 
-  // 2. Pipeline Loop
-  while (cursor < totalDuration) {
+  // Prepare chunks
+  const chunksParams = [];
+  let cursor = 0;
+  for (let i = 0; i < totalChunks; i++) {
     const end = Math.min(cursor + PROCESSING_CHUNK_DURATION, totalDuration);
-    onProgress?.(`Processing Chunk ${chunkIndex}/${totalChunks} (${formatTime(cursor)} - ${formatTime(end)})...`);
+    chunksParams.push({
+      index: i + 1,
+      start: cursor,
+      end: end
+    });
+    cursor += PROCESSING_CHUNK_DURATION;
+  }
+
+  const chunkResults: SubtitleItem[][] = new Array(chunksParams.length).fill([]);
+
+  // Parallel Execution (Concurrency: Flash Limit)
+  await mapInParallel(chunksParams, CONCURRENCY_LIMITS.FLASH, async (chunk, i) => {
+    const { index, start, end } = chunk;
+
+    onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'transcribing', message: 'Transcribing...' });
 
     // A. Slice Audio
-    const wavBlob = await sliceAudioBuffer(audioBuffer, cursor, end);
+    const wavBlob = await sliceAudioBuffer(audioBuffer, start, end);
     const base64Audio = await blobToBase64(wavBlob);
 
     // B. Step 1: OpenAI Transcription
-    onProgress?.(`[Chunk ${chunkIndex}] 1/3 Transcribing (${settings.transcriptionModel})...`);
+    // onProgress?.(`[Chunk ${index}] 1/3 Transcribing...`); // Too noisy in parallel
     let rawSegments: SubtitleItem[] = [];
     try {
       rawSegments = await transcribeAudio(wavBlob, openaiKey, settings.transcriptionModel);
     } catch (e: any) {
-      console.warn(`Transcription warning on chunk ${chunkIndex}: ${e.message}`);
-      throw new Error(`Transcription failed on chunk ${chunkIndex}: ${e.message}`);
+      console.warn(`Transcription warning on chunk ${index}: ${e.message}`);
+      throw new Error(`Transcription failed on chunk ${index}: ${e.message}`);
     }
 
     // C. Step 2: Gemini Refine (2.5 Flash)
     let refinedSegments: SubtitleItem[] = [];
     if (rawSegments.length > 0) {
-      onProgress?.(`[Chunk ${chunkIndex}] 2/3 Refining (Audio-Grounded)...`);
+      onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'refining', message: 'Refining...' });
 
       const refineSystemInstruction = getSystemInstruction(settings.genre, undefined, 'refinement');
       const refinePrompt = `
@@ -337,7 +355,7 @@ export const generateSubtitles = async (
           refinedSegments = [...rawSegments];
         }
       } catch (e) {
-        console.error(`Refinement failed for chunk ${chunkIndex}, falling back to raw.`, e);
+        console.error(`Refinement failed for chunk ${index}, falling back to raw.`, e);
         refinedSegments = [...rawSegments];
       }
     }
@@ -345,7 +363,7 @@ export const generateSubtitles = async (
     // D. Step 3: Gemini Translate (2.5 Flash)
     let finalChunkSubs: SubtitleItem[] = [];
     if (refinedSegments.length > 0) {
-      onProgress?.(`[Chunk ${chunkIndex}] 3/3 Translating (Text-Only)...`);
+      onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'translating', message: 'Translating...' });
 
       const toTranslate = refinedSegments.map((seg, idx) => ({
         id: idx + 1,
@@ -355,34 +373,40 @@ export const generateSubtitles = async (
       }));
 
       const translateSystemInstruction = getSystemInstruction(settings.genre, settings.customTranslationPrompt, 'translation');
+      // translateBatch is also parallelized now
       const translatedItems = await translateBatch(ai, toTranslate, translateSystemInstruction);
 
       finalChunkSubs = translatedItems.map(item => ({
-        id: globalIdCounter++,
-        startTime: formatTime(timeToSeconds(item.start) + cursor),
-        endTime: formatTime(timeToSeconds(item.end) + cursor),
+        id: 0, // Placeholder, will re-index later
+        startTime: formatTime(timeToSeconds(item.start) + start),
+        endTime: formatTime(timeToSeconds(item.end) + start),
         original: item.original,
         translated: item.translated
       }));
     }
 
-    allSubtitles = [...allSubtitles, ...finalChunkSubs];
-    onIntermediateResult?.(allSubtitles);
+    chunkResults[i] = finalChunkSubs;
 
-    cursor += PROCESSING_CHUNK_DURATION;
-    chunkIndex++;
-  }
+    // Update Intermediate Result
+    // We flatten and re-index everything so far
+    const currentAll = chunkResults.flat().map((s, idx) => ({ ...s, id: idx + 1 }));
+    onIntermediateResult?.(currentAll);
 
-  return allSubtitles;
+    onProgress?.({ id: index, total: totalChunks, status: 'completed', message: 'Done' });
+  });
+
+  return chunkResults.flat().map((s, idx) => ({ ...s, id: idx + 1 }));
 };
 
 // --- HELPERS ---
 
 async function translateBatch(ai: GoogleGenAI, items: any[], systemInstruction: string): Promise<any[]> {
-  const result: any[] = [];
-
+  const batches: any[][] = [];
   for (let i = 0; i < items.length; i += TRANSLATION_BATCH_SIZE) {
-    const batch = items.slice(i, i + TRANSLATION_BATCH_SIZE);
+    batches.push(items.slice(i, i + TRANSLATION_BATCH_SIZE));
+  }
+
+  const batchResults = await mapInParallel(batches, CONCURRENCY_LIMITS.FLASH, async (batch) => {
     const payload = batch.map(item => ({ id: item.id, text: item.original }));
 
     const prompt = `Task: Translate the following ${batch.length} items to Simplified Chinese.
@@ -420,25 +444,21 @@ async function translateBatch(ai: GoogleGenAI, items: any[], systemInstruction: 
 
       const transMap = new Map(translatedData.map((t: any) => [t.id, t.text_translated]));
 
-      batch.forEach(item => {
+      return batch.map(item => {
         const translatedText = transMap.get(item.id);
-        // Fallback: If translation is missing or empty, use original text.
-        // This prevents empty subtitles in the final output.
-        result.push({
+        return {
           ...item,
           translated: (translatedText && translatedText.trim().length > 0) ? translatedText : item.original
-        });
+        };
       });
 
     } catch (e) {
       console.error("Translation batch failed", e);
-      // Fallback: Use original text on API failure
-      batch.forEach(item => {
-        result.push({ ...item, translated: item.original });
-      });
+      return batch.map(item => ({ ...item, translated: item.original }));
     }
-  }
-  return result;
+  });
+
+  return batchResults.flat();
 }
 
 // --- CORE BATCH PROCESSING LOGIC ---
@@ -647,7 +667,7 @@ export const runBatchOperation = async (
   settings: AppSettings,
   mode: BatchOperationMode,
   batchComments: Record<number, string> = {}, // Pass map of batch index -> comment
-  onProgress?: (msg: string) => void
+  onProgress?: (update: ChunkStatus) => void
 ): Promise<SubtitleItem[]> => {
   const geminiKey = settings.geminiKey?.trim() || process.env.API_KEY || process.env.GEMINI_API_KEY;
   if (!geminiKey) throw new Error("API Key is missing.");
@@ -658,7 +678,7 @@ export const runBatchOperation = async (
   // but processBatch logic for retranslate ignores audio anyway. 
   // However, Proofread and Fix Timestamps need it.
   if (mode !== 'retranslate' && file) {
-    onProgress?.("Loading audio for context...");
+    onProgress?.({ id: 'init', total: 0, status: 'processing', message: "Loading audio..." });
     try {
       audioBuffer = await decodeAudio(file);
     } catch (e) {
@@ -709,8 +729,12 @@ export const runBatchOperation = async (
     }
   }
 
-  for (let i = 0; i < groups.length; i++) {
-    const group = groups[i];
+  // Determine concurrency based on mode
+  // Proofread uses Gemini 3 Pro (Low RPM) -> Concurrency PRO
+  // Others use Gemini 2.5 Flash (High RPM) -> Concurrency FLASH
+  const concurrency = mode === 'proofread' ? CONCURRENCY_LIMITS.PRO : CONCURRENCY_LIMITS.FLASH;
+
+  await mapInParallel(groups, concurrency, async (group, i) => {
     const firstBatchIdx = group[0];
 
     // Merge batches in the group
@@ -744,7 +768,7 @@ export const runBatchOperation = async (
     else actionLabel = "Translating";
 
     const groupLabel = group.length > 1 ? `${group[0] + 1}-${group[group.length - 1] + 1}` : `${firstBatchIdx + 1}`;
-    onProgress?.(`${actionLabel} Segments ${groupLabel} (${i + 1}/${groups.length})...`);
+    onProgress?.({ id: groupLabel, total: groups.length, status: 'processing', message: `${actionLabel}...` });
 
     const processed = await processBatch(
       ai,
@@ -759,22 +783,14 @@ export const runBatchOperation = async (
       mergedComment
     );
 
-    // Distribute result back to chunks?
-    // Actually, we can just put everything in the first chunk and empty the others.
-    // The flat() at the end will handle it.
     if (processed.length > 0) {
       chunks[firstBatchIdx] = processed;
       for (let j = 1; j < group.length; j++) {
         chunks[group[j]] = [];
       }
-    } else {
-      // If failed, we might want to keep original?
-      // processBatch returns original on failure usually.
-      // But if it returns empty array (which it shouldn't unless input was empty), we should be careful.
-      // processBatch implementation returns `batch` (original) on catch.
-      // So we are safe.
     }
-  }
+    onProgress?.({ id: groupLabel, total: groups.length, status: 'completed', message: 'Done' });
+  });
 
   return chunks.flat().map((s, i) => ({ ...s, id: i + 1 }));
 };

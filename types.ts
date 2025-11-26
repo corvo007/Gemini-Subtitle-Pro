@@ -25,6 +25,14 @@ export enum GenerationStatus {
   ERROR = 'error',
 }
 
+export interface ChunkStatus {
+  id: number | string;
+  total: number;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  stage?: 'transcribing' | 'refining' | 'translating';
+  message?: string;
+}
+
 export type OutputFormat = 'srt' | 'ass';
 
 export type BatchOperationMode = 'fix_timestamps' | 'retranslate' | 'proofread';
