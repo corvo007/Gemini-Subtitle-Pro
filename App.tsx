@@ -409,7 +409,10 @@ export default function App() {
                             <div className="divide-y divide-slate-800/50">
                                 {chunk.map((sub) => (
                                     <div key={sub.id} className="p-3 hover:bg-slate-800/30 transition-colors flex items-start space-x-4 group/row">
-                                        <div className="text-[10px] font-mono text-slate-600 min-w-[50px] pt-2">{(sub.startTime || '').split(',')[0]}</div>
+                                        <div className="flex flex-col text-sm font-mono text-slate-400 min-w-[85px] pt-1">
+                                            <span className="leading-tight">{(sub.startTime || '').split(',')[0]}</span>
+                                            <span className="leading-tight opacity-70">{(sub.endTime || '').split(',')[0]}</span>
+                                        </div>
                                         <div className="flex-1 space-y-1">
                                             {showSourceText && <p className="text-sm text-slate-400 leading-relaxed opacity-70 mb-1">{sub.original}</p>}
                                             <p className="text-lg text-indigo-300 leading-relaxed font-medium">{sub.translated}</p>
