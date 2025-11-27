@@ -164,8 +164,8 @@ export const generateSubtitles = async (
   onIntermediateResult?: (subs: SubtitleItem[]) => void
 ): Promise<SubtitleItem[]> => {
 
-  const geminiKey = settings.geminiKey?.trim() || process.env.API_KEY || process.env.GEMINI_API_KEY;
-  const openaiKey = settings.openaiKey?.trim() || process.env.OPENAI_API_KEY;
+  const geminiKey = (typeof window !== 'undefined' ? (window as any).env?.GEMINI_API_KEY : undefined) || settings.geminiKey?.trim() || process.env.API_KEY || process.env.GEMINI_API_KEY;
+  const openaiKey = (typeof window !== 'undefined' ? (window as any).env?.OPENAI_API_KEY : undefined) || settings.openaiKey?.trim() || process.env.OPENAI_API_KEY;
 
   if (!geminiKey) throw new Error("Gemini API Key is missing.");
   if (!openaiKey) throw new Error("OpenAI API Key is missing.");
@@ -565,7 +565,7 @@ export const runBatchOperation = async (
   batchComments: Record<number, string> = {}, // Pass map of batch index -> comment
   onProgress?: (update: ChunkStatus) => void
 ): Promise<SubtitleItem[]> => {
-  const geminiKey = settings.geminiKey?.trim() || process.env.API_KEY || process.env.GEMINI_API_KEY;
+  const geminiKey = (typeof window !== 'undefined' ? (window as any).env?.GEMINI_API_KEY : undefined) || settings.geminiKey?.trim() || process.env.API_KEY || process.env.GEMINI_API_KEY;
   if (!geminiKey) throw new Error("API Key is missing.");
   const ai = new GoogleGenAI({ apiKey: geminiKey });
 
