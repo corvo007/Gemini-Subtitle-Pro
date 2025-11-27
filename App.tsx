@@ -7,8 +7,8 @@ import { generateSubtitles, runBatchOperation } from './gemini';
 
 const SETTINGS_KEY = 'gemini_subtitle_settings';
 
-const ENV_GEMINI_KEY = process.env.API_KEY || process.env.GEMINI_API_KEY || '';
-const ENV_OPENAI_KEY = process.env.OPENAI_API_KEY || '';
+const ENV_GEMINI_KEY = (window as any).env?.GEMINI_API_KEY || process.env.API_KEY || process.env.GEMINI_API_KEY || '';
+const ENV_OPENAI_KEY = (window as any).env?.OPENAI_API_KEY || process.env.OPENAI_API_KEY || '';
 
 const DEFAULT_SETTINGS: AppSettings = {
     geminiKey: '',
