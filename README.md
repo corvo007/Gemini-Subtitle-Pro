@@ -11,7 +11,7 @@
 ### Core AI Features
 - **🤖 AI Transcription**: Transcribe video/audio using OpenAI Whisper (via API)
 - **🌍 Smart Translation**: Translate subtitles to Simplified Chinese using Gemini 2.5 Flash
-- **🧐 Deep Proofreading**: Polish and correct subtitles with Gemini 2.0 Flash or Gemini 2.0 Pro, ensuring natural and accurate phrasing
+- **🧐 Deep Proofreading**: Polish and correct subtitles with Gemini 2.5 Flash or Gemini 3.0 Pro, ensuring natural and accurate phrasing
 - **🎯 Smart Segmentation**: Intelligent audio segmentation using Silero VAD for optimal subtitle timing
 
 ### Quality Control Pipeline ⚠️ WIP
@@ -44,7 +44,7 @@
 - **Frontend**: [React 19](https://react.dev/), [Vite](https://vitejs.dev/), [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: Vanilla CSS with modern design patterns
 - **AI Integration**:
-    - [Google GenAI SDK](https://www.npmjs.com/package/@google/genai) (Gemini 2.0 Flash, Gemini 2.0 Pro)
+    - [Google GenAI SDK](https://www.npmjs.com/package/@google/genai) (Gemini 2.5 Flash, Gemini 3.0 Pro)
     - [OpenAI API](https://www.npmjs.com/package/openai) (Whisper-1, GPT-4o series for QC)
 - **Audio Processing**:
     - [@ricky0123/vad-web](https://www.npmjs.com/package/@ricky0123/vad-web) (Silero VAD for smart segmentation)
