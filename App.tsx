@@ -243,10 +243,10 @@ export default function App() {
             setError("API Keys are missing. Please configure them in Settings."); setShowSettings(true); return;
         }
         setStatus(GenerationStatus.UPLOADING); setError(null); setSubtitles([]); setSnapshots([]); setBatchComments({}); setSelectedBatches(new Set()); setChunkProgress({}); setStartTime(Date.now());
-        logger.info("Starting subtitle generation", { file: file.name, duration, settings: { ...settings, geminiKey: '***', openaiKey: '***' } });
+        logger.info("Starting subtitle generation", { file: file.name, duration, settings: { ...settings, geminiKey: '***', openaiKey: '***', useSmartSplit } });
         try {
             setStatus(GenerationStatus.PROCESSING);
-            const result = await generateSubtitles(file, duration, settings, (update) => { setChunkProgress(prev => ({ ...prev, [update.id]: update })); }, (newSubs) => setSubtitles(newSubs));
+            const result = await generateSubtitles(file, duration, { ...settings, useSmartSplit }, (update) => { setChunkProgress(prev => ({ ...prev, [update.id]: update })); }, (newSubs) => setSubtitles(newSubs));
             if (result.length === 0) throw new Error("No subtitles were generated.");
             setSubtitles(result); setStatus(GenerationStatus.COMPLETED); createSnapshot("Initial Generation", result);
             logger.info("Subtitle generation completed", { count: result.length });
