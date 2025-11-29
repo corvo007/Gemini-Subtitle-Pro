@@ -14,19 +14,14 @@
 - **🧐 Deep Proofreading**: Polish and correct subtitles with Gemini 2.5 Flash or Gemini 3.0 Pro, ensuring natural and accurate phrasing
 - **🎯 Smart Segmentation**: Intelligent audio segmentation using Silero VAD for optimal subtitle timing
 
-### Quality Control Pipeline ⚠️ WIP
-> [!NOTE]
-> This feature is currently under development and not yet fully functional.
-
-- **🔍 Automated QC**: Three-stage Review→Fix→Validate pipeline with configurable iterations
-- **📊 Quality Metrics**: Acceptance criteria based on issue severity and rate per minute
-- **🎭 Genre-Aware**: Tailored prompts for different content genres (documentary, drama, technical, etc.)
-- **🔄 Iterative Refinement**: Automatic iteration until quality standards are met
-
 ### Terminology Management
 - **📚 Custom Glossary**: Maintain project-specific terminology and translations
 - **✅ Consistency Checking**: Automatic detection of terminology inconsistencies
 - **🔄 AI-Generated Terms**: Generate glossary suggestions from source content
+- **📤 Import/Export**: Easily share and backup your glossaries
+
+### Performance
+- **⚡ VAD Worker**: Off-main-thread audio processing for smooth UI performance
 
 ### Batch Operations
 - **⏱️ Fix Timestamps**: Automatically align subtitle timestamps with audio using AI

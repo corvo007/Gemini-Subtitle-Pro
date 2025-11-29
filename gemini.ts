@@ -1,8 +1,9 @@
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold, Content, Part } from "@google/genai";
 import { ConsistencyIssue } from "./consistencyValidation";
 import { parseGeminiResponse, formatTime, decodeAudio, sliceAudioBuffer, transcribeAudio, timeToSeconds, blobToBase64, extractJsonArray, mapInParallel, logger } from "./utils";
-import { SubtitleItem, AppSettings, BatchOperationMode, ChunkStatus, GlossaryItem } from "./types";
-import { getSystemInstruction } from "./prompts";
+import { SubtitleItem, AppSettings, BatchOperationMode, ChunkStatus, GlossaryItem, GlossaryExtractionResult, GlossaryExtractionMetadata } from "./types";
+import { getSystemInstruction, GLOSSARY_EXTRACTION_PROMPT } from "./prompts";
+import { selectChunksByDuration } from "./glossaryUtils";
 import { SmartSegmenter } from "./smartSegmentation";
 
 export const PROOFREAD_BATCH_SIZE = 20; // Default fallback
@@ -13,9 +14,25 @@ async function generateContentWithRetry(ai: GoogleGenAI, params: any, retries = 
   for (let i = 0; i < retries; i++) {
     try {
       const result = await ai.models.generateContent(params);
+
+      // Log token usage
       if ((result as any).usageMetadata) {
         logger.debug("Gemini Token Usage", (result as any).usageMetadata);
       }
+
+      // Log grounding metadata (Search Grounding verification)
+      const candidates = (result as any).candidates;
+      if (candidates && candidates[0]?.groundingMetadata) {
+        const groundingMeta = candidates[0].groundingMetadata;
+        logger.info("🔍 Search Grounding Used", {
+          searchQueries: groundingMeta.searchQueries || [],
+          groundingSupports: groundingMeta.groundingSupports?.length || 0,
+          webSearchQueries: groundingMeta.webSearchQueries?.length || 0
+        });
+      } else if (params.tools && params.tools.some((t: any) => t.googleSearch)) {
+        logger.warn("⚠️ Search Grounding was configured but NOT used in this response");
+      }
+
       return result;
     } catch (e: any) {
       // Check for 429 (Resource Exhausted) or 503 (Service Unavailable)
@@ -34,12 +51,29 @@ async function generateContentWithRetry(ai: GoogleGenAI, params: any, retries = 
   throw new Error("Gemini API request failed after retries.");
 }
 
+async function decodeAudioWithRetry(file: File, retries = 3): Promise<AudioBuffer> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await decodeAudio(file);
+    } catch (e: any) {
+      if (i < retries - 1) {
+        logger.warn(`Audio decoding failed. Retrying...`, { attempt: i + 1, error: e.message });
+        await new Promise(r => setTimeout(r, 1000));
+      } else {
+        throw e;
+      }
+    }
+  }
+  throw new Error("Audio decoding failed after retries.");
+}
+
 async function generateContentWithLongOutput(
   ai: GoogleGenAI,
   modelName: string,
   systemInstruction: string,
   parts: Part[],
-  schema: any
+  schema: any,
+  tools?: any[]
 ): Promise<string> {
   let fullText = "";
 
@@ -61,6 +95,7 @@ async function generateContentWithLongOutput(
         systemInstruction: systemInstruction,
         safetySettings: SAFETY_SETTINGS,
         maxOutputTokens: 65536,
+        tools: tools, // Pass tools for Search Grounding
       }
     });
 
@@ -171,12 +206,222 @@ const BATCH_SCHEMA = {
   },
 };
 
+const GLOSSARY_SCHEMA = {
+  type: Type.ARRAY,
+  items: {
+    type: Type.OBJECT,
+    properties: {
+      term: { type: Type.STRING, description: "Original term from the audio" },
+      translation: { type: Type.STRING, description: "Simplified Chinese translation" },
+      notes: { type: Type.STRING, description: "Optional notes for pronunciation or context" },
+    },
+    required: ["term", "translation"],
+  },
+};
+
 const SAFETY_SETTINGS = [
   { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
   { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
   { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
   { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
 ];
+
+// --- ERROR CLASSIFICATION HELPER ---
+
+/**
+ * Determines if an error should trigger a retry attempt.
+ * Returns true for transient errors (network, server, parsing), false for permanent errors (auth, quota).
+ */
+function isRetryableError(error: any): boolean {
+  // Network errors (transient)
+  if (error.message?.includes('network') || error.message?.includes('timeout') || error.message?.includes('fetch')) {
+    return true;
+  }
+
+  // JSON parsing errors (might be transient response corruption)
+  if (error instanceof SyntaxError || error.name === 'SyntaxError') {
+    return true;
+  }
+
+  // 5xx server errors (transient)
+  if (error.status >= 500 && error.status < 600) {
+    return true;
+  }
+
+  // 429 and 503 are already handled by generateContentWithRetry, but include here for completeness
+  if (error.status === 429 || error.status === 503) {
+    return true;
+  }
+
+  // 4xx client errors (permanent - auth, quota, bad request)
+  if (error.status >= 400 && error.status < 500) {
+    return false;
+  }
+
+  // Unknown errors - conservatively treat as retryable
+  return true;
+}
+
+// --- GLOSSARY EXTRACTION ---
+
+export const extractGlossaryFromAudio = async (
+  ai: GoogleGenAI,
+  audioBuffer: AudioBuffer,
+  chunks: { index: number; start: number; end: number }[],
+  genre: string,
+  concurrency: number,
+  onProgress?: (completed: number, total: number) => void
+): Promise<GlossaryExtractionResult[]> => {
+  logger.info(`Starting glossary extraction on ${chunks.length} chunks...`);
+
+  // Track failed chunks for aggregated retry
+  const failedChunks: { index: number; start: number; end: number }[] = [];
+  let completed = 0;
+
+  // Helper function to extract a single chunk with retry
+  const extractSingleChunk = async (
+    chunk: { index: number; start: number; end: number },
+    attemptNumber: number = 1
+  ): Promise<GlossaryExtractionResult> => {
+    const { index, start, end } = chunk;
+
+    try {
+      const wavBlob = await sliceAudioBuffer(audioBuffer, start, end);
+      const base64Audio = await blobToBase64(wavBlob);
+      const prompt = GLOSSARY_EXTRACTION_PROMPT(genre);
+
+      const response = await generateContentWithRetry(ai, {
+        model: 'gemini-3-pro-preview',
+        contents: {
+          parts: [
+            { inlineData: { mimeType: "audio/wav", data: base64Audio } },
+            { text: prompt }
+          ]
+        },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: GLOSSARY_SCHEMA,
+          safetySettings: SAFETY_SETTINGS,
+          maxOutputTokens: 65536,
+          tools: [{ googleSearch: {} }],
+        }
+      });
+
+      const text = response.text || "[]";
+      const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const terms = JSON.parse(clean);
+
+      const termCount = Array.isArray(terms) ? terms.length : 0;
+      logger.info(`[Chunk ${index}] Extracted ${termCount} terms (Attempt ${attemptNumber})`);
+
+      return {
+        terms: Array.isArray(terms) ? terms : [],
+        source: 'chunk',
+        chunkIndex: index,
+        confidence: 'high'
+      } as GlossaryExtractionResult;
+
+    } catch (e: any) {
+      const isRetryable = isRetryableError(e);
+
+      // Retry logic: attempt up to 3 times total
+      if (isRetryable && attemptNumber < 3) {
+        const delay = Math.pow(2, attemptNumber) * 1000 + Math.random() * 500;
+        logger.warn(
+          `[Chunk ${index}] Extraction failed (${e.message}). Retrying in ${Math.round(delay)}ms... (Attempt ${attemptNumber + 1}/3)`,
+          { error: e.message, status: e.status }
+        );
+        await new Promise(r => setTimeout(r, delay));
+        return extractSingleChunk(chunk, attemptNumber + 1);
+      } else {
+        // All retries exhausted or non-retryable error
+        const reason = isRetryable ? `after ${attemptNumber} attempts` : '(non-retryable error)';
+        logger.error(`[Chunk ${index}] Extraction failed ${reason}`, { error: e.message, status: e.status });
+        throw e;
+      }
+    }
+  };
+
+  // ===== FIRST PASS: Process all chunks with chunk-level retry =====
+  const results = await mapInParallel(chunks, concurrency, async (chunk) => {
+    try {
+      const result = await extractSingleChunk(chunk, 1);
+      completed++;
+      onProgress?.(completed, chunks.length);
+      return result;
+
+    } catch (e) {
+      // Record failed chunk for aggregated retry
+      failedChunks.push(chunk);
+      completed++;
+      onProgress?.(completed, chunks.length);
+
+      return {
+        terms: [],
+        source: 'chunk',
+        chunkIndex: chunk.index,
+        confidence: 'low'
+      } as GlossaryExtractionResult;
+    }
+  });
+
+  // ===== SECOND PASS: Aggregated retry for failed chunks =====
+  if (failedChunks.length > 0) {
+    logger.warn(`First pass complete. ${failedChunks.length}/${chunks.length} chunks failed. Starting aggregated retry pass...`);
+
+    // Use lower concurrency to reduce load and improve success rate
+    const retryConcurrency = Math.max(1, Math.floor(concurrency / 2));
+
+    await mapInParallel(failedChunks, retryConcurrency, async (failedChunk) => {
+      try {
+        logger.info(`[Chunk ${failedChunk.index}] Retry attempt (aggregated pass)`);
+        const result = await extractSingleChunk(failedChunk, 1);
+
+        // Update result in the results array
+        const resultIndex = results.findIndex(r => r.chunkIndex === failedChunk.index);
+        if (resultIndex !== -1) {
+          results[resultIndex] = result;
+        }
+        logger.info(`[Chunk ${failedChunk.index}] Aggregated retry succeeded!`);
+
+      } catch (e: any) {
+        logger.error(`[Chunk ${failedChunk.index}] Aggregated retry failed`, { error: e.message, status: e.status });
+      }
+    });
+  }
+
+  // ===== FINAL STATISTICS =====
+  const successCount = results.filter(r => r.confidence === 'high').length;
+  const failCount = results.filter(r => r.confidence === 'low' && r.terms.length === 0).length;
+  const totalTerms = results.reduce((sum, r) => sum + r.terms.length, 0);
+
+  logger.info(
+    `Glossary extraction complete. Success: ${successCount}/${chunks.length}, Failed: ${failCount}/${chunks.length}, Total terms: ${totalTerms}`
+  );
+
+  return results;
+};
+
+export const retryGlossaryExtraction = async (
+  apiKey: string,
+  audioBuffer: AudioBuffer,
+  chunks: { index: number; start: number; end: number }[],
+  genre: string,
+  concurrency: number
+): Promise<GlossaryExtractionMetadata> => {
+  const ai = new GoogleGenAI({ apiKey });
+  const results = await extractGlossaryFromAudio(ai, audioBuffer, chunks, genre, concurrency);
+
+  const totalTerms = results.reduce((sum, r) => sum + r.terms.length, 0);
+  const hasFailures = results.some(r => r.confidence === 'low' && r.terms.length === 0);
+
+  return {
+    results,
+    totalTerms,
+    hasFailures,
+    glossaryChunks: chunks
+  };
+};
 
 // --- MAIN FUNCTIONS ---
 
@@ -185,8 +430,9 @@ export const generateSubtitles = async (
   duration: number,
   settings: AppSettings,
   onProgress?: (update: ChunkStatus) => void,
-  onIntermediateResult?: (subs: SubtitleItem[]) => void
-): Promise<SubtitleItem[]> => {
+  onIntermediateResult?: (subs: SubtitleItem[]) => void,
+  onGlossaryReady?: (metadata: GlossaryExtractionMetadata) => Promise<GlossaryItem[]>
+): Promise<{ subtitles: SubtitleItem[], glossaryResults?: GlossaryExtractionResult[] }> => {
 
   const geminiKey = (typeof window !== 'undefined' ? (window as any).env?.GEMINI_API_KEY : undefined) || settings.geminiKey?.trim() || process.env.API_KEY || process.env.GEMINI_API_KEY;
   const openaiKey = (typeof window !== 'undefined' ? (window as any).env?.OPENAI_API_KEY : undefined) || settings.openaiKey?.trim() || process.env.OPENAI_API_KEY;
@@ -197,11 +443,11 @@ export const generateSubtitles = async (
   const ai = new GoogleGenAI({ apiKey: geminiKey });
 
   // 1. Decode Audio
-  onProgress?.({ id: 'init', total: 0, status: 'processing', message: "Decoding audio track..." });
+  onProgress?.({ id: 'decoding', total: 1, status: 'processing', message: "Decoding audio track..." });
   let audioBuffer: AudioBuffer;
   try {
-    audioBuffer = await decodeAudio(file);
-    onProgress?.({ id: 'init', total: 0, status: 'completed', message: `Audio decoded. Duration: ${formatTime(audioBuffer.duration)}` });
+    audioBuffer = await decodeAudioWithRetry(file);
+    onProgress?.({ id: 'decoding', total: 1, status: 'completed', message: `Audio decoded. Duration: ${formatTime(audioBuffer.duration)}` });
   } catch (e) {
     logger.error("Failed to decode audio", e);
     throw new Error("Failed to decode audio. Please ensure the file is a valid video/audio format.");
@@ -215,7 +461,7 @@ export const generateSubtitles = async (
   const chunksParams = [];
 
   if (settings.useSmartSplit) {
-    onProgress?.({ id: 'init', total: 0, status: 'processing', message: "Analyzing audio for smart segmentation..." });
+    onProgress?.({ id: 'segmenting', total: 1, status: 'processing', message: "Analyzing audio for smart segmentation..." });
     const segmenter = new SmartSegmenter();
     const segments = await segmenter.segmentAudio(audioBuffer, chunkDuration);
     logger.info("Smart Segmentation Results", { count: segments.length, segments });
@@ -227,7 +473,7 @@ export const generateSubtitles = async (
         end: seg.end
       });
     });
-    onProgress?.({ id: 'init', total: 0, status: 'completed', message: `Smart split created ${segments.length} chunks.` });
+    onProgress?.({ id: 'segmenting', total: 1, status: 'completed', message: `Smart split created ${segments.length} chunks.` });
   } else {
     // Standard fixed-size chunking
     let cursor = 0;
@@ -243,40 +489,197 @@ export const generateSubtitles = async (
     logger.info("Fixed Segmentation Results", { count: chunksParams.length, chunks: chunksParams });
   }
 
-  const chunkResults: SubtitleItem[][] = new Array(chunksParams.length).fill([]);
+
   const concurrency = settings.concurrencyFlash || 5;
 
-  // Parallel Execution (Concurrency: Flash Limit)
-  await mapInParallel(chunksParams, concurrency, async (chunk, i) => {
+  // --- GLOSSARY EXTRACTION (Parallel) ---
+  let glossaryPromise: Promise<GlossaryExtractionResult[]> | null = null;
+  let glossaryChunks: { index: number; start: number; end: number }[] | undefined;
+
+  if (settings.enableAutoGlossary !== false) {
+    const sampleMinutes = settings.glossarySampleMinutes || 'all';
+    glossaryChunks = selectChunksByDuration(chunksParams, sampleMinutes, chunkDuration);
+
+    logger.info(`Initiating parallel glossary extraction on ${glossaryChunks.length} chunks (Limit: ${sampleMinutes} min)`);
+
+    // Use Pro concurrency setting for glossary (Gemini 3 Pro)
+    const glossaryConcurrency = settings.concurrencyPro || 2;
+
+    onProgress?.({ id: 'glossary', total: glossaryChunks.length, status: 'processing', message: `Extracting terms (0/${glossaryChunks.length})...` });
+
+    glossaryPromise = extractGlossaryFromAudio(
+      ai,
+      audioBuffer,
+      glossaryChunks,
+      settings.genre,
+      glossaryConcurrency,
+      (completed, total) => {
+        onProgress?.({
+          id: 'glossary',
+          total: total,
+          status: completed === total ? 'completed' : 'processing',
+          message: completed === total ? 'Glossary extraction complete.' : `Extracting terms (${completed}/${total})...`
+        });
+      }
+    );
+  }
+
+  // --- PHASE 1 & 2: TRANSCRIPTION & GLOSSARY (Parallel) ---
+  logger.info("Starting Phase 1 (Transcription) & Phase 2 (Glossary) in parallel");
+
+  // Task A: Transcription
+  const transcriptionPromise = mapInParallel(chunksParams, concurrency, async (chunk) => {
     const { index, start, end } = chunk;
-
     onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'transcribing', message: 'Transcribing...' });
-    logger.debug(`[Chunk ${index}] Processing started. Range: ${start}-${end}`);
 
-    // A. Slice Audio
-    const wavBlob = await sliceAudioBuffer(audioBuffer, start, end);
-    const base64Audio = await blobToBase64(wavBlob);
-
-    // B. Step 1: OpenAI Transcription
-    // onProgress?.(`[Chunk ${index}] 1/3 Transcribing...`); // Too noisy in parallel
-    let rawSegments: SubtitleItem[] = [];
     try {
-      rawSegments = await transcribeAudio(wavBlob, openaiKey, settings.transcriptionModel);
+      const wavBlob = await sliceAudioBuffer(audioBuffer, start, end);
+      const rawSegments = await transcribeAudio(wavBlob, openaiKey, settings.transcriptionModel);
       logger.debug(`[Chunk ${index}] Transcription complete. Segments: ${rawSegments.length}`);
+      onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'transcribing', message: 'Transcription done, waiting...' });
+      return { index, start, end, rawSegments };
     } catch (e: any) {
-      logger.warn(`Transcription warning on chunk ${index}: ${e.message}`);
-      throw new Error(`Transcription failed on chunk ${index}: ${e.message}`);
+      logger.error(`Transcription failed on chunk ${index}`, e);
+      onProgress?.({ id: index, total: totalChunks, status: 'error', message: 'Transcription failed' });
+      throw e;
+    }
+  });
+
+  // Task B: Glossary Handling (Blocking UI but parallel to transcription)
+  const glossaryHandlingPromise = (async () => {
+    let finalGlossary = settings.glossary || [];
+    let extractedGlossaryResults: GlossaryExtractionResult[] | undefined;
+
+    if (glossaryPromise) {
+      try {
+        logger.info("Waiting for glossary extraction...");
+        onProgress?.({ id: 'glossary', total: 1, status: 'processing', message: 'Finalizing glossary...' });
+
+        extractedGlossaryResults = await glossaryPromise;
+
+        // Calculate metadata for UI decision making
+        const totalTerms = extractedGlossaryResults.reduce((sum, r) => sum + r.terms.length, 0);
+        const hasFailures = extractedGlossaryResults.some(r => r.confidence === 'low' && r.terms.length === 0);
+
+        if (onGlossaryReady && (totalTerms > 0 || hasFailures)) {
+          logger.info("Glossary extracted, waiting for user confirmation...", {
+            totalTerms,
+            hasFailures,
+            resultsCount: extractedGlossaryResults.length,
+            results: extractedGlossaryResults.map(r => ({ idx: r.chunkIndex, terms: r.terms.length, conf: r.confidence }))
+          });
+          onProgress?.({ id: 'glossary', total: 1, status: 'processing', message: 'Waiting for user review...' });
+
+          // BLOCKING CALL (User Interaction) - Pass metadata for UI
+          logger.info("Calling onGlossaryReady with metadata...");
+
+          const confirmationPromise = onGlossaryReady({
+            results: extractedGlossaryResults,
+            totalTerms,
+            hasFailures,
+            glossaryChunks
+          });
+
+          const timeoutPromise = new Promise<GlossaryItem[]>((resolve) => {
+            setTimeout(() => {
+              logger.warn("Glossary confirmation timed out (60s), using existing glossary.");
+              resolve(settings.glossary || []);
+            }, 60000);
+          });
+
+          finalGlossary = await Promise.race([confirmationPromise, timeoutPromise]);
+          logger.info("onGlossaryReady returned.");
+
+          logger.info("Glossary confirmed/updated.", { count: finalGlossary.length });
+          onProgress?.({ id: 'glossary', total: 1, status: 'completed', message: 'Glossary applied.' });
+        } else {
+          // No callback or truly empty results (not even failures)
+          logger.info("No glossary extraction needed", { totalTerms, hasFailures });
+          onProgress?.({ id: 'glossary', total: 1, status: 'completed', message: 'No terms found.' });
+        }
+      } catch (e) {
+        logger.warn("Glossary extraction failed or timed out", e);
+        onProgress?.({ id: 'glossary', total: 1, status: 'error', message: 'Glossary failed' });
+      }
+    }
+    return { finalGlossary, extractedGlossaryResults };
+  })();
+
+  // Wait for both to complete
+  // Note: If transcription fails, this rejects. If glossary fails, it resolves (caught internally).
+  const [transcriptionResults, glossaryOutcome] = await Promise.all([transcriptionPromise, glossaryHandlingPromise]);
+
+  const { finalGlossary, extractedGlossaryResults } = glossaryOutcome;
+
+  // Update settings with confirmed glossary
+  const phase2Settings = { ...settings, glossary: finalGlossary };
+
+  // --- PHASE 3: REFINE & TRANSLATE (Parallel) ---
+  logger.info("Starting Phase 3: Refine & Translate");
+
+  const chunkResults: SubtitleItem[][] = new Array(totalChunks).fill([]);
+
+  await mapInParallel(transcriptionResults, concurrency, async (item, i) => {
+    const { index, start, end, rawSegments } = item;
+
+    // Skip if no segments
+    if (rawSegments.length === 0) {
+      chunkResults[i] = [];
+      onProgress?.({ id: index, total: totalChunks, status: 'completed', message: 'Done (Empty)' });
+      return;
     }
 
-    // C. Step 2: Gemini Refine (2.5 Flash)
-    let refinedSegments: SubtitleItem[] = [];
-    if (rawSegments.length > 0) {
+    try {
+      // Re-slice for Gemini (Refine needs audio)
+      const wavBlob = await sliceAudioBuffer(audioBuffer, start, end);
+      const base64Audio = await blobToBase64(wavBlob);
+
+      // C. Step 2: Gemini Refine
+      let refinedSegments: SubtitleItem[] = [];
       onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'refining', message: 'Refining...' });
 
-      const refineSystemInstruction = getSystemInstruction(settings.genre, undefined, 'refinement', settings.glossary);
+      const refineSystemInstruction = getSystemInstruction(phase2Settings.genre, undefined, 'refinement', phase2Settings.glossary);
+      const glossaryInfo = phase2Settings.glossary && phase2Settings.glossary.length > 0
+        ? `\n\nKEY TERMINOLOGY (Ensure these terms are spelled correctly in the transcription if heard):\n${phase2Settings.glossary.map(g => `- ${g.term}${g.notes ? ` (${g.notes})` : ''}`).join('\n')}`
+        : '';
+
       const refinePrompt = `
-        Refine this raw transcription based on the attached audio.
-        Raw Transcription: ${JSON.stringify(rawSegments.map(s => ({ start: s.startTime, end: s.endTime, text: s.original })))}
+        TRANSCRIPTION REFINEMENT TASK
+        Context: ${phase2Settings.genre}
+
+        TASK: Refine the raw OpenAI Whisper transcription by listening to the audio and correcting errors.
+
+        RULES (Priority Order):
+
+        [P1 - ACCURACY] Audio-Based Correction
+        → Listen carefully to the attached audio
+        → Fix misrecognized words and phrases in 'text'
+        → Verify timing accuracy of 'start' and 'end' timestamps
+        ${glossaryInfo ? `→ Pay special attention to key terminology listed below` : ''}
+
+        [P2 - CLEANING] Remove Non-Speech Elements
+        → Remove filler words (uh, um, 呃, 嗯, etc.)
+        → Remove stuttering and false starts
+        → Keep natural speech flow
+
+        [P3 - PRESERVATION] Maintain Structure
+        → Keep the same number of segments (do NOT merge or split)
+        → Only adjust text content and fine-tune timestamps
+        → Preserve segment boundaries from raw transcription
+
+        [P4 - OUTPUT] Format Requirements
+        → Return timestamps in HH:MM:SS,mmm format
+        → Timestamps must be relative to the provided audio (starting at 00:00:00,000)
+        → Ensure all required fields are present
+
+        FINAL VERIFICATION:
+        ✓ Segment count matches input
+        ✓ Timestamps are relative to chunk start
+        ✓ Terminology from glossary is used correctly
+        ${glossaryInfo ? `✓ Checked against ${phase2Settings.glossary?.length} glossary terms` : ''}
+
+        Input Transcription (JSON):
+        ${JSON.stringify(rawSegments.map(s => ({ start: s.startTime, end: s.endTime, text: s.original })))}
         `;
 
       try {
@@ -303,77 +706,110 @@ export const generateSubtitles = async (
           refinedSegments = [...rawSegments];
         }
         logger.debug(`[Chunk ${index}] Refinement complete. Segments: ${refinedSegments.length}`);
-      }
-      catch (e) {
+      } catch (e) {
         logger.error(`Refinement failed for chunk ${index}, falling back to raw.`, e);
         refinedSegments = [...rawSegments];
       }
+
+      // D. Step 3: Gemini Translate
+      let finalChunkSubs: SubtitleItem[] = [];
+      if (refinedSegments.length > 0) {
+        onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'translating', message: 'Translating...' });
+
+        const toTranslate = refinedSegments.map((seg, idx) => ({
+          id: idx + 1,
+          original: seg.original,
+          start: seg.startTime,
+          end: seg.endTime
+        }));
+
+        const translateSystemInstruction = getSystemInstruction(phase2Settings.genre, phase2Settings.customTranslationPrompt, 'translation', phase2Settings.glossary);
+
+        const translatedItems = await translateBatch(
+          ai,
+          toTranslate,
+          translateSystemInstruction,
+          concurrency,
+          phase2Settings.translationBatchSize || 20,
+          (update) => onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'translating', ...update })
+        );
+        logger.debug(`[Chunk ${index}] Translation complete. Items: ${translatedItems.length}`);
+
+        finalChunkSubs = translatedItems.map(item => ({
+          id: 0, // Placeholder, will re-index later
+          startTime: formatTime(timeToSeconds(item.start) + start),
+          endTime: formatTime(timeToSeconds(item.end) + start),
+          original: item.original,
+          translated: item.translated
+        }));
+      }
+
+      chunkResults[i] = finalChunkSubs;
+
+      // Update Intermediate Result
+      const currentAll = chunkResults.flat().map((s, idx) => ({ ...s, id: idx + 1 }));
+      onIntermediateResult?.(currentAll);
+
+      onProgress?.({ id: index, total: totalChunks, status: 'completed', message: 'Done' });
+
+    } catch (e: any) {
+      logger.error(`Phase 3 failed for chunk ${index}`, e);
+      onProgress?.({ id: index, total: totalChunks, status: 'error', message: 'Failed' });
+      throw e;
     }
-
-    // D. Step 3: Gemini Translate (2.5 Flash)
-    let finalChunkSubs: SubtitleItem[] = [];
-    if (refinedSegments.length > 0) {
-      onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'translating', message: 'Translating...' });
-
-      const toTranslate = refinedSegments.map((seg, idx) => ({
-        id: idx + 1,
-        original: seg.original,
-        start: seg.startTime,
-        end: seg.endTime
-      }));
-
-      const translateSystemInstruction = getSystemInstruction(settings.genre, settings.customTranslationPrompt, 'translation', settings.glossary);
-      // translateBatch is also parallelized now
-      logger.debug(`[Chunk ${index}] Starting translation of ${toTranslate.length} items`);
-      const translatedItems = await translateBatch(ai, toTranslate, translateSystemInstruction, concurrency, settings.translationBatchSize || 20);
-      logger.debug(`[Chunk ${index}] Translation complete. Items: ${translatedItems.length}`);
-
-      finalChunkSubs = translatedItems.map(item => ({
-        id: 0, // Placeholder, will re-index later
-        startTime: formatTime(timeToSeconds(item.start) + start),
-        endTime: formatTime(timeToSeconds(item.end) + start),
-        original: item.original,
-        translated: item.translated
-      }));
-    }
-
-    chunkResults[i] = finalChunkSubs;
-
-    // Update Intermediate Result
-    // We flatten and re-index everything so far
-    const currentAll = chunkResults.flat().map((s, idx) => ({ ...s, id: idx + 1 }));
-    onIntermediateResult?.(currentAll);
-
-    onProgress?.({ id: index, total: totalChunks, status: 'completed', message: 'Done' });
   });
 
-  return chunkResults.flat().map((s, idx) => ({ ...s, id: idx + 1 }));
+  const finalSubtitles = chunkResults.flat().map((s, idx) => ({ ...s, id: idx + 1 }));
+
+  return { subtitles: finalSubtitles, glossaryResults: extractedGlossaryResults };
 };
 
 // --- HELPERS ---
 
-async function translateBatch(ai: GoogleGenAI, items: any[], systemInstruction: string, concurrency: number, batchSize: number): Promise<any[]> {
-  const batches: any[][] = [];
-  for (let i = 0; i < items.length; i += batchSize) {
-    batches.push(items.slice(i, i + batchSize));
-  }
+async function processTranslationBatchWithRetry(
+  ai: GoogleGenAI,
+  batch: any[],
+  systemInstruction: string,
+  maxRetries = 3,
+  onStatusUpdate?: (update: { toast: { message: string, type: 'info' | 'warning' | 'error' | 'success' } }) => void
+): Promise<any[]> {
+  const payload = batch.map(item => ({ id: item.id, text: item.original }));
 
-  const batchResults = await mapInParallel(batches, concurrency, async (batch) => {
-    const payload = batch.map(item => ({ id: item.id, text: item.original }));
-
-    const prompt = `Task: Translate the following ${batch.length} items to Simplified Chinese.
+  const prompt = `
+    TRANSLATION BATCH TASK
     
-    STRICT RULES:
-    1. Output exactly ${batch.length} items. One-to-one mapping with input IDs.
-    2. ID matching is critical. Do not skip any ID.
-    3. **CHECK FOR MISSED TRANSLATION**: Ensure no meaning is lost from source text.
-    4. **REMOVE FILLER WORDS**: Ignore stuttering and filler words.
-    5. **LANGUAGE**: 'text_translated' MUST BE SIMPLIFIED CHINESE.
-    6. **FINAL CHECK**: Verify all IDs match and translation is complete before outputting.
+    TASK: Translate ${batch.length} subtitle segments to Simplified Chinese.
+    
+    RULES (Priority Order):
+    
+    [P1 - ACCURACY] Complete and Accurate Translation
+    → Translate all ${batch.length} items (one-to-one mapping with input IDs)
+    → Ensure no meaning is lost from source text
+    → ID matching is critical - do not skip any ID
+    → Output exactly ${batch.length} items in the response
+    
+    [P2 - QUALITY] Translation Excellence
+    → Remove filler words and stuttering (uh, um, 呃, 嗯, etc.)
+    → Produce fluent, natural Simplified Chinese
+    → Use terminology from system instruction if provided
+    → Maintain appropriate tone and style
+    
+    [P3 - OUTPUT] Format Requirements
+    → 'text_translated' MUST BE in Simplified Chinese
+    → Never output English, Japanese, or other languages in 'text_translated'
+    → Maintain exact ID values from input
+    
+    FINAL VERIFICATION:
+    ✓ All ${batch.length} IDs present in output
+    ✓ All translations are Simplified Chinese
+    ✓ No meaning lost from original text
+    ✓ Filler words removed
     
     Input JSON:
-    ${JSON.stringify(payload)}`;
+    ${JSON.stringify(payload)}
+    `;
 
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const response = await generateContentWithRetry(ai, {
         model: 'gemini-2.5-flash',
@@ -394,7 +830,8 @@ async function translateBatch(ai: GoogleGenAI, items: any[], systemInstruction: 
         translatedData = JSON.parse(clean);
         if (!Array.isArray(translatedData) && (translatedData as any).items) translatedData = (translatedData as any).items;
       } catch (e) {
-        logger.warn("Translation JSON parse error");
+        logger.warn(`Translation JSON parse error (Attempt ${attempt + 1}/${maxRetries})`);
+        throw e;
       }
 
       const transMap = new Map(translatedData.map((t: any) => [t.id, t.text_translated]));
@@ -408,9 +845,45 @@ async function translateBatch(ai: GoogleGenAI, items: any[], systemInstruction: 
       });
 
     } catch (e) {
-      logger.error("Translation batch failed", e);
-      return batch.map(item => ({ ...item, translated: item.original }));
+      if (attempt < maxRetries - 1) {
+        logger.warn(`Translation batch failed (Attempt ${attempt + 1}/${maxRetries}). Retrying entire batch...`, e);
+        onStatusUpdate?.({
+          toast: {
+            message: `Translation batch failed (Attempt ${attempt + 1}/${maxRetries}). Retrying...`,
+            type: 'warning'
+          }
+        });
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+      } else {
+        logger.error(`Translation batch failed after ${maxRetries} attempts`, e);
+        onStatusUpdate?.({
+          toast: {
+            message: `Translation batch failed after ${maxRetries} attempts. Using original text.`,
+            type: 'error'
+          }
+        });
+      }
     }
+  }
+
+  return batch.map(item => ({ ...item, translated: item.original }));
+}
+
+async function translateBatch(
+  ai: GoogleGenAI,
+  items: any[],
+  systemInstruction: string,
+  concurrency: number,
+  batchSize: number,
+  onStatusUpdate?: (update: { toast: { message: string, type: 'info' | 'warning' | 'error' | 'success' } }) => void
+): Promise<any[]> {
+  const batches: any[][] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    batches.push(items.slice(i, i + batchSize));
+  }
+
+  const batchResults = await mapInParallel(batches, concurrency, async (batch) => {
+    return await processTranslationBatchWithRetry(ai, batch, systemInstruction, 3, onStatusUpdate);
   });
 
   return batchResults.flat();
@@ -492,11 +965,23 @@ async function processBatch(
   }
   // Case 4: No Comments -> Default behavior (prompt below covers it)
 
+  // Construct Glossary Context
+  let glossaryContext = "";
+  if (settings.glossary && settings.glossary.length > 0) {
+    glossaryContext = `
+    GLOSSARY (Strictly adhere to these terms):
+    ${settings.glossary.map(g => `- ${g.term}: ${g.translation} ${g.notes ? `(${g.notes})` : ''}`).join('\n')}
+    `;
+    logger.info(`[Batch ${batchLabel}] Using glossary with ${settings.glossary.length} terms.`);
+  }
+
+
   if (mode === 'fix_timestamps') {
     prompt = `
     Batch ${batchLabel}.
     TIMESTAMP ALIGNMENT & SEGMENTATION TASK
     Previous batch ended at: "${lastEndTime}"
+    ${glossaryContext}
     ${specificInstruction}
 
     TASK RULES (Priority Order):
@@ -537,6 +1022,7 @@ async function processBatch(
     TRANSLATION QUALITY IMPROVEMENT TASK
     Previous batch ended at: "${lastEndTime}"
     Total video duration: ${totalVideoDuration ? formatTime(totalVideoDuration) : 'Unknown'}
+    ${glossaryContext}
     ${specificInstruction}
 
     TASK RULES (Priority Order):
@@ -552,11 +1038,11 @@ async function processBatch(
     → If you hear speech NOT in subtitles → ADD new subtitle entries
     → Verify 'text_original' matches what was actually said
     
-    [P3 - SUPPORTING] Timestamp Adjustments (When Needed)
-    → You MAY adjust timestamps to support better translation
-    → Example: merging/splitting segments for more natural translation flow
-    → Keep timestamps within provided audio range (00:00:00 to audio end)
-    → Ensure start < end for all segments
+    [P3 - ABSOLUTE] Timestamp Preservation
+    → DO NOT modify timestamps of existing subtitles
+    → Exception: When adding NEW entries for missed speech, assign appropriate timestamps
+    → Even if existing lines are very long → LEAVE their timing unchanged
+    → Your job is TRANSLATION quality, not timing adjustment
     
     [P4 - PRESERVATION] Default Behavior
     → For subtitles WITHOUT issues: preserve them as-is
@@ -585,9 +1071,10 @@ async function processBatch(
     }
 
     // Model Selection:
-    // Proofread -> Gemini 3 Pro (Best quality)
+    // Proofread -> Gemini 3 Pro (Best quality) + Search Grounding
     // Fix Timestamps / Retranslate -> Gemini 2.5 Flash (Fast/Efficient)
     const model = mode === 'proofread' ? 'gemini-3-pro-preview' : 'gemini-2.5-flash';
+    const tools = mode === 'proofread' ? [{ googleSearch: {} }] : undefined;
 
     // Use the new Long Output handler
     const text = await generateContentWithLongOutput(
@@ -595,17 +1082,28 @@ async function processBatch(
       model,
       systemInstruction,
       parts,
-      BATCH_SCHEMA // Use the new schema
+      BATCH_SCHEMA, // Use the new schema
+      tools // Enable Search Grounding for proofread
     );
 
 
     let processedBatch = parseGeminiResponse(text, totalVideoDuration);
 
     if (processedBatch.length > 0) {
-      // Since we requested relative timestamps (from 00:00:00) in the prompt,
-      // and we provided a sliced audio file, the timestamps returned are relative to the slice.
-      // We MUST add the audioOffset to convert them back to absolute video time.
-      if (audioOffset > 0) {
+      // Heuristic: Detect if Gemini returned relative timestamps (starting from ~0) or absolute
+      // We explicitly asked for relative (0-based) in the prompt.
+      // However, models sometimes ignore this and return absolute timestamps if the input had them.
+
+      const firstStart = timeToSeconds(processedBatch[0].startTime);
+      const expectedRelativeStart = 0; // We asked for 0-based
+      const expectedAbsoluteStart = startSec; // The actual start time in the video
+
+      const diffRelative = Math.abs(firstStart - expectedRelativeStart);
+      const diffAbsolute = Math.abs(firstStart - expectedAbsoluteStart);
+
+      // If the result is closer to 0 than to the absolute start, it's likely relative.
+      // If audioOffset is 0 (start of video), diffRelative == diffAbsolute, so we don't need to add offset.
+      if (audioOffset > 0 && diffRelative < diffAbsolute) {
         processedBatch = processedBatch.map(item => ({
           ...item,
           startTime: formatTime(timeToSeconds(item.startTime) + audioOffset),
@@ -735,25 +1233,38 @@ export const runBatchOperation = async (
     onProgress?.({ id: groupLabel, total: groups.length, status: 'processing', message: `${actionLabel}...` });
     logger.debug(`[Batch ${groupLabel}] Starting ${mode} operation. Merged items: ${mergedBatch.length}`);
 
-    const processed = await processBatch(
-      ai,
-      mergedBatch,
-      audioBuffer,
-      lastEndTime,
-      settings,
-      systemInstruction,
-      groupLabel,
-      audioBuffer?.duration,
-      mode,
-      mergedComment
-    );
-    logger.debug(`[Batch ${groupLabel}] Operation complete. Result items: ${processed.length}`);
+    try {
+      const processed = await processBatch(
+        ai,
+        mergedBatch,
+        audioBuffer,
+        lastEndTime,
+        settings,
+        systemInstruction,
+        groupLabel,
+        audioBuffer?.duration,
+        mode,
+        mergedComment
+      );
+      logger.debug(`[Batch ${groupLabel}] Operation complete. Result items: ${processed.length}`);
 
-    if (processed.length > 0) {
-      chunks[firstBatchIdx] = processed;
-      for (let j = 1; j < group.length; j++) {
-        chunks[group[j]] = [];
+      if (processed.length > 0) {
+        chunks[firstBatchIdx] = processed;
+        for (let j = 1; j < group.length; j++) {
+          chunks[group[j]] = [];
+        }
       }
+    } catch (e) {
+      logger.error(`Batch ${groupLabel} failed`, e);
+      onProgress?.({
+        id: groupLabel,
+        total: groups.length,
+        status: 'error',
+        message: 'Failed',
+        toast: { message: `Batch ${groupLabel} failed: ${(e as Error).message}`, type: 'error' }
+      });
+      // We do NOT re-throw here. This ensures other batches can continue.
+      // The chunks for this batch remain as they were (original subtitles), effectively acting as a fallback.
     }
     onProgress?.({ id: groupLabel, total: groups.length, status: 'completed', message: 'Done' });
   });
@@ -824,13 +1335,14 @@ export const generateGlossary = async (
 
   try {
     const response = await generateContentWithRetry(ai, {
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-pro-preview',
       contents: { parts: [{ text: prompt }] },
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
         temperature: 0.3,
         maxOutputTokens: 65536,
+        tools: [{ googleSearch: {} }],
       }
     });
 

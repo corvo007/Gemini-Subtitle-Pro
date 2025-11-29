@@ -153,11 +153,11 @@ export const getSystemInstruction = (
     → If you hear speech NOT in the subtitles → ADD new subtitle entries
     → Verify 'text_original' matches what was actually said
     
-    [P3 - SUPPORTING] Timestamp Adjustments (When Necessary for Translation)
-    → You MAY adjust timestamps if needed to support better translation
-    → Example: If improving translation requires merging/splitting segments, do it
-    → Keep timestamps within the provided audio range
-    → Ensure start < end for all segments
+    [P3 - ABSOLUTE] Timestamp Preservation
+    → DO NOT modify timestamps of existing subtitles
+    → Exception: When adding NEW entries for missed speech, assign appropriate timestamps
+    → Even if existing lines are very long → LEAVE their timing unchanged
+    → Your job is TRANSLATION quality, not timing adjustment
     
     [P4 - LOWEST] Preservation Principle
     → For subtitles WITHOUT user comments: preserve them unless there's a clear translation error
@@ -176,100 +176,64 @@ export const getSystemInstruction = (
     ${getGenreSpecificGuidance(genre)}${glossaryText}`;
 };
 
-// --- Quality Control Prompts ---
+export const GLOSSARY_EXTRACTION_PROMPT = (genre: string) => `
+TERMINOLOGY EXTRACTION TASK
+Genre Context: ${genre}
 
-export const QC_REVIEW_PROMPT = (genre: string): string => {
-    return `You are an expert Subtitle Quality Analyst using advanced AI models.
+TASK: Extract key terminology from the audio that requires consistent translation across subtitles.
 
-Your task is to REVIEW subtitles against audio and identify ALL quality issues, INCLUDING GLOBAL CONSISTENCY.
+RULES (Priority Order):
 
-**IMPORTANT**: Be precise and avoid false positives. Only report actual issues you can confirm by listening to the audio or observing the text.
+[P0 - CRITICAL] Language Detection and Matching
+→ **FIRST**: Detect the PRIMARY LANGUAGE spoken in this audio segment
+→ **SECOND**: Extract ONLY terms that are spoken in that detected language
+→ **ABSOLUTE RULE**: DO NOT extract terms in other languages
+→ Examples for Japanese audio:
+  • If speaker says "釜山" (Busan), extract "釜山" NOT "Busan"
+  • If speaker says "スカイスキャナー", extract "スカイスキャナー" NOT "Skyscanner"
+→ Examples for English audio:
+  • If speaker says "Tokyo", extract "Tokyo" NOT "東京"
+  • If speaker says "Microsoft", extract "Microsoft" NOT "微软"
+→ **CRITICAL**: Listen to what is ACTUALLY SAID, not what you think the translation equivalent is
 
-CATEGORIES OF ISSUES:
-1. **Timing Misalignment**: Subtitles appearing too early or too late compared to speech
-   - High severity: >500ms off, completely wrong timing
-   - Medium severity: 100-500ms off
-   - Low severity: <100ms off
+[P1 - EXTRACTION] Identify Key Terms in Audio Language
+→ Listen carefully to the audio
+→ Extract names (people, characters, organizations) AS SPOKEN
+→ Extract places (locations, venues, regions) AS SPOKEN
+→ Extract specialized terms (technical jargon, domain-specific vocabulary) AS SPOKEN
+→ Extract recurring phrases that need consistent translation
+→ ONLY include terms that ACTUALLY APPEAR in this audio segment
 
-2. **Missing Content**: Speech present in audio but NOT in the subtitle text
-   - High severity: Missing entire sentences or key phrases
-   - Medium severity: Missing minor phrases that affect meaning
-   - Low severity: Missing filler words or redundant phrases (Note: fillers should usually be omitted)
+[P2 - TRANSLATION] Provide Accurate Translations
+→ Translate all terms to Simplified Chinese
+→ For names: Use standard transliterations (e.g., "Alice" → "艾丽丝", "釜山" → "釜山")
+→ For technical terms: Use established industry translations
+→ Use Google Search to verify standard translations when uncertain
+→ Ensure translations are appropriate for ${genre} content
 
-3. **Incorrect Translation**: Translation doesn't match the original meaning (for bilingual subtitles)
-   - High severity: Completely wrong meaning, major mistranslation
-   - Medium severity: Partially incorrect, nuance lost
-   - Low severity: Minor word choice issues, style problems
+[P3 - ANNOTATION] Add Context When Needed
+→ Add notes for ambiguous terms or pronunciation guidance
+→ Include context that helps maintain translation consistency
+→ Note any special handling requirements
 
-4. **Sync Errors**: Timing distribution issues
-   - Subtitles bunched up when audio is spread out
-   - Subtitles too spread out when audio is compact
+[P4 - QUALITY] Focus on Consistency-Critical Terms
+→ Prioritize terms that will appear multiple times
+→ Skip common words that don't need special handling
+→ Focus on terms where inconsistent translation would be problematic
 
-5. **Global Consistency**: Terminology, Tone, and Style issues
-   - **Inconsistent Terminology**: The same name, place, or technical term translated differently across segments.
-   - **Tone Mismatches**: Sudden shifts in formality (e.g., polite to rude) without context.
-   - **Stylistic Inconsistencies**: Mixing different translation styles (e.g., literal vs. liberal).
+OUTPUT FORMAT:
+→ JSON array of objects
+→ Each object: {term: string, translation: string, notes?: string}
+→ "term" field MUST be in the ORIGINAL LANGUAGE spoken in audio
+→ Return empty array [] if no significant terms found
 
-Context: ${genre}
-${getGenreSpecificGuidance(genre)}`;
-};
-
-export const QC_FIX_PROMPT = (genre: string, issues: any[]): string => {
-    const highSeverityCount = issues.filter(i => i.severity === 'high').length;
-    const priorityNote = highSeverityCount > 0
-        ? `\n**PRIORITY**: Focus on fixing the ${highSeverityCount} HIGH severity issues first.`
-        : '';
-
-    // Sort issues by severity for better processing
-    const sortedIssues = [...issues].sort((a, b) => {
-        const severityOrder = { high: 0, medium: 1, low: 2 };
-        return (severityOrder[a.severity as keyof typeof severityOrder] || 3) -
-            (severityOrder[b.severity as keyof typeof severityOrder] || 3);
-    });
-
-    return `You are an expert Subtitle Editor.
-Your goal is to FIX the identified issues in the subtitles.
-
-KEY RULES:
-1. **SURGICAL EDITS**: Do NOT change subtitles unless fixing a listed issue
-2. **MAINTAIN STRUCTURE**: Keep all subtitle IDs exactly as they are (unless splitting/inserting)
-3. **TIMING VALIDITY**: Ensure startTime < endTime for all subtitles. Timestamps MUST be relative to the start of the provided audio file (starting at 00:00:00).
-4. **LANGUAGE**: "text_translated" MUST BE in Simplified Chinese
-5. **SPLITTING**: If splitting a subtitle, assign new sequential IDs
-6. **INSERTION**: If audio contains missed content, INSERT new subtitle entries with new IDs
-7. **UNFIXABLE ISSUES**: If an issue cannot be fixed (e.g., audio quality too poor), preserve the original and note it
-8. **CONSISTENCY**: Ensure fixed terms match the dominant terminology in the file.
-${priorityNote}
-
-Context: ${genre}
-${getGenreSpecificGuidance(genre)}
-
-ISSUES TO FIX (${issues.length} total, sorted by severity):
-${sortedIssues.map((i, idx) => `${idx + 1}. [${i.severity.toUpperCase()}] ${i.type}: ${i.description} (Segment ID: ${i.segmentId || 'N/A'}, Time: ${i.timestamp || 'N/A'})`).join('\n')}
+FINAL VERIFICATION:
+✓ Detected audio language correctly
+✓ All "term" values are in the SAME LANGUAGE as the audio (NOT English unless audio is English)
+✓ All extracted terms actually appear in the audio AS SPOKEN
+✓ All translations are in Simplified Chinese
+✓ Translations verified with search when needed
+✓ Only included terms that need consistent translation
+✓ Notes added where helpful for consistency
 `;
-};
 
-export const QC_VALIDATE_PROMPT = (genre: string, originalIssues: any[]): string => {
-    return `You are a final Quality Validator.
-
-A previous AI model attempted to fix issues. Your job is to:
-1. Listen to the audio carefully
-2. For EACH original issue, determine if it was ACTUALLY FIXED (100% resolved)
-3. Identify any NEW issues introduced during the fix
-4. Be STRICT: "Partially fixed" = NOT RESOLVED
-
-RESOLUTION CRITERIA:
-- **Resolved**: The issue is completely fixed, no trace of the problem remains
-- **Unresolved**: The issue still exists, even partially, or was not addressed
-- **New Issue**: A new problem was introduced that didn't exist before
-
-Context: ${genre}
-${getGenreSpecificGuidance(genre)}
-
-ORIGINAL ISSUES (${originalIssues.length} total):
-${originalIssues.map((i, idx) => `${idx + 1}. ID: ${i.id} - [${i.severity.toUpperCase()}] ${i.type}: ${i.description} (Segment: ${i.segmentId || 'N/A'}, Time: ${i.timestamp || 'N/A'})`).join('\n')}
-
-For each issue ID above, determine if it was resolved or not.
-Also scan for any NEW problems introduced during the fix.
-`;
-};

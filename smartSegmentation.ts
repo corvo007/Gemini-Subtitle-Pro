@@ -1,4 +1,7 @@
-import { NonRealTimeVAD, utils } from "@ricky0123/vad-web";
+// Removed imports to use global script tags
+// import { NonRealTimeVAD, utils } from "@ricky0123/vad-web";
+// import * as ort from "onnxruntime-web";
+
 import { SubtitleItem } from "./types";
 import { logger } from "./utils";
 
@@ -134,41 +137,104 @@ export class SmartSegmenter {
             currentChunkStart = bestSplitPoint;
         }
 
+        logger.debug(`Segmented audio into ${chunks.length} chunks.`);
         return chunks;
     }
 
+    private worker: Worker | null = null;
+    private workerReadyPromise: Promise<void> | null = null;
+
     /**
-     * Analyze audio buffer and return speech segments using Silero VAD
+     * Analyze audio buffer and return speech segments using Silero VAD (via Web Worker)
      */
     public async analyzeAudio(
         audioBuffer: AudioBuffer,
         options: SegmentationOptions = {}
     ): Promise<{ start: number; end: number }[]> {
+        logger.debug("analyzeAudio called", {
+            duration: audioBuffer.duration,
+            sampleRate: audioBuffer.sampleRate,
+            numberOfChannels: audioBuffer.numberOfChannels,
+            options
+        });
+
         // Convert AudioBuffer to Float32Array (mono)
         const audioData = audioBuffer.getChannelData(0);
 
         try {
-            logger.debug("Initializing Silero VAD...");
-            const vad = await NonRealTimeVAD.new();
+            logger.debug("Initializing VAD Worker...");
+            const startTime = performance.now();
 
-            const segments: { start: number; end: number }[] = [];
+            if (!this.worker) {
+                // Initialize worker
+                this.worker = new Worker(new URL('./vad.worker.ts', import.meta.url), {
+                    type: 'classic' // Use classic to allow importScripts
+                });
 
-            logger.debug("Running VAD on audio data...");
-            // vad.run returns an async iterator
-            for await (const { start, end } of vad.run(audioData, audioBuffer.sampleRate)) {
-                // VAD returns timestamps in milliseconds, we need seconds
-                segments.push({
-                    start: start / 1000,
-                    end: end / 1000
+                this.workerReadyPromise = new Promise((resolve, reject) => {
+                    if (!this.worker) return reject("Worker not created");
+
+                    const handleInitMessage = (e: MessageEvent) => {
+                        if (e.data.type === 'ready') {
+                            this.worker?.removeEventListener('message', handleInitMessage);
+                            resolve();
+                        } else if (e.data.type === 'error') {
+                            this.worker?.removeEventListener('message', handleInitMessage);
+                            reject(new Error(e.data.message));
+                        }
+                    };
+                    this.worker.addEventListener('message', handleInitMessage);
+
+                    // Send init command
+                    this.worker.postMessage({
+                        command: 'init',
+                        options: {
+                            positiveSpeechThreshold: 0.6,
+                            negativeSpeechThreshold: 0.4,
+                            minSpeechFrames: 4,
+                            redemptionFrames: 8, // ~250ms silence ends segment
+                            preSpeechPadFrames: 1,
+                        }
+                    });
                 });
             }
 
-            logger.debug(`VAD complete. Found ${segments.length} speech segments.`);
-            return segments;
+            await this.workerReadyPromise;
+            const initTime = performance.now() - startTime;
+            logger.debug(`VAD Worker initialized in ${initTime.toFixed(2)}ms`);
+
+            // Run VAD via worker
+            return new Promise((resolve, reject) => {
+                if (!this.worker) return reject("Worker not available");
+
+                const handleProcessMessage = (e: MessageEvent) => {
+                    const msg = e.data;
+                    if (msg.type === 'result') {
+                        this.worker?.removeEventListener('message', handleProcessMessage);
+                        const runTime = performance.now() - startTime - initTime;
+                        logger.debug(`VAD execution complete in ${runTime.toFixed(2)}ms. Found ${msg.segments.length} speech segments.`);
+                        resolve(msg.segments);
+                    } else if (msg.type === 'progress') {
+                        logger.debug(`VAD Progress: ${msg.processed} segments (Latest: ${msg.latestTime.toFixed(2)}s)`);
+                    } else if (msg.type === 'error') {
+                        this.worker?.removeEventListener('message', handleProcessMessage);
+                        reject(new Error(msg.message));
+                    }
+                };
+
+                this.worker.addEventListener('message', handleProcessMessage);
+
+                // Send process command
+                this.worker.postMessage({
+                    command: 'process',
+                    audioData: audioData,
+                    sampleRate: audioBuffer.sampleRate
+                });
+            });
 
         } catch (e) {
-            logger.warn("Silero VAD failed, falling back to energy-based segmentation:", e);
-            // Fallback to energy-based if VAD fails (e.g. model download error)
+            logger.error("Silero VAD failed initialization or execution", e);
+            logger.warn("Falling back to energy-based segmentation due to VAD error");
             return this.energyBasedSegmentation(audioData, audioBuffer.sampleRate, options.minDurationMs || 1000);
         }
     }
