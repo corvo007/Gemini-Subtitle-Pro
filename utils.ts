@@ -572,16 +572,16 @@ export function audioBufferToWav(buffer: AudioBuffer): Blob {
 
 // --- OpenAI API (Whisper & GPT-4o Audio) ---
 
-export const transcribeAudio = async (audioBlob: Blob, apiKey: string, model: string = 'whisper-1', endpoint?: string): Promise<SubtitleItem[]> => {
+export const transcribeAudio = async (audioBlob: Blob, apiKey: string, model: string = 'whisper-1', endpoint?: string, timeout?: number): Promise<SubtitleItem[]> => {
   logger.debug(`Starting transcription with model: ${model} on endpoint: ${endpoint || 'default'}`);
   if (model.includes('gpt-4o')) {
-    return transcribeWithOpenAIChat(audioBlob, apiKey, model, endpoint);
+    return transcribeWithOpenAIChat(audioBlob, apiKey, model, endpoint, timeout);
   } else {
-    return transcribeWithWhisper(audioBlob, apiKey, model, endpoint);
+    return transcribeWithWhisper(audioBlob, apiKey, model, endpoint, timeout);
   }
 };
 
-const transcribeWithWhisper = async (audioBlob: Blob, apiKey: string, model: string, endpoint?: string): Promise<SubtitleItem[]> => {
+const transcribeWithWhisper = async (audioBlob: Blob, apiKey: string, model: string, endpoint?: string, timeout?: number): Promise<SubtitleItem[]> => {
   const formData = new FormData();
   formData.append('file', audioBlob, 'audio.wav');
   formData.append('model', model); // usually 'whisper-1'
@@ -596,7 +596,7 @@ const transcribeWithWhisper = async (audioBlob: Blob, apiKey: string, model: str
   while (attempt < maxRetries) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minutes
+      const timeoutId = setTimeout(() => controller.abort(), timeout || 600000); // Default 10 minutes
 
       const response = await fetch(`${baseUrl}/audio/transcriptions`, {
         method: 'POST',
@@ -634,7 +634,7 @@ const transcribeWithWhisper = async (audioBlob: Blob, apiKey: string, model: str
   throw lastError || new Error("Failed to connect to Whisper API.");
 };
 
-const transcribeWithOpenAIChat = async (audioBlob: Blob, apiKey: string, model: string, endpoint?: string): Promise<SubtitleItem[]> => {
+const transcribeWithOpenAIChat = async (audioBlob: Blob, apiKey: string, model: string, endpoint?: string, timeout?: number): Promise<SubtitleItem[]> => {
   logger.debug(`Starting OpenAI Chat transcription with model: ${model}`);
   const base64Audio = await blobToBase64(audioBlob);
 
@@ -665,7 +665,7 @@ const transcribeWithOpenAIChat = async (audioBlob: Blob, apiKey: string, model: 
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minutes
+    const timeoutId = setTimeout(() => controller.abort(), timeout || 600000); // Default 10 minutes
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",

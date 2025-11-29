@@ -34,7 +34,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     glossaryAutoConfirm: false,
     useSmartSplit: true,
     glossaries: [],
-    activeGlossaryId: null
+    activeGlossaryId: null,
+    requestTimeout: 600
 };
 
 
@@ -727,7 +728,7 @@ export default function App() {
                             <div key={chunk.id} className="flex items-center justify-between bg-slate-800/80 p-3 rounded-lg border border-slate-700/50 hover:border-slate-600 transition-colors">
                                 <div className="flex items-center space-x-3 min-w-[120px]">
                                     <div className={`w-2 h-2 rounded-full ${chunk.status === 'completed' ? 'bg-emerald-500' : chunk.status === 'error' ? 'bg-red-500' : 'bg-blue-500 animate-pulse'}`} />
-                                    <span className="text-slate-300 font-mono text-sm font-medium">
+                                    <span className="text-slate-300 text-sm font-medium">
                                         {typeof chunk.id === 'number'
                                             ? `片段 ${chunk.id}`
                                             : chunk.id === 'decoding' ? '解码'
@@ -882,7 +883,7 @@ export default function App() {
         setIsGeneratingGlossary(true);
         try {
             const apiKey = settings.geminiKey || ENV_GEMINI_KEY;
-            const terms = await generateGlossary(subtitles, apiKey, settings.genre);
+            const terms = await generateGlossary(subtitles, apiKey, settings.genre, (settings.requestTimeout || 600) * 1000);
 
             // Merge with existing glossary to avoid duplicates
             const existingTerms = new Set(settings.glossary?.map(g => g.term.toLowerCase()) || []);
@@ -1698,6 +1699,15 @@ export default function App() {
                                             }} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
                                             <p className="text-xs text-slate-500 mt-1">用于 <strong>Gemini 3 Pro</strong> (术语提取和深度校对)。严格的速率限制 (保持 &lt; 5)。</p>
                                         </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-1.5">请求超时 (秒)</label>
+                                            <input type="text" value={settings.requestTimeout === 0 ? '' : (settings.requestTimeout || 600)} onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '') updateSetting('requestTimeout', 0);
+                                                else if (/^\d+$/.test(val)) updateSetting('requestTimeout', parseInt(val));
+                                            }} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
+                                            <p className="text-xs text-slate-500 mt-1">API 请求的超时时间。如果经常遇到超时错误，请增加此值。</p>
+                                        </div>
                                     </div>
 
                                     <div className="pt-4 border-t border-slate-800">
@@ -1754,6 +1764,7 @@ export default function App() {
                                                     分析前 X 分钟以提取术语。“完整音频”覆盖面更广，但耗时更长。
                                                 </p>
                                             </div>
+
 
                                             <div className="flex items-center justify-between">
                                                 <div>
@@ -1854,7 +1865,8 @@ export default function App() {
                 glossaryMetadata.glossaryChunks,
                 settings.genre,
                 settings.concurrencyPro,
-                settings.geminiEndpoint
+                settings.geminiEndpoint,
+                (settings.requestTimeout || 600) * 1000
             );
 
             setGlossaryMetadata(newMetadata);

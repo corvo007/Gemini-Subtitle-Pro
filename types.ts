@@ -102,6 +102,7 @@ export interface AppSettings {
   enableAutoGlossary?: boolean;           // Default: true
   glossarySampleMinutes?: number | 'all'; // Default: 'all', or max minutes to analyze
   glossaryAutoConfirm?: boolean;          // Default: false (show dialog)
+  requestTimeout?: number;                // Default: 600 (seconds)
 }
 
 // Gemini Response Schema Helper Types

@@ -408,13 +408,14 @@ export const retryGlossaryExtraction = async (
   chunks: { index: number; start: number; end: number }[],
   genre: string,
   concurrency: number,
-  endpoint?: string
+  endpoint?: string,
+  timeout?: number
 ): Promise<GlossaryExtractionMetadata> => {
   const ai = new GoogleGenAI({
     apiKey,
     httpOptions: {
       ...(endpoint ? { baseUrl: endpoint } : {}),
-      timeout: 600000
+      timeout: timeout || 600000
     }
   });
   const results = await extractGlossaryFromAudio(ai, audioBuffer, chunks, genre, concurrency);
@@ -495,7 +496,7 @@ export const generateSubtitles = async (
     apiKey: geminiKey,
     httpOptions: {
       ...(settings.geminiEndpoint ? { baseUrl: settings.geminiEndpoint } : {}),
-      timeout: 600000 // 10 minutes timeout to prevent 30s default
+      timeout: (settings.requestTimeout || 600) * 1000 // Convert seconds to ms, default 600s if not set (UI defaults to 600)
     }
   });
 
@@ -661,7 +662,7 @@ export const generateSubtitles = async (
       logger.debug(`[Chunk ${index}] Starting transcription...`);
 
       const wavBlob = await sliceAudioBuffer(audioBuffer, start, end);
-      const rawSegments = await transcribeAudio(wavBlob, openaiKey, settings.transcriptionModel);
+      const rawSegments = await transcribeAudio(wavBlob, openaiKey, settings.transcriptionModel, settings.openaiEndpoint, (settings.requestTimeout || 600) * 1000);
 
       logger.debug(`[Chunk ${index}] Transcription complete. Segments: ${rawSegments.length}`);
 
@@ -1189,7 +1190,7 @@ export const runBatchOperation = async (
     apiKey: geminiKey,
     httpOptions: {
       ...(settings.geminiEndpoint ? { baseUrl: settings.geminiEndpoint } : {}),
-      timeout: 600000
+      timeout: (settings.requestTimeout || 600) * 1000
     }
   });
 
@@ -1337,12 +1338,13 @@ export const runBatchOperation = async (
 export const generateGlossary = async (
   subtitles: SubtitleItem[],
   apiKey: string,
-  genre: string
+  genre: string,
+  timeout?: number
 ): Promise<GlossaryItem[]> => {
   if (!apiKey) throw new Error("Gemini API Key is missing.");
   const ai = new GoogleGenAI({
     apiKey,
-    httpOptions: { timeout: 600000 }
+    httpOptions: { timeout: timeout || 600000 }
   });
 
   // Prepare a sample of the text to avoid context limit issues if the file is huge.
@@ -1419,10 +1421,14 @@ export const generateGlossary = async (
 export const checkGlobalConsistency = async (
   subtitles: SubtitleItem[],
   apiKey: string,
-  genre: string
+  genre: string,
+  timeout?: number
 ): Promise<ConsistencyIssue[]> => {
   if (!apiKey) throw new Error("Gemini API Key is missing.");
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({
+    apiKey,
+    httpOptions: { timeout: timeout || 600000 }
+  });
 
   // Prepare a sample of the text
   let textSample = "";
