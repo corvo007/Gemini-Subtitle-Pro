@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Upload, FileVideo, Download, Trash2, Play, CheckCircle, AlertCircle, Languages, Loader2, Sparkles, Settings, X, Eye, EyeOff, MessageSquareText, AudioLines, Clapperboard, Monitor, CheckSquare, Square, RefreshCcw, Type, Clock, Wand2, FileText, RotateCcw, MessageCircle, GitCommit, ArrowLeft, Plus, Book, ShieldCheck, Scissors, Pencil, Cpu, Layout, Search, Globe, Zap, Volume2, ChevronDown, ChevronRight, Save, Edit2, Ban } from 'lucide-react';
 import { SubtitleItem, GenerationStatus, OutputFormat, AppSettings, Genre, BatchOperationMode, SubtitleSnapshot, ChunkStatus, GENRE_PRESETS, GlossaryItem, GlossaryExtractionResult, GlossaryExtractionMetadata } from './types';
 import { generateSrtContent, generateAssContent, downloadFile, parseSrt, parseAss, decodeAudio, logger, LogEntry } from './utils';
-import { mergeGlossaryResults } from './glossaryUtils';
+import { mergeGlossaryResults, createGlossary, migrateFromLegacyGlossary } from './glossaryUtils';
 import { generateSubtitles, runBatchOperation, generateGlossary, retryGlossaryExtraction } from './gemini';
 
 import { SmartSegmenter } from './smartSegmentation';
 import { TerminologyChecker, TerminologyIssue } from './terminologyChecker';
+import { GlossaryManager } from './GlossaryManager';
 
 
 const SETTINGS_KEY = 'gemini_subtitle_settings';
@@ -31,7 +32,9 @@ const DEFAULT_SETTINGS: AppSettings = {
     enableAutoGlossary: true,
     glossarySampleMinutes: 'all',
     glossaryAutoConfirm: false,
-    useSmartSplit: true
+    useSmartSplit: true,
+    glossaries: [],
+    activeGlossaryId: null
 };
 
 
@@ -86,6 +89,188 @@ const TimeTracker = ({ startTime, completed, total, status }: { startTime: numbe
     );
 };
 
+interface SimpleConfirmationModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    type?: 'info' | 'warning' | 'danger';
+}
+
+const SimpleConfirmationModal: React.FC<SimpleConfirmationModalProps> = ({
+    isOpen,
+    onClose,
+    onConfirm,
+    title,
+    message,
+    confirmText = 'Confirm',
+    cancelText = 'Cancel',
+    type = 'info'
+}) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-md w-full shadow-2xl transform transition-all scale-100">
+                <div className="flex items-center space-x-3 mb-4">
+                    {type === 'danger' && <div className="p-2 bg-red-500/20 rounded-lg"><AlertCircle className="w-6 h-6 text-red-400" /></div>}
+                    {type === 'warning' && <div className="p-2 bg-amber-500/20 rounded-lg"><AlertCircle className="w-6 h-6 text-amber-400" /></div>}
+                    {type === 'info' && <div className="p-2 bg-indigo-500/20 rounded-lg"><CheckCircle className="w-6 h-6 text-indigo-400" /></div>}
+                    <h3 className="text-lg font-bold text-white">{title}</h3>
+                </div>
+                <p className="text-slate-300 mb-6 leading-relaxed">
+                    {message}
+                </p>
+                <div className="flex justify-end space-x-3">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium"
+                    >
+                        {cancelText}
+                    </button>
+                    <button
+                        onClick={() => { onConfirm(); onClose(); }}
+                        className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors shadow-lg ${type === 'danger' ? 'bg-red-600 hover:bg-red-500 shadow-red-500/20' :
+                            type === 'warning' ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-500/20' :
+                                'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'
+                            }`}
+                    >
+                        {confirmText}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+interface GenreSettingsDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    currentGenre: string;
+    onSave: (genre: string) => void;
+}
+
+const GenreSettingsDialog: React.FC<GenreSettingsDialogProps> = ({ isOpen, onClose, currentGenre, onSave }) => {
+    const [tempGenre, setTempGenre] = useState(currentGenre);
+    const [customInput, setCustomInput] = useState('');
+
+    useEffect(() => {
+        if (isOpen) {
+            if (GENRE_PRESETS.includes(currentGenre)) {
+                setTempGenre(currentGenre);
+                setCustomInput('');
+            } else {
+                setTempGenre('custom');
+                setCustomInput(currentGenre);
+            }
+        }
+    }, [isOpen, currentGenre]);
+
+    const handleSave = () => {
+        onSave(tempGenre === 'custom' ? customInput : tempGenre);
+        onClose();
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-md w-full shadow-2xl">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-bold text-white flex items-center"><Clapperboard className="w-5 h-5 mr-2 text-indigo-400" /> Genre / Context Settings</h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+                </div>
+                <div className="space-y-4 mb-6">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Select Preset</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {GENRE_PRESETS.map(g => (
+                                <button key={g} onClick={() => setTempGenre(g)} className={`px-3 py-2 rounded-lg text-sm border transition-all ${tempGenre === g ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>{g.charAt(0).toUpperCase() + g.slice(1)}</button>
+                            ))}
+                            <button onClick={() => setTempGenre('custom')} className={`px-3 py-2 rounded-lg text-sm border transition-all ${tempGenre === 'custom' ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Custom...</button>
+                        </div>
+                    </div>
+                    {tempGenre === 'custom' && (
+                        <div className="animate-fade-in">
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Custom Context</label>
+                            <input type="text" value={customInput} onChange={(e) => setCustomInput(e.target.value)} placeholder="E.g. Minecraft Gameplay, Medical Lecture..." className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" autoFocus />
+                        </div>
+                    )}
+                </div>
+                <div className="flex justify-end">
+                    <button onClick={handleSave} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium shadow-lg shadow-indigo-500/20 transition-colors">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+interface CustomSelectProps {
+    value: string;
+    onChange: (value: string) => void;
+    options: { value: string; label: React.ReactNode | string }[];
+    className?: string;
+    icon?: React.ReactNode;
+    placeholder?: string;
+}
+
+const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, className = "", icon, placeholder }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedLabel = options.find(opt => opt.value === value)?.label || placeholder || value;
+
+    return (
+        <div className={`relative ${className}`} ref={containerRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between bg-slate-800 border border-slate-700 rounded-lg py-2 pl-3 pr-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm transition-colors hover:bg-slate-750"
+            >
+                <div className="flex items-center truncate">
+                    {icon && <span className="mr-2 text-slate-500">{icon}</span>}
+                    <span className="truncate">{selectedLabel}</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                    <div className="p-1">
+                        {options.map((option) => (
+                            <button
+                                key={option.value}
+                                onClick={() => {
+                                    onChange(option.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${value === option.value ? 'bg-indigo-600/20 text-indigo-300' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                                    }`}
+                            >
+                                <span className="truncate">{option.label}</span>
+                                {value === option.value && <CheckCircle className="w-3 h-3 text-indigo-400" />}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function App() {
     // View State
     const [view, setView] = useState<'home' | 'workspace'>('home');
@@ -104,6 +289,8 @@ export default function App() {
 
     const [showSnapshots, setShowSnapshots] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
+    const [showGenreSettings, setShowGenreSettings] = useState(false);
+    const [showGlossaryManager, setShowGlossaryManager] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Settings State
@@ -176,11 +363,28 @@ export default function App() {
         if (storedSettings) {
             try {
                 const parsed = JSON.parse(storedSettings);
+                let newSettings = { ...DEFAULT_SETTINGS, ...parsed };
 
-                // Migration: Fix legacy model names
+                // Migration: Legacy glossary to Multi-Glossary
+                if (parsed.glossary && parsed.glossary.length > 0 && (!parsed.glossaries || parsed.glossaries.length === 0)) {
+                    const defaultGlossary = migrateFromLegacyGlossary(parsed.glossary);
+                    newSettings.glossaries = [defaultGlossary];
+                    newSettings.activeGlossaryId = defaultGlossary.id;
+                    logger.info('Migrated legacy glossary to new format');
+                }
 
+                // Ensure glossaries array exists and fix malformed data
+                if (!newSettings.glossaries) {
+                    newSettings.glossaries = [];
+                } else {
+                    // Fix potential migration issues (items vs terms)
+                    newSettings.glossaries = newSettings.glossaries.map((g: any) => ({
+                        ...g,
+                        terms: g.terms || g.items || []
+                    }));
+                }
 
-                setSettings(prev => ({ ...DEFAULT_SETTINGS, ...parsed }));
+                setSettings(newSettings);
             } catch (e) { logger.warn("Settings load error", e); }
         }
         setIsSettingsLoaded(true);
@@ -297,10 +501,17 @@ export default function App() {
         try {
             setStatus(GenerationStatus.PROCESSING);
 
+            // Prepare runtime settings with active glossary terms
+            const activeGlossary = settings.glossaries?.find(g => g.id === settings.activeGlossaryId);
+            const runtimeSettings = {
+                ...settings,
+                glossary: activeGlossary?.terms || settings.glossary || []
+            };
+
             const { subtitles: result, glossaryResults } = await generateSubtitles(
                 file,
                 duration,
-                settings,
+                runtimeSettings,
                 handleProgress,
                 (newSubs) => setSubtitles(newSubs),
                 // onGlossaryReady callback (Blocking)
@@ -309,15 +520,39 @@ export default function App() {
 
                     if (settings.glossaryAutoConfirm && !metadata.hasFailures) {
                         const { unique } = mergeGlossaryResults(metadata.results);
-                        const existingTerms = new Set(settings.glossary?.map(g => g.term.toLowerCase()) || []);
-                        const newTerms = unique.filter(t => !existingTerms.has(t.term.toLowerCase()));
-                        if (newTerms.length > 0) {
-                            const updatedGlossary = [...(settings.glossary || []), ...newTerms];
-                            updateSetting('glossary', updatedGlossary);
-                            logger.info(`Auto-added ${newTerms.length} terms to glossary`);
-                            return updatedGlossary;
+
+                        if (settings.activeGlossaryId && settings.glossaries) {
+                            const activeG = settings.glossaries.find(g => g.id === settings.activeGlossaryId);
+                            const activeTerms = activeG?.terms || (activeG as any)?.items || [];
+                            const existingTerms = new Set(activeTerms.map(g => g.term.toLowerCase()));
+                            const newTerms = unique.filter(t => !existingTerms.has(t.term.toLowerCase()));
+
+                            if (newTerms.length > 0) {
+                                const updatedGlossaries = settings.glossaries.map(g => {
+                                    if (g.id === settings.activeGlossaryId) {
+                                        const currentTerms = g.terms || (g as any).items || [];
+                                        return { ...g, terms: [...currentTerms, ...newTerms] };
+                                    }
+                                    return g;
+                                });
+                                updateSetting('glossaries', updatedGlossaries);
+                                logger.info(`Auto-added ${newTerms.length} terms to active glossary`);
+                                const updatedActive = updatedGlossaries.find(g => g.id === settings.activeGlossaryId);
+                                return updatedActive?.terms || [];
+                            }
+                            return activeTerms;
+                        } else {
+                            // Fallback for legacy
+                            const existingTerms = new Set(settings.glossary?.map(g => g.term.toLowerCase()) || []);
+                            const newTerms = unique.filter(t => !existingTerms.has(t.term.toLowerCase()));
+                            if (newTerms.length > 0) {
+                                const updatedGlossary = [...(settings.glossary || []), ...newTerms];
+                                updateSetting('glossary', updatedGlossary);
+                                logger.info(`Auto-added ${newTerms.length} terms to glossary`);
+                                return updatedGlossary;
+                            }
+                            return settings.glossary || [];
                         }
-                        return settings.glossary || [];
                     }
 
                     // Manual confirmation required
@@ -328,8 +563,7 @@ export default function App() {
                         // Store the resolve function
                         setGlossaryConfirmCallback(() => (confirmedItems: GlossaryItem[]) => {
                             logger.info("User confirmed glossary terms:", confirmedItems.length);
-                            const newGlossary = [...(settings.glossary || []), ...confirmedItems];
-                            updateSetting('glossary', newGlossary);
+                            // Settings are already updated by GlossaryConfirmationModal
 
                             // Cleanup UI
                             setShowGlossaryConfirmation(false);
@@ -338,7 +572,7 @@ export default function App() {
                             setGlossaryMetadata(null);
                             setGlossaryConfirmCallback(null);
 
-                            resolve(newGlossary);
+                            resolve(confirmedItems);
                         });
 
                         if (metadata.totalTerms > 0) {
@@ -348,7 +582,12 @@ export default function App() {
                             setShowGlossaryFailure(true);
                         } else {
                             // Should not happen if gemini.ts logic is correct, but safe fallback
-                            resolve(settings.glossary || []);
+                            if (settings.activeGlossaryId && settings.glossaries) {
+                                const activeG = settings.glossaries.find(g => g.id === settings.activeGlossaryId);
+                                resolve(activeG?.terms || []);
+                            } else {
+                                resolve(settings.glossary || []);
+                            }
                         }
                     });
                 }
@@ -448,9 +687,18 @@ export default function App() {
             return String(a.id).localeCompare(String(b.id));
         });
 
+        const systemChunks = chunks.filter(c => ['decoding', 'segmenting', 'glossary'].includes(String(c.id)));
         const contentChunks = chunks.filter(c => !['init', 'decoding', 'segmenting', 'glossary'].includes(String(c.id)));
-        const total = contentChunks.length > 0 ? contentChunks[0].total : 0;
-        const completed = contentChunks.filter(c => c.status === 'completed').length;
+
+        const contentTotal = contentChunks.length > 0 ? contentChunks[0].total : 0;
+        const contentCompleted = contentChunks.filter(c => c.status === 'completed').length;
+
+        const systemTotal = systemChunks.length;
+        const systemCompleted = systemChunks.filter(c => c.status === 'completed').length;
+
+        const total = contentTotal + systemTotal;
+        const completed = contentCompleted + systemCompleted;
+
         const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
         return (
@@ -653,6 +901,25 @@ export default function App() {
         downloadFile('glossary.json', content, 'json');
     };
 
+    // Confirmation Modal State
+    const [confirmationModal, setConfirmationModal] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+        type?: 'info' | 'warning' | 'danger';
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { },
+        type: 'info'
+    });
+
+    const closeConfirmationModal = () => {
+        setConfirmationModal(prev => ({ ...prev, isOpen: false }));
+    };
+
     const handleImportGlossary = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
@@ -665,25 +932,32 @@ export default function App() {
                         // Basic validation
                         const validItems = parsed.filter(item => item.term && item.translation);
                         if (validItems.length > 0) {
-                            if (confirm(`Import ${validItems.length} terms? This will merge with your existing glossary.`)) {
-                                const existingTerms = new Set(settings.glossary?.map(g => g.term.toLowerCase()) || []);
-                                const newTerms = validItems.filter((t: GlossaryItem) => !existingTerms.has(t.term.toLowerCase()));
-                                const updatedGlossary = [...(settings.glossary || []), ...newTerms];
-                                updateSetting('glossary', updatedGlossary);
-                                alert(`Imported ${newTerms.length} new terms.`);
-                            }
+                            setConfirmationModal({
+                                isOpen: true,
+                                title: 'Import Glossary',
+                                message: `Import ${validItems.length} terms? This will merge with your existing glossary.`,
+                                type: 'info',
+                                onConfirm: () => {
+                                    const existingTerms = new Set(settings.glossary?.map(g => g.term.toLowerCase()) || []);
+                                    const newTerms = validItems.filter((t: GlossaryItem) => !existingTerms.has(t.term.toLowerCase()));
+                                    const updatedGlossary = [...(settings.glossary || []), ...newTerms];
+                                    updateSetting('glossary', updatedGlossary);
+                                    addToast(`Imported ${newTerms.length} new terms.`, 'success');
+                                }
+                            });
                         } else {
-                            alert("No valid glossary items found in file.");
+                            addToast("No valid glossary items found in file.", 'warning');
                         }
                     } else {
-                        alert("Invalid glossary file format.");
+                        addToast("Invalid glossary file format.", 'error');
                     }
                 } catch (err) {
                     console.error("Failed to parse glossary file", err);
-                    alert("Failed to parse glossary file.");
+                    addToast("Failed to parse glossary file.", 'error');
                 }
             };
             reader.readAsText(file);
+            e.target.value = '';
         }
     };
 
@@ -707,22 +981,26 @@ export default function App() {
             return null;
         }
 
+        // Get active glossary terms
+        const activeGlossary = settings.glossaries?.find(g => g.id === settings.activeGlossaryId);
+        const activeTerms = activeGlossary?.terms || (activeGlossary as any)?.items || settings.glossary || [];
+
         // Memoize mergeGlossaryResults to prevent re-computing on every render
         const { unique, conflicts } = useMemo(() =>
-            mergeGlossaryResults(pendingGlossaryResults, settings.glossary),
-            [pendingGlossaryResults, settings.glossary]
+            mergeGlossaryResults(pendingGlossaryResults, activeTerms),
+            [pendingGlossaryResults, activeTerms]
         );
 
         // Initialize state ONLY on first mount, not on every render
         useEffect(() => {
             if (!initialized.current && pendingGlossaryResults.length > 0) {
-                const newUnique = unique.filter(u => !settings.glossary?.some(g => g.term.toLowerCase() === u.term.toLowerCase()));
+                const newUnique = unique.filter(u => !activeTerms.some(g => g.term.toLowerCase() === u.term.toLowerCase()));
                 setSelectedTerms(new Set(newUnique.map(t => t.term)));
 
                 const initialResolved: Record<string, GlossaryItem | null> = {};
                 conflicts.forEach(c => {
                     if (c.hasExisting) {
-                        const existing = c.options.find(o => settings.glossary?.some(g => g.term === o.term && g.translation === o.translation));
+                        const existing = c.options.find(o => activeTerms.some(g => g.term === o.term && g.translation === o.translation));
                         if (existing) initialResolved[c.term] = existing;
                     }
                 });
@@ -730,7 +1008,7 @@ export default function App() {
 
                 initialized.current = true; // Mark as initialized
             }
-        }, [pendingGlossaryResults, unique, conflicts, settings.glossary]);
+        }, [pendingGlossaryResults, unique, conflicts, activeTerms]);
 
 
 
@@ -738,13 +1016,31 @@ export default function App() {
             if (!glossaryConfirmCallback) return;
             const termsToAdd = unique.filter(t => selectedTerms.has(t.term)).map(t => overrides[t.term] || t);
             const resolvedToAdd = Object.values(resolvedConflicts).filter((t): t is GlossaryItem => t !== null);
-            const finalGlossary = [...(settings.glossary || []), ...termsToAdd, ...resolvedToAdd, ...customTerms];
-            const uniqueMap = new Map<string, GlossaryItem>();
-            finalGlossary.forEach(item => uniqueMap.set(item.term.toLowerCase(), item));
-            const deduplicated = Array.from(uniqueMap.values());
+            const newTerms = [...termsToAdd, ...resolvedToAdd, ...customTerms];
 
-            updateSetting('glossary', deduplicated);
-            glossaryConfirmCallback(deduplicated);
+            if (settings.activeGlossaryId && settings.glossaries) {
+                const updatedGlossaries = settings.glossaries.map(g => {
+                    if (g.id === settings.activeGlossaryId) {
+                        const uniqueMap = new Map<string, GlossaryItem>();
+                        (g.terms || (g as any).items || []).forEach((item: GlossaryItem) => uniqueMap.set(item.term.toLowerCase(), item));
+                        newTerms.forEach(item => uniqueMap.set(item.term.toLowerCase(), item));
+                        return { ...g, terms: Array.from(uniqueMap.values()) };
+                    }
+                    return g;
+                });
+                updateSetting('glossaries', updatedGlossaries);
+                const updatedActive = updatedGlossaries.find(g => g.id === settings.activeGlossaryId);
+                glossaryConfirmCallback(updatedActive?.terms || []);
+            } else {
+                const finalGlossary = [...(settings.glossary || []), ...newTerms];
+                const uniqueMap = new Map<string, GlossaryItem>();
+                finalGlossary.forEach(item => uniqueMap.set(item.term.toLowerCase(), item));
+                const deduplicated = Array.from(uniqueMap.values());
+
+                updateSetting('glossary', deduplicated);
+                glossaryConfirmCallback(deduplicated);
+            }
+
             setGlossaryConfirmCallback(null);
             setPendingGlossaryResults([]);
             setCustomTerms([]);
@@ -756,7 +1052,7 @@ export default function App() {
 
         const handleDiscard = () => {
             if (glossaryConfirmCallback) {
-                glossaryConfirmCallback(settings.glossary || []);
+                glossaryConfirmCallback(activeTerms);
                 setGlossaryConfirmCallback(null);
             }
             setPendingGlossaryResults([]);
@@ -1177,13 +1473,27 @@ export default function App() {
                     </div>
 
                     <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-between items-center">
-                        <button onClick={handleDiscard} className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
-                            Discard All
-                        </button>
-                        <button onClick={handleConfirm} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg font-medium shadow-lg shadow-indigo-500/25 transition-all flex items-center">
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Add {totalToAdd} Terms
-                        </button>
+                        <div className="flex items-center space-x-2">
+                            <button onClick={handleDiscard} className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+                                Discard All
+                            </button>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                            <div className="flex items-center space-x-2">
+                                <span className="text-sm text-slate-400">Add to:</span>
+                                <CustomSelect
+                                    value={settings.activeGlossaryId || ''}
+                                    onChange={(val) => updateSetting('activeGlossaryId', val || null)}
+                                    options={settings.glossaries?.map(g => ({ value: g.id, label: g.name })) || []}
+                                    className="w-48"
+                                    placeholder="Select Glossary"
+                                />
+                            </div>
+                            <button onClick={handleConfirm} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg font-medium shadow-lg shadow-indigo-500/25 transition-all flex items-center">
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Add {totalToAdd} Terms
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1238,7 +1548,7 @@ export default function App() {
                         <h2 className="text-xl font-bold text-white mb-6 flex items-center"><Settings className="w-5 h-5 mr-2 text-indigo-400" /> Settings</h2>
 
                         <div className="flex space-x-1 border-b border-slate-700 mb-6 overflow-x-auto">
-                            {['api', 'performance', 'transcription', 'terminology'].map((tab) => (
+                            {['api', 'performance', 'transcription'].map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setSettingsTab(tab)}
@@ -1248,7 +1558,6 @@ export default function App() {
                                     {tab === 'performance' && 'Performance'}
                                     {tab === 'transcription' && 'Transcription'}
                                     {tab === 'prompts' && 'Prompts'}
-                                    {tab === 'terminology' && 'Terminology'}
                                 </button>
                             ))}
                         </div>
@@ -1256,17 +1565,19 @@ export default function App() {
                         <div className="space-y-6 min-h-[400px]">
                             {settingsTab === 'api' && (
                                 <div className="space-y-3 animate-fade-in">
-                                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">API Configuration</h3>
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-slate-300 mb-1.5">Gemini API Key</label>
                                             <div className="relative"><input type="password" value={settings.geminiKey} onChange={(e) => updateSetting('geminiKey', e.target.value.trim())} placeholder="Enter Gemini API Key" className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 pr-10 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm" /></div>
+                                            <p className="text-xs text-slate-500 mt-1">Required. Uses <strong>Gemini 2.5 Flash</strong> for translation and <strong>Gemini 3 Pro</strong> for glossary extraction.</p>
                                             {ENV_GEMINI_KEY && !settings.geminiKey && (<p className="text-xs text-emerald-400 mt-1 flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> Using API Key from environment</p>)}
                                             {ENV_GEMINI_KEY && settings.geminiKey && (<p className="text-xs text-amber-400 mt-1">Overriding environment API Key</p>)}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-slate-300 mb-1.5">OpenAI API Key</label>
                                             <div className="relative"><input type="password" value={settings.openaiKey} onChange={(e) => updateSetting('openaiKey', e.target.value.trim())} placeholder="Enter OpenAI API Key" className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 pr-10 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm" /></div>
+                                            <p className="text-xs text-slate-500 mt-1">Required. Uses <strong>Whisper</strong> model for high-accuracy base transcription.</p>
                                             {ENV_OPENAI_KEY && !settings.openaiKey && (<p className="text-xs text-emerald-400 mt-1 flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> Using API Key from environment</p>)}
                                             {ENV_OPENAI_KEY && settings.openaiKey && (<p className="text-xs text-amber-400 mt-1">Overriding environment API Key</p>)}
                                         </div>
@@ -1276,27 +1587,52 @@ export default function App() {
 
                             {settingsTab === 'performance' && (
                                 <div className="space-y-3 animate-fade-in">
-                                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Performance & Batching</h3>
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-slate-300 mb-1.5">Proofread Batch Size</label>
-                                            <input type="number" value={settings.proofreadBatchSize} onChange={(e) => updateSetting('proofreadBatchSize', isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value))} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
+                                            <input type="text" value={settings.proofreadBatchSize === 0 ? '' : settings.proofreadBatchSize} onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '') updateSetting('proofreadBatchSize', 0);
+                                                else if (/^\d+$/.test(val)) updateSetting('proofreadBatchSize', parseInt(val));
+                                            }} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
+                                            <p className="text-xs text-slate-500 mt-1">Number of lines to proofread in a single API call. Higher values save tokens but may reduce quality.</p>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-slate-300 mb-1.5">Translation Batch Size</label>
-                                            <input type="number" value={settings.translationBatchSize} onChange={(e) => updateSetting('translationBatchSize', isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value))} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
+                                            <input type="text" value={settings.translationBatchSize === 0 ? '' : settings.translationBatchSize} onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '') updateSetting('translationBatchSize', 0);
+                                                else if (/^\d+$/.test(val)) updateSetting('translationBatchSize', parseInt(val));
+                                            }} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
+                                            <p className="text-xs text-slate-500 mt-1">Number of lines to translate in a single API call. Adjust based on context requirements.</p>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-slate-300 mb-1.5">Chunk Duration (s)</label>
-                                            <input type="number" value={settings.chunkDuration} onChange={(e) => updateSetting('chunkDuration', isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value))} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
+                                            <input type="text" value={settings.chunkDuration === 0 ? '' : settings.chunkDuration} onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '') updateSetting('chunkDuration', 0);
+                                                else if (/^\d+$/.test(val)) updateSetting('chunkDuration', parseInt(val));
+                                            }} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
+                                            <p className="text-xs text-slate-500 mt-1">Target duration (in seconds) for splitting audio files during processing.</p>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-slate-300 mb-1.5">Concurrency (Flash)</label>
-                                            <input type="number" value={settings.concurrencyFlash} onChange={(e) => updateSetting('concurrencyFlash', isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value))} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
+                                            <input type="text" value={settings.concurrencyFlash === 0 ? '' : settings.concurrencyFlash} onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '') updateSetting('concurrencyFlash', 0);
+                                                else if (/^\d+$/.test(val)) updateSetting('concurrencyFlash', parseInt(val));
+                                            }} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
+                                            <p className="text-xs text-slate-500 mt-1">For <strong>Gemini 2.5 Flash</strong> (Refinement & Translation). Higher limits (e.g. 10-20) supported.</p>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-slate-300 mb-1.5">Concurrency (Pro)</label>
-                                            <input type="number" value={settings.concurrencyPro} onChange={(e) => updateSetting('concurrencyPro', isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value))} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
+                                            <input type="text" value={settings.concurrencyPro === 0 ? '' : settings.concurrencyPro} onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '') updateSetting('concurrencyPro', 0);
+                                                else if (/^\d+$/.test(val)) updateSetting('concurrencyPro', parseInt(val));
+                                            }} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
+                                            <p className="text-xs text-slate-500 mt-1">For <strong>Gemini 3 Pro</strong> (Glossary Extraction). Strict rate limits (keep &lt; 5).</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1304,22 +1640,7 @@ export default function App() {
 
                             {settingsTab === 'transcription' && (
                                 <div className="space-y-3 animate-fade-in">
-                                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Transcription & Style</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-300 mb-1.5">Transcription Model</label>
-                                            <div className="relative"><AudioLines className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" /><select value={settings.transcriptionModel} onChange={(e) => updateSetting('transcriptionModel', e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 pl-9 pr-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm appearance-none"><option value="whisper-1">Whisper (Standard)</option><option value="gpt-4o-audio-preview">GPT-4o Audio</option></select></div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-300 mb-1.5">Genre / Context</label>
-                                            <div className="relative"><Clapperboard className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" /><select value={isCustomGenre ? 'custom' : settings.genre} onChange={(e) => { const val = e.target.value; if (val === 'custom') updateSetting('genre', ''); else updateSetting('genre', val); }} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 pl-9 pr-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm appearance-none"><option value="general">General</option><option value="anime">Anime / Animation</option><option value="movie">Movies / TV Series</option><option value="news">News / Documentary</option><option value="tech">Tech / Education</option><option value="custom">Custom...</option></select></div>
-                                        </div>
-                                    </div>
-                                    {isCustomGenre && (
-                                        <div className="pt-2 animate-fade-in"><label className="block text-xs font-medium text-indigo-400 mb-1.5">Custom Context / Genre Description</label><input type="text" value={settings.genre} onChange={(e) => updateSetting('genre', e.target.value)} placeholder="E.g., Minecraft Gameplay, Medical Lecture, 19th Century Drama... (Be specific for better tone)" className="w-full bg-slate-800 border border-slate-700 rounded-lg py-3 px-4 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm placeholder-slate-600 shadow-inner" autoFocus /></div>
-                                    )}
-
-                                    <div className="pt-4 border-t border-slate-800">
+                                    <div>
                                         <div className="flex items-center justify-between mb-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-slate-300">Smart Split</label>
@@ -1333,11 +1654,48 @@ export default function App() {
                                             </button>
                                         </div>
 
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-300">Enable Auto-Glossary</label>
+                                                <p className="text-xs text-slate-500">Automatically extract terms from audio before translation</p>
+                                            </div>
+                                            <button
+                                                onClick={() => updateSetting('enableAutoGlossary', !settings.enableAutoGlossary)}
+                                                className={`w-10 h-5 rounded-full transition-colors relative ${settings.enableAutoGlossary !== false ? 'bg-indigo-500' : 'bg-slate-600'}`}
+                                            >
+                                                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.enableAutoGlossary !== false ? 'left-6' : 'left-1'}`} />
+                                            </button>
+                                        </div>
+
+                                        {settings.enableAutoGlossary !== false && (
+                                            <div className="mb-4 animate-fade-in">
+                                                <label className="block text-sm font-medium text-slate-300 mb-1.5">Glossary Extraction Audio Length</label>
+                                                <CustomSelect
+                                                    value={settings.glossarySampleMinutes === 'all' ? 'all' : settings.glossarySampleMinutes.toString()}
+                                                    onChange={(val) => {
+                                                        if (val === 'all') updateSetting('glossarySampleMinutes', 'all');
+                                                        else updateSetting('glossarySampleMinutes', parseInt(val));
+                                                    }}
+                                                    options={[
+                                                        { value: '5', label: 'First 5 Minutes' },
+                                                        { value: '15', label: 'First 15 Minutes' },
+                                                        { value: '30', label: 'First 30 Minutes' },
+                                                        { value: 'all', label: 'Full Audio (Slower)' }
+                                                    ]}
+                                                    icon={<Clock className="w-4 h-4" />}
+                                                />
+                                                <p className="text-xs text-slate-500 mt-1">
+                                                    Analyze the first X minutes to extract terms. "Full Audio" provides better coverage but takes longer.
+                                                </p>
+                                            </div>
+                                        )}
+
                                         <label className="block text-sm font-medium text-slate-300 mb-1.5">Export Mode</label>
                                         <div className="grid grid-cols-2 gap-3">
                                             <button onClick={() => updateSetting('outputMode', 'bilingual')} className={`p-3 rounded-lg border text-sm flex items-center justify-center space-x-2 transition-all ${settings.outputMode === 'bilingual' ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'}`}><Languages className="w-4 h-4" /><span>Bilingual (Original + CN)</span></button>
                                             <button onClick={() => updateSetting('outputMode', 'target_only')} className={`p-3 rounded-lg border text-sm flex items-center justify-center space-x-2 transition-all ${settings.outputMode === 'target_only' ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'}`}><Type className="w-4 h-4" /><span>Chinese Only</span></button>
                                         </div>
+                                        <p className="text-xs text-slate-500 mt-2">Choose whether to keep the original text alongside the translation in the final output.</p>
                                     </div>
                                 </div>
                             )}
@@ -1352,184 +1710,6 @@ export default function App() {
                             )}
 
 
-                            {settingsTab === 'terminology' && (
-                                <div className="space-y-4 animate-fade-in">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider flex items-center"><Book className="w-4 h-4 mr-1.5" /> Glossary & Terminology</h3>
-                                        <div className="flex items-center space-x-2">
-                                            <label className="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-2 transition-colors bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-slate-700">
-                                                <Upload className="w-3 h-3" />
-                                                <span className="hidden sm:inline">Import</span>
-                                                <input type="file" accept=".json" onChange={handleImportGlossary} className="hidden" />
-                                            </label>
-                                            <button
-                                                onClick={handleExportGlossary}
-                                                disabled={!settings.glossary || settings.glossary.length === 0}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-2 transition-colors ${!settings.glossary || settings.glossary.length === 0 ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-slate-700'}`}
-                                                title="Export Glossary"
-                                            >
-                                                <Download className="w-3 h-3" />
-                                                <span className="hidden sm:inline">Export</span>
-                                            </button>
-                                            <div className="w-px h-4 bg-slate-700 mx-1"></div>
-                                            <button
-                                                onClick={() => {
-                                                    if (confirm("Are you sure you want to clear the entire glossary? This action cannot be undone.")) {
-                                                        updateSetting('glossary', []);
-                                                    }
-                                                }}
-                                                disabled={!settings.glossary || settings.glossary.length === 0}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-2 transition-colors ${!settings.glossary || settings.glossary.length === 0 ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20'}`}
-                                                title="Clear all terms"
-                                            >
-                                                <Trash2 className="w-3 h-3" />
-                                                <span className="hidden sm:inline">Clear All</span>
-                                            </button>
-                                            <button
-                                                onClick={handleGenerateGlossary}
-                                                disabled={isGeneratingGlossary || subtitles.length === 0}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-2 transition-colors ${isGeneratingGlossary || subtitles.length === 0 ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white'}`}
-                                            >
-                                                {isGeneratingGlossary ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
-                                                <span>{isGeneratingGlossary ? 'Analyzing...' : 'Auto-Generate from Subtitles'}</span>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 space-y-4">
-                                        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Audio Extraction Settings</h4>
-                                        <div className="flex items-center justify-between">
-                                            <label className="text-sm text-slate-300">Enable Auto-Extraction</label>
-                                            <button
-                                                onClick={() => updateSetting('enableAutoGlossary', !settings.enableAutoGlossary)}
-                                                className={`w-10 h-5 rounded-full transition-colors relative ${settings.enableAutoGlossary !== false ? 'bg-indigo-500' : 'bg-slate-600'}`}
-                                            >
-                                                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.enableAutoGlossary !== false ? 'left-6' : 'left-1'}`} />
-                                            </button>
-                                        </div>
-
-                                        {settings.enableAutoGlossary !== false && (
-                                            <>
-                                                <div>
-                                                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Sample Duration (Minutes)</label>
-                                                    <select
-                                                        value={settings.glossarySampleMinutes || 'all'}
-                                                        onChange={(e) => updateSetting('glossarySampleMinutes', e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                                                        className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
-                                                    >
-                                                        <option value="all">Analyze Full Audio (Best Quality)</option>
-                                                        <option value="5">First 5 Minutes</option>
-                                                        <option value="10">First 10 Minutes</option>
-                                                        <option value="20">First 20 Minutes</option>
-                                                        <option value="30">First 30 Minutes</option>
-                                                    </select>
-                                                    <p className="text-xs text-slate-500 mt-1">Limit analysis time to save tokens and speed up processing.</p>
-                                                </div>
-                                                <div className="flex items-center justify-between pt-2">
-                                                    <div>
-                                                        <label className="text-xs font-medium text-slate-400">Auto-Confirm Extracted Terms</label>
-                                                        <p className="text-xs text-slate-500 mt-0.5">Skip review dialog and add terms automatically</p>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => updateSetting('glossaryAutoConfirm', !settings.glossaryAutoConfirm)}
-                                                        className={`w-10 h-5 rounded-full transition-colors relative ${settings.glossaryAutoConfirm ? 'bg-indigo-500' : 'bg-slate-600'}`}
-                                                    >
-                                                        <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.glossaryAutoConfirm ? 'left-6' : 'left-1'}`} />
-                                                    </button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
-                                        <table className="w-full text-sm text-left">
-                                            <thead className="text-xs text-slate-400 uppercase bg-slate-800 border-b border-slate-700">
-                                                <tr>
-                                                    <th className="px-4 py-3">Term (Original)</th>
-                                                    <th className="px-4 py-3">Translation</th>
-                                                    <th className="px-4 py-3">Notes</th>
-                                                    <th className="px-4 py-3 w-10"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-700">
-                                                {(settings.glossary || []).map((item, idx) => (
-                                                    <tr key={idx} className="hover:bg-slate-800/50 group">
-                                                        <td className="px-4 py-2">
-                                                            <input
-                                                                type="text"
-                                                                value={item.term}
-                                                                onChange={(e) => {
-                                                                    const newGlossary = [...(settings.glossary || [])];
-                                                                    newGlossary[idx].term = e.target.value;
-                                                                    updateSetting('glossary', newGlossary);
-                                                                }}
-                                                                className="bg-transparent border-none focus:ring-0 w-full text-slate-200 placeholder-slate-600"
-                                                                placeholder="Term"
-                                                            />
-                                                        </td>
-                                                        <td className="px-4 py-2">
-                                                            <input
-                                                                type="text"
-                                                                value={item.translation}
-                                                                onChange={(e) => {
-                                                                    const newGlossary = [...(settings.glossary || [])];
-                                                                    newGlossary[idx].translation = e.target.value;
-                                                                    updateSetting('glossary', newGlossary);
-                                                                }}
-                                                                className="bg-transparent border-none focus:ring-0 w-full text-slate-200 placeholder-slate-600"
-                                                                placeholder="Translation"
-                                                            />
-                                                        </td>
-                                                        <td className="px-4 py-2">
-                                                            <input
-                                                                type="text"
-                                                                value={item.notes || ''}
-                                                                onChange={(e) => {
-                                                                    const newGlossary = [...(settings.glossary || [])];
-                                                                    newGlossary[idx].notes = e.target.value;
-                                                                    updateSetting('glossary', newGlossary);
-                                                                }}
-                                                                className="bg-transparent border-none focus:ring-0 w-full text-slate-400 placeholder-slate-700 text-xs"
-                                                                placeholder="Context/Notes"
-                                                            />
-                                                        </td>
-                                                        <td className="px-4 py-2 text-right">
-                                                            <button
-                                                                onClick={() => {
-                                                                    const newGlossary = settings.glossary?.filter((_, i) => i !== idx);
-                                                                    updateSetting('glossary', newGlossary);
-                                                                }}
-                                                                className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                <tr>
-                                                    <td colSpan={4} className="px-4 py-2 text-center border-t border-slate-700/50">
-                                                        <button
-                                                            onClick={() => {
-                                                                const newGlossary = [...(settings.glossary || []), { term: '', translation: '' }];
-                                                                updateSetting('glossary', newGlossary);
-                                                            }}
-                                                            className="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center justify-center py-1"
-                                                        >
-                                                            <Plus className="w-3 h-3 mr-1" /> Add Term
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="pt-4 border-t border-slate-800 flex justify-end">
-                                <button onClick={() => setShowSettings(false)} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium py-2 px-6 rounded-lg shadow-lg shadow-indigo-500/25 transition-all">
-                                    Save Configuration
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1669,30 +1849,33 @@ export default function App() {
 
     const renderHome = () => (
         <div className="min-h-screen bg-slate-950 flex flex-col p-4 md:p-8">
-            <header className="flex justify-between items-center mb-12">
-                <div className="flex items-center space-x-3">
-                    <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/20"><Languages className="w-6 h-6 text-white" /></div>
-                    <div><h1 className="text-2xl font-bold text-white tracking-tight">Gemini Subtitle Pro</h1><p className="text-sm text-slate-400">AI-Powered Subtitle Creation & Localization</p></div>
-                </div>
-                <div className="flex space-x-2">
-                    <button onClick={() => setShowLogs(true)} className="p-3 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl transition-colors group" title="View Logs"><FileText className="w-5 h-5 text-slate-400 group-hover:text-blue-400" /></button>
-                    <button onClick={() => setShowSettings(true)} className="p-3 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl transition-colors group"><Settings className="w-5 h-5 text-slate-400 group-hover:text-emerald-400" /></button>
-                </div>
-            </header>
-            <main className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto w-full">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
-                    <button onClick={startNewProject} className="group relative bg-slate-900 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-800/50 rounded-3xl p-8 transition-all duration-300 shadow-2xl flex flex-col items-center text-center cursor-pointer">
-                        <div className="w-20 h-20 bg-slate-800 group-hover:bg-indigo-500/20 rounded-2xl flex items-center justify-center mb-6 transition-colors"><FileVideo className="w-10 h-10 text-indigo-400 group-hover:scale-110 transition-transform" /></div>
-                        <h2 className="text-2xl font-bold text-white mb-3">New Project</h2><p className="text-slate-400 leading-relaxed">Transcribe & Translate from Video/Audio using Whisper & Gemini.</p>
-                    </button>
-                    <button onClick={startImportProject} className="group relative bg-slate-900 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-800/50 rounded-3xl p-8 transition-all duration-300 shadow-2xl flex flex-col items-center text-center cursor-pointer">
-                        <div className="w-20 h-20 bg-slate-800 group-hover:bg-emerald-500/20 rounded-2xl flex items-center justify-center mb-6 transition-colors"><FileText className="w-10 h-10 text-emerald-400 group-hover:scale-110 transition-transform" /></div>
-                        <h2 className="text-2xl font-bold text-white mb-3">Open Subtitles</h2><p className="text-slate-400 leading-relaxed mb-4">Import existing .SRT or .ASS files to fix timing, proofread, or re-translate.</p>
-                        <div className="flex flex-wrap gap-2 justify-center mt-2"><span className="text-xs px-2 py-1 bg-slate-800 rounded border border-slate-700 text-slate-500">Edit Text</span><span className="text-xs px-2 py-1 bg-slate-800 rounded border border-slate-700 text-slate-500">+ Video Ref</span></div>
-                    </button>
-                </div>
-            </main>
-            <footer className="mt-12 text-center text-slate-600 text-sm">Gemini Subtitle Pro v1.2</footer>
+            <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
+                <header className="flex justify-between items-center mb-12">
+                    <div className="flex items-center space-x-3">
+                        <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/20"><Languages className="w-6 h-6 text-white" /></div>
+                        <div><h1 className="text-2xl font-bold text-white tracking-tight"><span className="text-indigo-400">Gemini</span> Subtitle Pro</h1><p className="text-sm text-slate-400">AI-Powered Subtitle Creation & Localization</p></div>
+                    </div>
+                    <div className="flex space-x-2">
+                        <button onClick={() => setShowLogs(true)} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group" title="View Logs"><FileText className="w-4 h-4 text-slate-400 group-hover:text-blue-400 transition-colors" /><span className="hidden sm:inline text-slate-300 group-hover:text-white">Logs</span></button>
+                        <button onClick={() => setShowGlossaryManager(true)} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group" title="Glossary Manager"><Book className="w-4 h-4 text-slate-400 group-hover:text-indigo-400 transition-colors" /><span className="hidden sm:inline text-slate-300 group-hover:text-white">Glossary</span></button>
+                        <button onClick={() => setShowSettings(true)} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group"><Settings className="w-4 h-4 text-slate-400 group-hover:text-emerald-400 transition-colors" /><span className="hidden sm:inline text-slate-300 group-hover:text-white">Settings</span></button>
+                    </div>
+                </header>
+                <main className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto w-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+                        <button onClick={startNewProject} className="group relative bg-slate-900 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-800/50 rounded-3xl p-8 transition-all duration-300 shadow-2xl flex flex-col items-center text-center cursor-pointer">
+                            <div className="w-20 h-20 bg-slate-800 group-hover:bg-indigo-500/20 rounded-2xl flex items-center justify-center mb-6 transition-colors"><FileVideo className="w-10 h-10 text-indigo-400 group-hover:scale-110 transition-transform" /></div>
+                            <h2 className="text-2xl font-bold text-white mb-3">New Project</h2><p className="text-slate-400 leading-relaxed">Transcribe & Translate from Video/Audio using Whisper & Gemini.</p>
+                        </button>
+                        <button onClick={startImportProject} className="group relative bg-slate-900 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-800/50 rounded-3xl p-8 transition-all duration-300 shadow-2xl flex flex-col items-center text-center cursor-pointer">
+                            <div className="w-20 h-20 bg-slate-800 group-hover:bg-emerald-500/20 rounded-2xl flex items-center justify-center mb-6 transition-colors"><FileText className="w-10 h-10 text-emerald-400 group-hover:scale-110 transition-transform" /></div>
+                            <h2 className="text-2xl font-bold text-white mb-3">Open Subtitles</h2><p className="text-slate-400 leading-relaxed mb-4">Import existing .SRT or .ASS files to fix timing, proofread, or re-translate.</p>
+                            <div className="flex flex-wrap gap-2 justify-center mt-2"><span className="text-xs px-2 py-1 bg-slate-800 rounded border border-slate-700 text-slate-500">Edit Text</span><span className="text-xs px-2 py-1 bg-slate-800 rounded border border-slate-700 text-slate-500">+ Video Ref</span></div>
+                        </button>
+                    </div>
+                </main>
+                <footer className="mt-12 text-center text-slate-600 text-sm">Gemini Subtitle Pro v1.2</footer>
+            </div>
         </div>
     );
 
@@ -1703,15 +1886,16 @@ export default function App() {
                     <div className="flex items-center space-x-4">
                         <button onClick={goBackHome} className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"><ArrowLeft className="w-5 h-5" /></button>
                         <div>
-                            <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">{activeTab === 'new' ? 'New Project' : 'Subtitle Editor'}<span className="text-xs font-normal text-slate-500 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded">{activeTab === 'new' ? 'Generation' : 'Import Mode'}</span></h1>
+                            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">{activeTab === 'new' ? 'New Project' : 'Subtitle Editor'}<span className="text-xs font-normal text-slate-500 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded">{activeTab === 'new' ? 'Generation' : 'Import Mode'}</span></h1>
                             <p className="text-xs text-slate-400 truncate max-w-[300px]">{file ? file.name : (subtitles.length > 0 ? `${subtitles.length} lines loaded` : 'No file selected')}</p>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
                         <button onClick={() => setShowSnapshots(!showSnapshots)} disabled={snapshots.length === 0} className={`flex items-center space-x-2 px-4 py-2 border rounded-lg transition-colors text-sm font-medium ${snapshots.length > 0 ? 'bg-indigo-900/30 border-indigo-500/50 text-indigo-200' : 'bg-slate-900 border-slate-800 text-slate-600'}`}><GitCommit className="w-4 h-4" /><span className="hidden sm:inline">Versions</span></button>
                         {/* <button onClick={() => setView('quality_control')} className="flex items-center space-x-2 px-4 py-2 border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded-lg transition-colors text-sm font-medium"><Sparkles className="w-4 h-4" /><span className="hidden sm:inline">Quality Control</span></button> */}
-                        <button onClick={() => setShowLogs(true)} className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group" title="View Logs"><FileText className="w-4 h-4 text-slate-400 group-hover:text-blue-400 transition-colors" /></button>
-                        <button onClick={() => setShowSettings(true)} className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group"><Settings className="w-4 h-4 text-slate-400 group-hover:text-emerald-400 transition-colors" /></button>
+                        <button onClick={() => setShowLogs(true)} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group" title="View Logs"><FileText className="w-4 h-4 text-slate-400 group-hover:text-blue-400 transition-colors" /><span className="hidden sm:inline text-slate-300 group-hover:text-white">Logs</span></button>
+                        <button onClick={() => setShowGlossaryManager(true)} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group" title="Glossary Manager"><Book className="w-4 h-4 text-slate-400 group-hover:text-indigo-400 transition-colors" /><span className="hidden sm:inline text-slate-300 group-hover:text-white">Glossary</span></button>
+                        <button onClick={() => setShowSettings(true)} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group"><Settings className="w-4 h-4 text-slate-400 group-hover:text-emerald-400 transition-colors" /><span className="hidden sm:inline text-slate-300 group-hover:text-white">Settings</span></button>
                     </div>
                 </header>
                 <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-6 min-h-0">
@@ -1745,9 +1929,44 @@ export default function App() {
                                     )}
                                 </div>
                             )}
-                            <div className="flex flex-col space-y-2 text-xs text-slate-400 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
-                                <div className="flex items-center justify-between"><span className="flex items-center text-slate-500"><Monitor className="w-3 h-3 mr-2" /> Model</span><span className="font-medium text-slate-300">{settings.transcriptionModel === 'whisper-1' ? 'Whisper' : 'GPT-4o'}</span></div>
-                                <div className="flex items-center justify-between"><span className="flex items-center text-slate-500"><Clapperboard className="w-3 h-3 mr-2" /> Genre</span><span className="font-medium text-slate-300 truncate max-w-[120px]" title={settings.genre}>{settings.genre}</span></div>
+                            <div className="flex flex-col space-y-3 text-xs text-slate-400 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
+
+
+                                <div className="flex items-center justify-between">
+                                    <span className="flex items-center text-slate-500"><Clapperboard className="w-3 h-3 mr-2" /> Genre</span>
+                                    <button onClick={() => setShowGenreSettings(true)} className="flex items-center space-x-1.5 px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-xs font-medium text-slate-300 hover:text-white transition-colors group" title="Edit Genre / Context">
+                                        <span className="truncate max-w-[100px]">
+                                            {settings.genre === 'general' ? 'General' :
+                                                settings.genre === 'anime' ? 'Anime' :
+                                                    settings.genre === 'movie' ? 'Movie' :
+                                                        settings.genre === 'news' ? 'News' :
+                                                            settings.genre === 'tech' ? 'Tech' : settings.genre}
+                                        </span>
+                                        <Edit2 className="w-3 h-3 text-slate-500 group-hover:text-indigo-400 transition-colors" />
+                                    </button>
+                                </div>
+
+                                <div className="flex flex-col space-y-1 pt-2 border-t border-slate-700/50">
+                                    <span className="flex items-center text-slate-500 mb-1"><Book className="w-3 h-3 mr-2" /> Glossary</span>
+                                    <CustomSelect
+                                        value={settings.activeGlossaryId || ''}
+                                        onChange={(val) => updateSetting('activeGlossaryId', val || null)}
+                                        options={[
+                                            { value: '', label: '(None)' },
+                                            ...(settings.glossaries?.map(g => ({
+                                                value: g.id,
+                                                label: (
+                                                    <div className="flex items-center justify-between w-full min-w-0">
+                                                        <span className="truncate mr-2">{g.name}</span>
+                                                        <span className="text-slate-500 text-xs flex-shrink-0">({g.terms?.length || 0})</span>
+                                                    </div>
+                                                )
+                                            })) || [])
+                                        ]}
+                                        className="w-full"
+                                        placeholder="(None)"
+                                    />
+                                </div>
                             </div>
                         </div>
                         {activeTab === 'new' && (
@@ -1797,9 +2016,24 @@ export default function App() {
             <GlossaryConfirmationModal />
             <GlossaryExtractionFailedDialog />
             {showSettings && renderSettingsModal()}
+            {showGlossaryManager && (
+                <GlossaryManager
+                    glossaries={settings.glossaries || []}
+                    activeGlossaryId={settings.activeGlossaryId || null}
+                    onUpdateGlossaries={(updated) => updateSetting('glossaries', updated)}
+                    onSetActiveGlossary={(id) => updateSetting('activeGlossaryId', id)}
+                    onClose={() => setShowGlossaryManager(false)}
+                />
+            )}
             {showLogs && renderLogViewer()}
             {view === 'home' && renderHome()}
             {view === 'workspace' && renderWorkspace()}
+            <GenreSettingsDialog
+                isOpen={showGenreSettings}
+                onClose={() => setShowGenreSettings(false)}
+                currentGenre={settings.genre}
+                onSave={(genre) => updateSetting('genre', genre)}
+            />
             <ProgressOverlay />
             <ToastContainer toasts={toasts} removeToast={removeToast} />
         </>

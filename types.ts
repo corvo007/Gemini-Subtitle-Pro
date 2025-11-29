@@ -50,6 +50,20 @@ export interface GlossaryItem {
   notes?: string;
 }
 
+// Multi-Glossary Support
+export interface Glossary {
+  id: string;              // UUID
+  name: string;            // User-defined name
+  terms: GlossaryItem[];   // Terms list
+  createdAt: string;       // ISO timestamp
+  updatedAt: string;       // ISO timestamp
+}
+
+export interface GlossaryStorage {
+  glossaries: Glossary[];
+  activeGlossaryId: string | null;
+}
+
 export interface GlossaryExtractionResult {
   terms: GlossaryItem[];
   source: 'chunk' | 'full';
@@ -79,7 +93,9 @@ export interface AppSettings {
   concurrencyPro: number;
 
   useSmartSplit?: boolean;
-  glossary?: GlossaryItem[];
+  glossary?: GlossaryItem[]; // Deprecated, used for migration
+  glossaries?: Glossary[];
+  activeGlossaryId?: string;
   // Glossary Extraction Settings
   enableAutoGlossary?: boolean;           // Default: true
   glossarySampleMinutes?: number | 'all'; // Default: 'all', or max minutes to analyze
