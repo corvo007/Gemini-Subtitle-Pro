@@ -4,135 +4,146 @@
 
 # Gemini Subtitle Pro
 
-**Gemini Subtitle Pro** is an AI-powered tool for creating, translating, and polishing subtitles. It leverages Google's Gemini models for high-quality translation and proofreading, and OpenAI's Whisper for accurate transcription.
+**Gemini Subtitle Pro** 是一款基于 AI 的字幕创建、翻译和润色工具。它利用 Google 的 Gemini 模型进行高质量的翻译和校对，并使用 OpenAI 的 Whisper 进行精准的语音转写。
 
-## ✨ Features
+## ✨ 功能特性
 
-### Core AI Features
-- **🤖 AI Transcription**: Transcribe video/audio using OpenAI Whisper (via API)
-- **🌍 Smart Translation**: Translate subtitles to Simplified Chinese using Gemini 2.5 Flash
-- **🧐 Deep Proofreading**: Polish and correct subtitles with Gemini 2.5 Flash or Gemini 3.0 Pro, ensuring natural and accurate phrasing
-- **🎯 Smart Segmentation**: Intelligent audio segmentation using Silero VAD for optimal subtitle timing
+### 核心 AI 功能
+- **🤖 AI 转写**: 使用 OpenAI Whisper (通过 API) 转写视频/音频
+- **🌍 智能翻译**: 使用 Gemini 2.5 Flash 将字幕翻译为简体中文
+- **🧐 深度校对**: 使用 Gemini 2.5 Flash 或 Gemini 3.0 Pro 润色和校正字幕，确保措辞自然准确
+- **🎯 智能分割**: 使用 Silero VAD 进行智能音频分割，优化字幕时间轴
 
-### Terminology Management
-- **📚 Custom Glossary**: Maintain project-specific terminology and translations
-- **✅ Consistency Checking**: Automatic detection of terminology inconsistencies
-- **🔄 AI-Generated Terms**: Generate glossary suggestions from source content
-- **📤 Import/Export**: Easily share and backup your glossaries
+### 术语管理
+- **📚 自定义术语表**: 维护项目特定的术语和翻译
+- **🔄 AI 生成术语**: 从源内容自动生成术语建议
+- **📤 导入/导出**: 轻松分享和备份您的术语表
+- **🛡️ 强大的重试机制**: 内置术语提取重试逻辑，防止瞬时错误导致数据丢失
 
-### Performance
-- **⚡ VAD Worker**: Off-main-thread audio processing for smooth UI performance
+### 性能优化
+- **⚡ VAD Worker**: 将音频处理移至后台线程，确保 UI 流畅
+- **🚀 自定义 API 端点**: 支持配置自定义 OpenAI 和 Gemini API 端点 (Base URL)
+- **⏱️ 请求超时配置**: 可自定义 API 请求超时时间，适应不同网络环境
 
-### Batch Operations
-- **⏱️ Fix Timestamps**: Automatically align subtitle timestamps with audio using AI
-- **🔄 Re-translate**: Select specific segments to re-translate
-- **✏️ Proofread**: Batch polish selected segments with context awareness
+### 批量操作
+- **⏱️ 修复时间轴**: 使用 AI 自动对齐字幕时间轴与音频
+- **✏️ 润色**: 结合上下文对选中片段进行批量润色
 
-### Workflow Features
-- **📸 Version Control**: Built-in snapshot system to save and restore different versions of your work
-- **📂 Dual Modes**: Start from scratch (New Project) or edit existing files (Import Mode)
-- **💾 Bilingual Export**: Download subtitles in SRT or ASS formats (Bilingual or Target Language)
-- **🐛 Debug Logging**: Comprehensive logging system with configurable verbosity for troubleshooting
+### 工作流功能
+- **📸 版本控制**: 内置快照系统，可保存和恢复不同版本的工作
+- **📂 双模式**: 支持从头开始 (新建项目) 或编辑现有文件 (导入模式)
+- **💾 双语导出**: 下载 SRT 或 ASS 格式字幕 (双语或仅目标语言)
+- **🐛 调试日志**: 具有可配置详细级别的综合日志系统，便于故障排查
 
-## 🛠️ Tech Stack
+## 🛠️ 技术栈
 
-- **Frontend**: [React 19](https://react.dev/), [Vite](https://vitejs.dev/), [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: Vanilla CSS with modern design patterns
-- **AI Integration**:
+- **前端**: [React 19](https://react.dev/), [Vite](https://vitejs.dev/), [TypeScript](https://www.typescriptlang.org/)
+- **样式**: Vanilla CSS 配合现代设计模式
+- **AI 集成**:
     - [Google GenAI SDK](https://www.npmjs.com/package/@google/genai) (Gemini 2.5 Flash, Gemini 3.0 Pro)
-    - [OpenAI API](https://www.npmjs.com/package/openai) (Whisper-1, GPT-4o series for QC)
-- **Audio Processing**:
-    - [@ricky0123/vad-web](https://www.npmjs.com/package/@ricky0123/vad-web) (Silero VAD for smart segmentation)
-    - [onnxruntime-web](https://www.npmjs.com/package/onnxruntime-web) (ML model runtime)
-- **Icons**: [Lucide React](https://lucide.dev/)
+    - [OpenAI API](https://www.npmjs.com/package/openai) (Whisper-1)
+- **音频处理**:
+    - [@ricky0123/vad-web](https://www.npmjs.com/package/@ricky0123/vad-web) (Silero VAD 用于智能分割)
+    - [onnxruntime-web](https://www.npmjs.com/package/onnxruntime-web) (ML 模型运行时)
+- **图标**: [Lucide React](https://lucide.dev/)
 
-## 🚀 Run Locally
+## 🚀 本地运行
 
-**Prerequisites:** Node.js 18+
+**前提条件:** Node.js 18+
 
-1. **Install dependencies:**
+1. **安装依赖:**
    ```bash
    npm install
-   # or
+   # 或
    yarn install
    ```
 
-2. **Configure Environment:**
-   Create a `.env.local` file in the root directory and add your API keys:
+2. **配置环境:**
+   在根目录创建一个 `.env.local` 文件并添加您的 API 密钥：
    ```bash
    cp .env.example .env.local
    ```
-   Edit `.env.local`:
+   编辑 `.env.local`:
    ```env
-   # Required for Translation & Proofreading
+   # 翻译和校对需要
    GEMINI_API_KEY=your_gemini_key
 
-   # Required for Transcription (Whisper)
+   # 转写 (Whisper) 需要
    OPENAI_API_KEY=your_openai_key
    ```
 
-3. **Run the app:**
+3. **运行应用:**
    ```bash
    npm run dev
-   # or
+   # 或
    yarn dev
    ```
 
-## ☁️ Deploy
+## ⚙️ 配置说明
 
-You can deploy this application to various serverless platforms.
+在应用设置中，您可以配置以下高级选项：
+
+- **API 端点**:
+  - `OpenAI Endpoint`: 自定义 OpenAI API 的 Base URL (例如用于代理)
+  - `Gemini Endpoint`: 自定义 Google Gemini API 的 Base URL
+- **请求超时**: 设置 API 请求的超时时间 (默认 600 秒)，以解决网络较慢时的超时问题
+- **术语表设置**: 启用/禁用自动术语提取，设置采样时长等
+
+## ☁️ 部署
+
+您可以将此应用程序部署到各种 Serverless 平台。
 
 ### Vercel
 
-The easiest way to deploy is using Vercel.
+最简单的部署方式是使用 Vercel。
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcorvo007%2Fgemini-subtitle-pro&env=GEMINI_API_KEY,OPENAI_API_KEY)
 
-1. Click the button above.
-2. Connect your GitHub repository.
-3. Vercel will automatically detect the Vite configuration.
-4. **Important:** Add `GEMINI_API_KEY` and `OPENAI_API_KEY` in the Environment Variables section.
+1. 点击上方按钮。
+2. 连接您的 GitHub 仓库。
+3. Vercel 将自动检测 Vite 配置。
+4. **重要:** 在 Environment Variables 部分添加 `GEMINI_API_KEY` 和 `OPENAI_API_KEY`。
 
 ### Google Cloud Run
 
-Deploy as a containerized application on Google Cloud Run.
+作为容器化应用程序部署在 Google Cloud Run 上。
 
 [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
 
-1. Click the button above.
-2. Select your project and repository.
-3. The `Dockerfile` will be automatically detected.
-4. In the **Variables & Secrets** step, add your `GEMINI_API_KEY` and `OPENAI_API_KEY`.
+1. 点击上方按钮。
+2. 选择您的项目和仓库。
+3. 将自动检测 `Dockerfile`。
+4. 在 **Variables & Secrets** 步骤中，添加您的 `GEMINI_API_KEY` 和 `OPENAI_API_KEY`。
 
 ### Cloudflare Pages
 
-1. Push your code to a GitHub repository.
-2. Log in to the Cloudflare Dashboard and go to **Pages**.
-3. Select **Connect to Git** and choose your repository.
-4. **Build Settings:**
+1. 将代码推送到 GitHub 仓库。
+2. 登录 Cloudflare Dashboard 并转到 **Pages**。
+3. 选择 **Connect to Git** 并选择您的仓库。
+4. **构建设置:**
    - **Framework Preset:** Vite
    - **Build Command:** `npm run build`
    - **Build Output Directory:** `dist`
-5. **Environment Variables:**
-   - Add `GEMINI_API_KEY` and `OPENAI_API_KEY`.
+5. **环境变量:**
+   - 添加 `GEMINI_API_KEY` 和 `OPENAI_API_KEY`。
 
 ### Netlify
 
-Deploy with Netlify using the configured `netlify.toml`.
+使用配置好的 `netlify.toml` 部署到 Netlify。
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/corvo007/gemini-subtitle-pro)
 
-1. Click the button above.
-2. Connect your GitHub repository.
-3. Netlify will detect the `netlify.toml` settings.
-4. Go to **Site settings > Build & deploy > Environment** and add your API keys.
+1. 点击上方按钮。
+2. 连接您的 GitHub 仓库。
+3. Netlify 将检测 `netlify.toml` 设置。
+4. 转到 **Site settings > Build & deploy > Environment** 并添加您的 API 密钥。
 
 ### Render
 
-Deploy as a Static Site on Render.
+在 Render 上作为静态站点部署。
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/corvo007/gemini-subtitle-pro)
 
-1. Click the button above.
-2. Render will read the `render.yaml` file.
-3. You will be prompted to enter your `GEMINI_API_KEY` and `OPENAI_API_KEY` during the setup.
+1. 点击上方按钮。
+2. Render 将读取 `render.yaml` 文件。
+3. 设置过程中系统会提示您输入 `GEMINI_API_KEY` 和 `OPENAI_API_KEY`。
