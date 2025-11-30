@@ -2,6 +2,7 @@ import React from 'react';
 import { Settings, X, CheckCircle, Languages, Type, Clock, Book } from 'lucide-react';
 import { AppSettings } from '@/types/settings';
 import { CustomSelect } from './CustomSelect';
+import { LocalWhisperSettings } from './LocalWhisperSettings';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -26,6 +27,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     envOpenaiKey,
     onOpenGlossaryManager
 }) => {
+    const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
+
     if (!isOpen) return null;
 
     return (
@@ -54,8 +57,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <div className="space-y-6 animate-fade-in">
                                 {/* API Settings */}
                                 <div className="space-y-3">
-                                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">API 配置</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">翻译和校对服务</h3>
+                                    <div className="space-y-4">
                                         {/* Gemini */}
                                         <div>
                                             <label className="block text-sm font-medium text-slate-300 mb-1.5">Gemini API 密钥</label>
@@ -84,35 +87,132 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             </div>
                                             <p className="text-xs text-slate-500 mt-1">Gemini API 的自定义基础 URL (例如用于代理)。</p>
                                         </div>
-                                        {/* OpenAI */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-300 mb-1.5">OpenAI API 密钥</label>
-                                            <div className="relative"><input type="password" value={settings.openaiKey} onChange={(e) => updateSetting('openaiKey', e.target.value.trim())} placeholder="输入 OpenAI API 密钥" className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 pr-10 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm" /></div>
-                                            <p className="text-xs text-slate-500 mt-1">必填。使用 <strong>Whisper</strong> 模型进行高精度基础转录。</p>
-                                            {envOpenaiKey && !settings.openaiKey && (<p className="text-xs text-emerald-400 mt-1 flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> 使用环境变量中的 API 密钥</p>)}
-                                            {envOpenaiKey && settings.openaiKey && (<p className="text-xs text-amber-400 mt-1">覆盖环境变量中的 API 密钥</p>)}
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-300 mb-1.5">OpenAI 端点 (可选)</label>
-                                            <div className="relative flex gap-2">
-                                                <input
-                                                    type="text"
-                                                    value={settings.openaiEndpoint || ''}
-                                                    onChange={(e) => updateSetting('openaiEndpoint', e.target.value.trim())}
-                                                    placeholder="https://api.openai.com/v1"
-                                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
-                                                />
+                                    </div>
+                                </div>
+
+                                {/* Transcription Provider Settings */}
+                                <div className="space-y-3 pt-4 border-t border-slate-800">
+                                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">转录服务</h3>
+
+                                    {isElectron ? (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-3">
                                                 <button
-                                                    onClick={() => updateSetting('openaiEndpoint', undefined)}
-                                                    className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-colors whitespace-nowrap"
-                                                    title="恢复默认"
+                                                    onClick={() => {
+                                                        updateSetting('useLocalWhisper', false);
+                                                        if (window.electronAPI) {
+                                                            window.electronAPI.updateWhisperConfig({
+                                                                enabled: false,
+                                                                modelPath: settings.whisperModelPath || ''
+                                                            });
+                                                        }
+                                                    }}
+                                                    className={`p-3 rounded-lg border text-sm flex items-center justify-center space-x-2 transition-all ${!settings.useLocalWhisper ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'}`}
                                                 >
-                                                    重置
+                                                    <span>OpenAI API</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        updateSetting('useLocalWhisper', true);
+                                                        if (window.electronAPI) {
+                                                            window.electronAPI.updateWhisperConfig({
+                                                                enabled: true,
+                                                                modelPath: settings.whisperModelPath || ''
+                                                            });
+                                                        }
+                                                    }}
+                                                    className={`p-3 rounded-lg border text-sm flex items-center justify-center space-x-2 transition-all ${settings.useLocalWhisper ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'}`}
+                                                >
+                                                    <span>本地 Whisper</span>
                                                 </button>
                                             </div>
-                                            <p className="text-xs text-slate-500 mt-1">OpenAI API 的自定义基础 URL (例如用于本地 LLM 或代理)。</p>
+
+                                            {settings.useLocalWhisper ? (
+                                                <LocalWhisperSettings
+                                                    useLocalWhisper={true}
+                                                    whisperModelPath={settings.whisperModelPath}
+                                                    onToggle={(enabled) => {
+                                                        updateSetting('useLocalWhisper', enabled);
+                                                        if (window.electronAPI) {
+                                                            window.electronAPI.updateWhisperConfig({
+                                                                enabled,
+                                                                modelPath: settings.whisperModelPath || ''
+                                                            });
+                                                        }
+                                                    }}
+                                                    onModelPathChange={(path) => {
+                                                        updateSetting('whisperModelPath', path);
+                                                        if (window.electronAPI) {
+                                                            window.electronAPI.updateWhisperConfig({
+                                                                enabled: settings.useLocalWhisper || false,
+                                                                modelPath: path
+                                                            });
+                                                        }
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="space-y-4 animate-fade-in">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-slate-300 mb-1.5">OpenAI API 密钥</label>
+                                                        <div className="relative"><input type="password" value={settings.openaiKey} onChange={(e) => updateSetting('openaiKey', e.target.value.trim())} placeholder="输入 OpenAI API 密钥" className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 pr-10 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm" /></div>
+                                                        <p className="text-xs text-slate-500 mt-1">必填。使用 <strong>Whisper</strong> 模型进行高精度基础转录。</p>
+                                                        {envOpenaiKey && !settings.openaiKey && (<p className="text-xs text-emerald-400 mt-1 flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> 使用环境变量中的 API 密钥</p>)}
+                                                        {envOpenaiKey && settings.openaiKey && (<p className="text-xs text-amber-400 mt-1">覆盖环境变量中的 API 密钥</p>)}
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-slate-300 mb-1.5">OpenAI 端点 (可选)</label>
+                                                        <div className="relative flex gap-2">
+                                                            <input
+                                                                type="text"
+                                                                value={settings.openaiEndpoint || ''}
+                                                                onChange={(e) => updateSetting('openaiEndpoint', e.target.value.trim())}
+                                                                placeholder="https://api.openai.com/v1"
+                                                                className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                                                            />
+                                                            <button
+                                                                onClick={() => updateSetting('openaiEndpoint', undefined)}
+                                                                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-colors whitespace-nowrap"
+                                                                title="恢复默认"
+                                                            >
+                                                                重置
+                                                            </button>
+                                                        </div>
+                                                        <p className="text-xs text-slate-500 mt-1">OpenAI API 的自定义基础 URL (例如用于本地 LLM 或代理)。</p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-300 mb-1.5">OpenAI API 密钥</label>
+                                                <div className="relative"><input type="password" value={settings.openaiKey} onChange={(e) => updateSetting('openaiKey', e.target.value.trim())} placeholder="输入 OpenAI API 密钥" className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 pr-10 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm" /></div>
+                                                <p className="text-xs text-slate-500 mt-1">必填。使用 <strong>Whisper</strong> 模型进行高精度基础转录。</p>
+                                                {envOpenaiKey && !settings.openaiKey && (<p className="text-xs text-emerald-400 mt-1 flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> 使用环境变量中的 API 密钥</p>)}
+                                                {envOpenaiKey && settings.openaiKey && (<p className="text-xs text-amber-400 mt-1">覆盖环境变量中的 API 密钥</p>)}
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-300 mb-1.5">OpenAI 端点 (可选)</label>
+                                                <div className="relative flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={settings.openaiEndpoint || ''}
+                                                        onChange={(e) => updateSetting('openaiEndpoint', e.target.value.trim())}
+                                                        placeholder="https://api.openai.com/v1"
+                                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                                                    />
+                                                    <button
+                                                        onClick={() => updateSetting('openaiEndpoint', undefined)}
+                                                        className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-colors whitespace-nowrap"
+                                                        title="恢复默认"
+                                                    >
+                                                        重置
+                                                    </button>
+                                                </div>
+                                                <p className="text-xs text-slate-500 mt-1">OpenAI API 的自定义基础 URL (例如用于本地 LLM 或代理)。</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Output Settings */}
@@ -132,6 +232,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                         {activeTab === 'performance' && (
                             <div className="space-y-3 animate-fade-in">
+                                {/* Electron Exclusive: Local Whisper - Moved to General Tab */}
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div>

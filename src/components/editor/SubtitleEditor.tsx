@@ -25,7 +25,7 @@ interface SubtitleEditorProps {
     updateLineComment: (id: number, comment: string) => void;
 }
 
-export const SubtitleEditor: React.FC<SubtitleEditorProps> = ({
+export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(({
     subtitles,
     settings,
     status,
@@ -98,4 +98,16 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = ({
             ))}
         </div>
     );
-};
+}, (prev, next) => {
+    return (
+        prev.subtitles === next.subtitles &&
+        prev.settings === next.settings &&
+        prev.status === next.status &&
+        prev.activeTab === next.activeTab &&
+        prev.selectedBatches === next.selectedBatches &&
+        prev.showSourceText === next.showSourceText &&
+        prev.file === next.file &&
+        prev.batchComments === next.batchComments &&
+        prev.editingCommentId === next.editingCommentId
+    );
+});

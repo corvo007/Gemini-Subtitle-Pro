@@ -3,7 +3,7 @@
   "description": "AI-powered subtitle generation tool",
   "author": "Corvo007",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.1.0",
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
     "@google/genai": "^1.30.0",
     "@ricky0123/vad-web": "^0.0.30",
     "electron-squirrel-startup": "^1.0.1",
@@ -49,7 +50,13 @@
     "icon": "resources/icon.png",
     "files": [
       "dist/**/*",
-      "dist-electron/**/*"
+      "dist-electron/**/*",
+      "node_modules/@ffmpeg-installer/**/*",
+      "node_modules/@ffprobe-installer/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/@ffmpeg-installer/**/*",
+      "node_modules/@ffprobe-installer/**/*"
     ],
     "extraResources": [
       {

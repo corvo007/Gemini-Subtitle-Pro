@@ -47,6 +47,20 @@ export default defineConfig(({ mode }) => {
         ]
       })
     ],
+    build: {
+      rollupOptions: {
+        external: [
+          'electron',
+          'fluent-ffmpeg',
+          '@ffmpeg-installer/ffmpeg',
+          '@ffprobe-installer/ffprobe',
+          'electron-squirrel-startup',
+          'path',
+          'fs',
+          'child_process',
+        ]
+      }
+    },
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),

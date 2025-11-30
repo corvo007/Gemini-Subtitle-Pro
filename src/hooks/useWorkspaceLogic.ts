@@ -12,8 +12,10 @@ import { generateSubtitles } from '@/services/api/gemini/subtitle';
 import { runBatchOperation } from '@/services/api/gemini/batch';
 import { retryGlossaryExtraction } from '@/services/api/gemini/glossary';
 
-const ENV_GEMINI_KEY = (window as any).env?.GEMINI_API_KEY || process.env.API_KEY || process.env.GEMINI_API_KEY || '';
-const ENV_OPENAI_KEY = (window as any).env?.OPENAI_API_KEY || process.env.OPENAI_API_KEY || '';
+import { getEnvVariable } from "@/services/utils/env";
+
+const ENV_GEMINI_KEY = getEnvVariable('GEMINI_API_KEY') || '';
+const ENV_OPENAI_KEY = getEnvVariable('OPENAI_API_KEY') || '';
 
 interface UseWorkspaceLogicProps {
     settings: AppSettings;
@@ -86,7 +88,7 @@ export const useWorkspaceLogic = ({
     };
 
     // Handlers
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, activeTab: 'new' | 'import') => {
+    const handleFileChange = React.useCallback(async (e: React.ChangeEvent<HTMLInputElement>, activeTab: 'new' | 'import') => {
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0];
 
@@ -112,9 +114,9 @@ export const useWorkspaceLogic = ({
                 processFile();
             }
         }
-    };
+    }, [subtitles.length, status, snapshotsValues, showConfirm]);
 
-    const handleSubtitleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSubtitleImport = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const subFile = e.target.files[0];
             logger.info("Subtitle file imported", { name: subFile.name });
@@ -132,9 +134,9 @@ export const useWorkspaceLogic = ({
             };
             reader.readAsText(subFile);
         }
-    };
+    }, [snapshotsValues]);
 
-    const handleGenerate = async () => {
+    const handleGenerate = React.useCallback(async () => {
         if (!file) { setError("请先上传媒体文件。"); return; }
         if ((!settings.geminiKey && !ENV_GEMINI_KEY) || (!settings.openaiKey && !ENV_OPENAI_KEY)) {
             setError("缺少 API 密钥。请在设置中配置。"); setShowSettings(true); return;
@@ -251,9 +253,9 @@ export const useWorkspaceLogic = ({
             logger.error("Subtitle generation failed", err);
             addToast(`生成失败: ${err.message}`, "error");
         }
-    };
+    }, [file, settings, duration, glossaryFlow, snapshotsValues, updateSetting, addToast, setShowSettings]);
 
-    const handleBatchAction = async (mode: BatchOperationMode, singleIndex?: number) => {
+    const handleBatchAction = React.useCallback(async (mode: BatchOperationMode, singleIndex?: number) => {
         const indices: number[] = singleIndex !== undefined ? [singleIndex] : Array.from(selectedBatches) as number[];
         if (indices.length === 0) return;
         if (!settings.geminiKey && !ENV_GEMINI_KEY) { setError("缺少 API 密钥。"); return; }
@@ -275,9 +277,9 @@ export const useWorkspaceLogic = ({
             logger.error(`Batch action ${mode} failed`, err);
             addToast(`批量操作失败: ${err.message}`, "error");
         }
-    };
+    }, [file, subtitles, selectedBatches, settings, batchComments, snapshotsValues, addToast]);
 
-    const handleDownload = (format: 'srt' | 'ass') => {
+    const handleDownload = React.useCallback((format: 'srt' | 'ass') => {
         if (subtitles.length === 0) return;
         const isBilingual = settings.outputMode === 'bilingual';
         const content = format === 'srt'
@@ -286,9 +288,9 @@ export const useWorkspaceLogic = ({
         const filename = file ? file.name.replace(/\.[^/.]+$/, "") : "subtitles";
         logger.info(`Downloading subtitles: ${filename}.${format}`);
         downloadFile(`${filename}.${format}`, content, format);
-    };
+    }, [subtitles, settings.outputMode, file]);
 
-    const handleRetryGlossary = async () => {
+    const handleRetryGlossary = React.useCallback(async () => {
         if (!glossaryFlow.glossaryMetadata?.glossaryChunks || !audioCacheRef.current) return;
 
         glossaryFlow.setIsGeneratingGlossary(true);
@@ -329,21 +331,21 @@ export const useWorkspaceLogic = ({
         } finally {
             glossaryFlow.setIsGeneratingGlossary(false);
         }
-    };
+    }, [glossaryFlow, settings]);
 
-    const toggleBatch = (index: number) => {
+    const toggleBatch = React.useCallback((index: number) => {
         const newSet = new Set(selectedBatches);
         if (newSet.has(index)) newSet.delete(index);
         else newSet.add(index);
         setSelectedBatches(newSet);
-    };
+    }, [selectedBatches]);
 
-    const toggleAllBatches = (totalBatches: number) => {
+    const toggleAllBatches = React.useCallback((totalBatches: number) => {
         if (selectedBatches.size === totalBatches) setSelectedBatches(new Set());
         else setSelectedBatches(new Set(Array.from({ length: totalBatches }, (_, i) => i)));
-    };
+    }, [selectedBatches]);
 
-    const selectBatchesWithComments = (chunks: SubtitleItem[][]) => {
+    const selectBatchesWithComments = React.useCallback((chunks: SubtitleItem[][]) => {
         const newSet = new Set<number>();
         chunks.forEach((chunk, idx) => {
             const hasBatchComment = batchComments[idx] && batchComments[idx].trim().length > 0;
@@ -351,17 +353,17 @@ export const useWorkspaceLogic = ({
             if (hasBatchComment || hasLineComments) newSet.add(idx);
         });
         setSelectedBatches(newSet);
-    };
+    }, [batchComments]);
 
-    const updateBatchComment = (index: number, comment: string) => {
+    const updateBatchComment = React.useCallback((index: number, comment: string) => {
         setBatchComments(prev => ({ ...prev, [index]: comment }));
-    };
+    }, []);
 
-    const updateLineComment = (id: number, comment: string) => {
+    const updateLineComment = React.useCallback((id: number, comment: string) => {
         setSubtitles(prev => prev.map(s => s.id === id ? { ...s, comment } : s));
-    };
+    }, []);
 
-    const resetWorkspace = () => {
+    const resetWorkspace = React.useCallback(() => {
         setSubtitles([]);
         setFile(null);
         setDuration(0);
@@ -370,9 +372,9 @@ export const useWorkspaceLogic = ({
         setBatchComments({});
         setSelectedBatches(new Set());
         setError(null);
-    };
+    }, [snapshotsValues]);
 
-    return {
+    return React.useMemo(() => ({
         // State
         file,
         duration,
@@ -404,5 +406,30 @@ export const useWorkspaceLogic = ({
         updateBatchComment,
         updateLineComment,
         resetWorkspace
-    };
+    }), [
+        file,
+        duration,
+        status,
+        progressMsg,
+        chunkProgress,
+        subtitles,
+        error,
+        startTime,
+        selectedBatches,
+        batchComments,
+        showSourceText,
+        editingCommentId,
+        handleFileChange,
+        handleSubtitleImport,
+        handleGenerate,
+        handleBatchAction,
+        handleDownload,
+        handleRetryGlossary,
+        toggleBatch,
+        toggleAllBatches,
+        selectBatchesWithComments,
+        updateBatchComment,
+        updateLineComment,
+        resetWorkspace
+    ]);
 };

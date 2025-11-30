@@ -19,7 +19,7 @@ interface SubtitleBatchProps {
     updateLineComment: (id: number, comment: string) => void;
 }
 
-export const SubtitleBatch: React.FC<SubtitleBatchProps> = ({
+export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(({
     chunk,
     chunkIdx,
     isSelected,
@@ -81,4 +81,13 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = ({
             </div>
         </div>
     );
-};
+}, (prev, next) => {
+    return (
+        prev.chunk === next.chunk &&
+        prev.isSelected === next.isSelected &&
+        prev.status === next.status &&
+        prev.batchComment === next.batchComment &&
+        prev.showSourceText === next.showSourceText &&
+        prev.editingCommentId === next.editingCommentId
+    );
+});

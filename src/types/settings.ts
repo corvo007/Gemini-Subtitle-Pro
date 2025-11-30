@@ -28,4 +28,8 @@ export interface AppSettings {
     glossarySampleMinutes?: number | 'all'; // Default: 'all', or max minutes to analyze
     glossaryAutoConfirm?: boolean;          // Default: false (show dialog)
     requestTimeout?: number;                // Default: 600 (seconds)
+
+    // Local Whisper Settings
+    useLocalWhisper?: boolean;      // Whether to use local Whisper
+    whisperModelPath?: string;      // Model file path (.bin)
 }

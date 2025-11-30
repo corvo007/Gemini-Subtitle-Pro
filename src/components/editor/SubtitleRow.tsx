@@ -10,7 +10,7 @@ interface SubtitleRowProps {
     updateLineComment: (id: number, comment: string) => void;
 }
 
-export const SubtitleRow: React.FC<SubtitleRowProps> = ({
+export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(({
     sub,
     showSourceText,
     editingCommentId,
@@ -57,4 +57,14 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = ({
             </button>
         </div>
     );
-};
+}, (prev, next) => {
+    return (
+        prev.sub === next.sub &&
+        prev.showSourceText === next.showSourceText &&
+        prev.editingCommentId === next.editingCommentId &&
+        // Functions are usually stable if from useWorkspaceLogic, but if not, this might cause issues.
+        // However, since we plan to memoize handlers in useWorkspaceLogic, strict equality check is fine.
+        // But for editingCommentId, we only care if it matches THIS row's ID.
+        (prev.editingCommentId === prev.sub.id) === (next.editingCommentId === next.sub.id)
+    );
+});

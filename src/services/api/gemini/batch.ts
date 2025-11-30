@@ -376,6 +376,8 @@ async function processBatch(
     return batch;
 }
 
+import { getEnvVariable } from "@/services/utils/env";
+
 export const runBatchOperation = async (
     file: File | null,
     allSubtitles: SubtitleItem[],
@@ -385,7 +387,7 @@ export const runBatchOperation = async (
     batchComments: Record<number, string> = {}, // Pass map of batch index -> comment
     onProgress?: (update: ChunkStatus) => void
 ): Promise<SubtitleItem[]> => {
-    const geminiKey = (typeof window !== 'undefined' ? (window as any).env?.GEMINI_API_KEY : undefined) || settings.geminiKey?.trim() || process.env.API_KEY || process.env.GEMINI_API_KEY;
+    const geminiKey = getEnvVariable('GEMINI_API_KEY') || settings.geminiKey?.trim();
     if (!geminiKey) throw new Error("API Key is missing.");
     const ai = new GoogleGenAI({
         apiKey: geminiKey,

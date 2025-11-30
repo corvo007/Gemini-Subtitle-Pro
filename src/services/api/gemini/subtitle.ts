@@ -20,6 +20,8 @@ import { REFINEMENT_SCHEMA, SAFETY_SETTINGS } from "./schemas";
 import { generateContentWithRetry } from "./client";
 import { translateBatch } from "./batch";
 
+import { getEnvVariable } from "@/services/utils/env";
+
 export const generateSubtitles = async (
     file: File,
     duration: number,
@@ -29,8 +31,8 @@ export const generateSubtitles = async (
     onGlossaryReady?: (metadata: GlossaryExtractionMetadata) => Promise<GlossaryItem[]>
 ): Promise<{ subtitles: SubtitleItem[], glossaryResults?: GlossaryExtractionResult[] }> => {
 
-    const geminiKey = (typeof window !== 'undefined' ? (window as any).env?.GEMINI_API_KEY : undefined) || settings.geminiKey?.trim() || process.env.API_KEY || process.env.GEMINI_API_KEY;
-    const openaiKey = (typeof window !== 'undefined' ? (window as any).env?.OPENAI_API_KEY : undefined) || settings.openaiKey?.trim() || process.env.OPENAI_API_KEY;
+    const geminiKey = getEnvVariable('GEMINI_API_KEY') || settings.geminiKey?.trim();
+    const openaiKey = getEnvVariable('OPENAI_API_KEY') || settings.openaiKey?.trim();
 
     if (!geminiKey) throw new Error("Gemini API Key is missing.");
     if (!openaiKey) throw new Error("OpenAI API Key is missing.");
@@ -205,7 +207,7 @@ export const generateSubtitles = async (
             logger.debug(`[Chunk ${index}] Starting transcription...`);
 
             const wavBlob = await sliceAudioBuffer(audioBuffer, start, end);
-            const rawSegments = await transcribeAudio(wavBlob, openaiKey, settings.transcriptionModel, settings.openaiEndpoint, (settings.requestTimeout || 600) * 1000);
+            const rawSegments = await transcribeAudio(wavBlob, openaiKey, settings.transcriptionModel, settings.openaiEndpoint, (settings.requestTimeout || 600) * 1000, settings.useLocalWhisper);
 
             logger.debug(`[Chunk ${index}] Transcription complete. Segments: ${rawSegments.length}`);
 
