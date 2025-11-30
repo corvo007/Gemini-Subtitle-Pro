@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Book, Plus, Trash2, Edit2, Download, Upload, CheckCircle, X, Search, ChevronRight, AlertCircle } from 'lucide-react';
 import { Glossary, GlossaryItem } from '@/types/glossary';
 import { createGlossary, renameGlossary, exportGlossary, importGlossary, validateGlossaryItem } from './glossaryUtils';
+import { GlossaryImportDialog, ImportMode, ConflictMode } from '@/components/modals/GlossaryImportDialog';
 
 interface GlossaryManagerProps {
     glossaries: Glossary[];
@@ -27,6 +28,13 @@ export const GlossaryManager: React.FC<GlossaryManagerProps> = ({
     // Term Editing State
     const [editingTermIndex, setEditingTermIndex] = useState<number | null>(null);
     const [editTermData, setEditTermData] = useState<GlossaryItem | null>(null);
+
+    // Import Dialog State
+    const [importDialogData, setImportDialogData] = useState<{
+        isOpen: boolean;
+        items: GlossaryItem[];
+        filename: string;
+    }>({ isOpen: false, items: [], filename: '' });
 
     // Ensure we have a selection
     useEffect(() => {
@@ -116,14 +124,60 @@ export const GlossaryManager: React.FC<GlossaryManagerProps> = ({
             try {
                 const content = event.target?.result as string;
                 const imported = importGlossary(content);
-                onUpdateGlossaries([...glossaries, imported]);
-                setSelectedGlossaryId(imported.id);
+                // Instead of adding directly, open the dialog
+                setImportDialogData({
+                    isOpen: true,
+                    items: imported.terms,
+                    filename: imported.name
+                });
             } catch (err) {
                 console.error('Import failed', err);
                 // Could add toast here
             }
         };
         reader.readAsText(file);
+        // Reset input
+        e.target.value = '';
+    };
+
+    const handleConfirmImport = (mode: ImportMode, targetId: string | null, conflictMode: ConflictMode, newName: string | null) => {
+        const { items } = importDialogData;
+
+        if (mode === 'create') {
+            const name = newName || `Imported Glossary`;
+            const newGlossary = createGlossary(name);
+            newGlossary.terms = items;
+            onUpdateGlossaries([...glossaries, newGlossary]);
+            setSelectedGlossaryId(newGlossary.id);
+        } else if (mode === 'merge' && targetId) {
+            const targetGlossary = glossaries.find(g => g.id === targetId);
+            if (targetGlossary) {
+                let mergedTerms = [...targetGlossary.terms];
+                const existingMap = new Map(targetGlossary.terms.map(t => [t.term.toLowerCase(), t]));
+
+                if (conflictMode === 'skip') {
+                    // Add only terms that don't exist
+                    const newUnique = items.filter(t => !existingMap.has(t.term.toLowerCase()));
+                    mergedTerms = [...mergedTerms, ...newUnique];
+                } else {
+                    // Overwrite: Add all new terms, replacing existing ones
+                    const newMap = new Map(items.map(t => [t.term.toLowerCase(), t]));
+                    // Keep existing terms that are NOT in new items
+                    const keptExisting = targetGlossary.terms.filter(t => !newMap.has(t.term.toLowerCase()));
+                    mergedTerms = [...keptExisting, ...items];
+                }
+
+                const updated = glossaries.map(g =>
+                    g.id === targetId
+                        ? { ...g, terms: mergedTerms, updatedAt: new Date().toISOString() }
+                        : g
+                );
+                onUpdateGlossaries(updated);
+                setSelectedGlossaryId(targetId);
+            }
+        }
+
+        setImportDialogData({ isOpen: false, items: [], filename: '' });
     };
 
     return (
@@ -445,6 +499,14 @@ export const GlossaryManager: React.FC<GlossaryManagerProps> = ({
                     </button>
                 </div>
             </div>
+            <GlossaryImportDialog
+                isOpen={importDialogData.isOpen}
+                onClose={() => setImportDialogData({ ...importDialogData, isOpen: false })}
+                onConfirm={handleConfirmImport}
+                glossaries={glossaries}
+                importCount={importDialogData.items.length}
+                defaultName={importDialogData.filename}
+            />
         </div>
     );
 };
