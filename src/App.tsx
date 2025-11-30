@@ -25,6 +25,8 @@ import { FileUploader } from '@/components/upload/FileUploader';
 import { SubtitleEditor } from '@/components/editor/SubtitleEditor';
 import { SettingsModal, GenreSettingsDialog, CustomSelect } from '@/components/settings';
 import { SimpleConfirmationModal } from '@/components/modals';
+import { ToastContainer, TimeTracker } from '@/components/ui';
+import type { ToastMessage } from '@/components/ui';
 
 
 const SETTINGS_KEY = 'gemini_subtitle_settings';
@@ -58,54 +60,11 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 
 
-interface ToastMessage {
-    id: string;
-    message: string;
-    type: 'info' | 'warning' | 'error' | 'success';
-}
 
-const ToastContainer = ({ toasts, removeToast }: { toasts: ToastMessage[], removeToast: (id: string) => void }) => {
-    return (
-        <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
-            {toasts.map(toast => (
-                <div key={toast.id} className={`
-          pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium animate-fade-in
-          ${toast.type === 'error' ? 'bg-red-500/90 text-white' :
-                        toast.type === 'warning' ? 'bg-amber-500/90 text-white' :
-                            toast.type === 'success' ? 'bg-emerald-500/90 text-white' :
-                                'bg-slate-800/90 text-slate-200 border border-slate-700'}
-        `}>
-                    {toast.type === 'error' && <AlertCircle className="w-4 h-4" />}
-                    {toast.type === 'warning' && <AlertCircle className="w-4 h-4" />}
-                    {toast.type === 'success' && <CheckCircle className="w-4 h-4" />}
-                    {toast.type === 'info' && <MessageSquareText className="w-4 h-4" />}
-                    <span>{toast.message}</span>
-                    <button onClick={() => removeToast(toast.id)} className="ml-2 opacity-70 hover:opacity-100">
-                        <X className="w-3 h-3" />
-                    </button>
-                </div>
-            ))}
-        </div>
-    );
-};
 
-const TimeTracker = ({ startTime, completed, total, status }: { startTime: number, completed: number, total: number, status: GenerationStatus }) => {
-    const [now, setNow] = useState(Date.now());
-    useEffect(() => {
-        const timer = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(timer);
-    }, []);
 
-    if (!startTime) return null;
 
-    const elapsed = Math.floor((now - startTime) / 1000);
 
-    return (
-        <div className="flex justify-between text-xs text-slate-400 mb-4 px-1">
-            <span>用时: {elapsed}s</span>
-        </div>
-    );
-};
 
 
 
