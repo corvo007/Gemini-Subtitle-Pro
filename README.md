@@ -79,6 +79,16 @@
    yarn dev
    ```
 
+4. **构建桌面应用 (Electron):**
+   ```bash
+   # 开发模式
+   npm run electron:dev
+
+   # 打包 (生成安装包和便携版)
+   npm run electron:build
+   ```
+   打包完成后，您可以在 `release` 目录下找到安装程序 (`Setup.exe`) 和单文件便携版 (`.exe`)。
+
 ## ⚙️ 配置说明
 
 在应用设置中，您可以配置以下高级选项，分为三个主要部分：

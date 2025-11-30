@@ -1,16 +1,23 @@
 {
   "name": "gemini-subtitle-pro",
+  "description": "AI-powered subtitle generation tool",
+  "author": "Corvo007",
   "private": true,
   "version": "2.0.0",
   "type": "module",
+  "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:3000 && electron -r ts-node/register electron/main.ts\"",
+    "electron:build": "npm run build:main && vite build && electron-builder",
+    "build:main": "vite build -c vite.config.electron.ts"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
     "@ricky0123/vad-web": "^0.0.30",
+    "electron-squirrel-startup": "^1.0.1",
     "lucide-react": "^0.554.0",
     "onnxruntime-web": "^1.23.2",
     "openai": "^6.9.1",
@@ -20,8 +27,37 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^39.2.4",
+    "electron-builder": "^26.0.12",
+    "ts-node": "^10.9.2",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
-    "vite-plugin-static-copy": "^3.1.4"
+    "vite-plugin-static-copy": "^3.1.4",
+    "wait-on": "^9.0.3"
+  },
+  "build": {
+    "appId": "com.gemini.subtitle.pro",
+    "productName": "Gemini Subtitle Pro",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }
