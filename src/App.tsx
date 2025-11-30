@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GenerationStatus } from '@/types/api';
 import { logger, LogEntry } from '@/services/utils/logger';
 
-import { GlossaryManager } from './GlossaryManager';
+import { GlossaryManager } from '@/components/glossary/GlossaryManager';
 import { SettingsModal, GenreSettingsDialog } from '@/components/settings';
 import { GlossaryExtractionFailedDialog, GlossaryConfirmationModal, SimpleConfirmationModal } from '@/components/modals';
 import { ToastContainer, ProgressOverlay } from '@/components/ui';
@@ -15,24 +15,8 @@ import { LogViewerModal } from '@/components/layout/LogViewerModal';
 import { HomePage } from '@/components/pages/HomePage';
 import { WorkspacePage } from '@/components/pages/WorkspacePage';
 
-
 const ENV_GEMINI_KEY = (window as any).env?.GEMINI_API_KEY || process.env.API_KEY || process.env.GEMINI_API_KEY || '';
 const ENV_OPENAI_KEY = (window as any).env?.OPENAI_API_KEY || process.env.OPENAI_API_KEY || '';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export default function App() {
     // View State

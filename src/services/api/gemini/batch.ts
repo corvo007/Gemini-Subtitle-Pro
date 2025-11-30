@@ -9,7 +9,7 @@ import { sliceAudioBuffer } from "@/services/audio/processor";
 import { blobToBase64 } from "@/services/audio/converter";
 import { mapInParallel } from "@/services/utils/concurrency";
 import { logger } from "@/services/utils/logger";
-import { getSystemInstruction } from "@/prompts";
+import { getSystemInstruction } from "@/services/api/gemini/prompts";
 import {
     TRANSLATION_SCHEMA,
     BATCH_SCHEMA,

@@ -12,7 +12,7 @@ import { GlossaryState } from "./glossary-state";
 import { sliceAudioBuffer } from "@/services/audio/processor";
 import { transcribeAudio } from "@/services/api/openai/transcribe";
 import { blobToBase64 } from "@/services/audio/converter";
-import { getSystemInstruction } from "@/prompts";
+import { getSystemInstruction } from "@/services/api/gemini/prompts";
 import { parseGeminiResponse } from "@/services/subtitle/parser";
 import { mapInParallel } from "@/services/utils/concurrency";
 import { logger } from "@/services/utils/logger";

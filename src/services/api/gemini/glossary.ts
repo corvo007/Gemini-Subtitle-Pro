@@ -7,7 +7,7 @@ import { mapInParallel } from "@/services/utils/concurrency";
 import { logger } from "@/services/utils/logger";
 import { GLOSSARY_SCHEMA, SAFETY_SETTINGS } from "./schemas";
 import { generateContentWithRetry, isRetryableError } from "./client";
-import { GLOSSARY_EXTRACTION_PROMPT } from "@/prompts";
+import { GLOSSARY_EXTRACTION_PROMPT } from "@/services/api/gemini/prompts";
 import { extractJsonArray } from "@/services/subtitle/parser";
 
 export const extractGlossaryFromAudio = async (

@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SubtitleItem } from "@/types/subtitle";
-import { ConsistencyIssue } from "@/consistencyValidation";
+import { ConsistencyIssue } from "@/services/glossary/consistency";
 import { generateContentWithRetry } from "./client";
 import { logger } from "@/services/utils/logger";
 import { extractJsonArray } from "@/services/subtitle/parser";

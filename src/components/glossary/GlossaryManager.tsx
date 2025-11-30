@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Book, Plus, Trash2, Edit2, Download, Upload, CheckCircle, X, Search, ChevronRight, AlertCircle } from 'lucide-react';
 import { Glossary, GlossaryItem } from '@/types/glossary';
-import { createGlossary, renameGlossary, exportGlossary, importGlossary, validateGlossaryItem } from './glossaryUtils';
+import { createGlossary, renameGlossary, exportGlossary, importGlossary } from '@/services/glossary/manager';
+import { validateGlossaryItem } from '@/services/glossary/validator';
 import { GlossaryImportDialog, ImportMode, ConflictMode } from '@/components/modals/GlossaryImportDialog';
 
 interface GlossaryManagerProps {
