@@ -20,6 +20,7 @@ import { SmartSegmenter } from '@/services/audio/segmenter';
 import { TerminologyChecker, TerminologyIssue } from './terminologyChecker';
 import { GlossaryManager } from './GlossaryManager';
 import { Header } from '@/components/layout/Header';
+import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 
 
 const SETTINGS_KEY = 'gemini_subtitle_settings';
@@ -1975,22 +1976,18 @@ export default function App() {
     const renderWorkspace = () => (
         <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 flex flex-col">
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col space-y-6">
-                <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800 shrink-0">
-                    <div className="flex items-center space-x-4">
-                        <button onClick={goBackHome} className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"><ArrowLeft className="w-5 h-5" /></button>
-                        <div>
-                            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">{activeTab === 'new' ? '新建项目' : '字幕编辑器'}<span className="text-xs font-normal text-slate-500 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded">{activeTab === 'new' ? '生成模式' : '导入模式'}</span></h1>
-                            <p className="text-xs text-slate-400 truncate max-w-[300px]">{file ? file.name : (subtitles.length > 0 ? `${subtitles.length} 行已加载` : '未选择文件')}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <button onClick={() => setShowSnapshots(!showSnapshots)} disabled={snapshots.length === 0} className={`flex items-center space-x-2 px-4 py-2 border rounded-lg transition-colors text-sm font-medium ${snapshots.length > 0 ? 'bg-indigo-900/30 border-indigo-500/50 text-indigo-200' : 'bg-slate-900 border-slate-800 text-slate-600'}`}><GitCommit className="w-4 h-4" /><span className="hidden sm:inline">版本</span></button>
-                        {/* <button onClick={() => setView('quality_control')} className="flex items-center space-x-2 px-4 py-2 border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded-lg transition-colors text-sm font-medium"><Sparkles className="w-4 h-4" /><span className="hidden sm:inline">Quality Control</span></button> */}
-                        <button onClick={() => setShowLogs(true)} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group" title="查看日志"><FileText className="w-4 h-4 text-slate-400 group-hover:text-blue-400 transition-colors" /><span className="hidden sm:inline text-slate-300 group-hover:text-white">日志</span></button>
-                        <button onClick={() => setShowGlossaryManager(true)} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group" title="术语表管理"><Book className="w-4 h-4 text-slate-400 group-hover:text-indigo-400 transition-colors" /><span className="hidden sm:inline text-slate-300 group-hover:text-white">术语表</span></button>
-                        <button onClick={() => setShowSettings(true)} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group"><Settings className="w-4 h-4 text-slate-400 group-hover:text-emerald-400 transition-colors" /><span className="hidden sm:inline text-slate-300 group-hover:text-white">设置</span></button>
-                    </div>
-                </header>
+                <WorkspaceHeader
+                    title={activeTab === 'new' ? '新建项目' : '字幕编辑器'}
+                    modeLabel={activeTab === 'new' ? '生成模式' : '导入模式'}
+                    subtitleInfo={file ? file.name : (subtitles.length > 0 ? `${subtitles.length} 行已加载` : '未选择文件')}
+                    onBack={goBackHome}
+                    showSnapshots={showSnapshots}
+                    onToggleSnapshots={() => setShowSnapshots(!showSnapshots)}
+                    hasSnapshots={snapshots.length > 0}
+                    onShowLogs={() => setShowLogs(true)}
+                    onShowGlossary={() => setShowGlossaryManager(true)}
+                    onShowSettings={() => setShowSettings(true)}
+                />
                 <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-6 min-h-0">
                     <div className="lg:col-span-3 lg:h-full overflow-y-auto custom-scrollbar space-y-4">
                         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 shadow-sm space-y-4">
