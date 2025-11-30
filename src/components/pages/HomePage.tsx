@@ -41,7 +41,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                         </button>
                     </div>
                 </main>
-                <footer className="mt-12 text-center text-slate-600 text-sm">Gemini Subtitle Pro v1.2</footer>
+                <footer className="mt-12 text-center text-slate-600 text-sm">Gemini Subtitle Pro v2.0</footer>
             </div>
         </div>
     );
