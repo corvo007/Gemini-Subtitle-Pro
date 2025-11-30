@@ -43,6 +43,7 @@
     "directories": {
       "output": "release"
     },
+    "icon": "resources/icon.png",
     "files": [
       "dist/**/*",
       "dist-electron/**/*"
