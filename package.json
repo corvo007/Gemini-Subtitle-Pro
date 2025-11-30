@@ -3,7 +3,7 @@
   "description": "AI-powered subtitle generation tool",
   "author": "Corvo007",
   "private": true,
-  "version": "2.1.0",
+  "version": "2.1.1",
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
@@ -11,8 +11,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"cross-env BROWSER=none yarn dev\" \"wait-on http://localhost:3000 && electron -r ts-node/register electron/main.ts\"",
-    "electron:build": "yarn build:main && vite build && electron-builder",
-    "build:main": "vite build -c vite.config.electron.ts"
+    "electron:build": "yarn download:whisper && yarn build:main && vite build && electron-builder",
+    "build:main": "vite build -c vite.config.electron.ts",
+    "download:whisper": "node scripts/download-whisper.js"
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
@@ -31,6 +32,7 @@
     "@types/fluent-ffmpeg": "^2.1.28",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "adm-zip": "^0.5.16",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^39.2.4",
