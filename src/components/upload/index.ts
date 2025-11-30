@@ -1,1 +1,1 @@
-// Upload components will be exported here
+export { FileUploader } from './FileUploader';

@@ -21,6 +21,7 @@ import { TerminologyChecker, TerminologyIssue } from './terminologyChecker';
 import { GlossaryManager } from './GlossaryManager';
 import { Header } from '@/components/layout/Header';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
+import { FileUploader } from '@/components/upload/FileUploader';
 
 
 const SETTINGS_KEY = 'gemini_subtitle_settings';
@@ -1993,29 +1994,48 @@ export default function App() {
                         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 shadow-sm space-y-4">
                             <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-slate-300">项目文件</h3></div>
                             {file ? (
-                                <div className="flex items-center p-3 bg-slate-800 rounded-lg border border-slate-700/50">
-                                    <FileVideo className="w-8 h-8 text-indigo-400 mr-3 flex-shrink-0" />
-                                    <div className="overflow-hidden flex-1 min-w-0"><p className="text-xs font-medium text-white truncate" title={file.name}>{file.name}</p><p className="text-[10px] text-slate-500">{Math.floor(duration / 60)}:{Math.floor(duration % 60).toString().padStart(2, '0')} · {(file.size / (1024 * 1024)).toFixed(1)}MB</p></div>
-                                    <label className="cursor-pointer p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors ml-1" title="更改源文件"><RefreshCcw className="w-3 h-3" /><input type="file" accept="video/*,audio/*" onChange={handleFileChange} className="hidden" disabled={isProcessing} /></label>
-                                </div>
+                                <FileUploader
+                                    hasFile={true}
+                                    fileName={file.name}
+                                    fileInfo={`${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')} · ${(file.size / (1024 * 1024)).toFixed(1)}MB`}
+                                    onFileSelect={handleFileChange}
+                                    disabled={isProcessing}
+                                    accept="video/*,audio/*"
+                                    icon={<FileVideo className="text-indigo-400" />}
+                                    uploadTitle="" // Not used when hasFile is true
+                                />
                             ) : (
-                                <label className={`flex flex-col items-center justify-center w-full border-2 border-dashed border-slate-700 rounded-lg bg-slate-800/30 hover:bg-slate-800/50 hover:border-indigo-500/50 cursor-pointer transition-all group ${activeTab === 'new' ? 'h-32' : 'h-20'}`}>
-                                    <div className="flex flex-col items-center justify-center py-4">
-                                        {activeTab === 'new' ? (<><Upload className="w-8 h-8 text-indigo-400 mb-2 group-hover:scale-110 transition-transform" /><p className="text-xs font-bold text-slate-300">上传视频 / 音频</p><p className="text-[10px] text-slate-500 mt-1">开始转录</p></>) : (<><Plus className="w-5 h-5 text-slate-500 group-hover:text-indigo-400 mb-1" /><p className="text-xs text-slate-500">附加媒体 (可选)</p></>)}
-                                    </div>
-                                    <input type="file" accept="video/*,audio/*" onChange={handleFileChange} className="hidden" />
-                                </label>
+                                <FileUploader
+                                    hasFile={false}
+                                    onFileSelect={handleFileChange}
+                                    accept="video/*,audio/*"
+                                    icon={activeTab === 'new' ? <Upload className="text-indigo-400" /> : <Plus className="text-slate-500 group-hover:text-indigo-400" />}
+                                    uploadTitle={activeTab === 'new' ? "上传视频 / 音频" : "附加媒体 (可选)"}
+                                    uploadDescription={activeTab === 'new' ? "开始转录" : undefined}
+                                    heightClass={activeTab === 'new' ? 'h-32' : 'h-20'}
+                                />
                             )}
                             {activeTab === 'import' && (
                                 <div className="pt-2 border-t border-slate-800">
                                     <div className="flex items-center justify-between mb-2"><h3 className="text-xs font-semibold text-slate-400">字幕文件</h3>{subtitles.length > 0 && (<span className="text-[10px] text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">{subtitles.length} 行</span>)}</div>
                                     {subtitles.length === 0 ? (
-                                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-700 rounded-lg bg-slate-800/30 hover:bg-slate-800/50 hover:border-emerald-500/50 cursor-pointer transition-all group">
-                                            <div className="flex flex-col items-center justify-center pt-5 pb-6"><FileText className="w-6 h-6 text-emerald-500 group-hover:text-emerald-400 mb-1 group-hover:scale-110 transition-transform" /><p className="text-xs font-bold text-slate-300">导入 .SRT / .ASS</p></div>
-                                            <input type="file" accept=".srt,.ass" onChange={handleSubtitleImport} className="hidden" />
-                                        </label>
+                                        <FileUploader
+                                            hasFile={false}
+                                            onFileSelect={handleSubtitleImport}
+                                            accept=".srt,.ass"
+                                            icon={<FileText className="text-emerald-500 group-hover:text-emerald-400" />}
+                                            uploadTitle="导入 .SRT / .ASS"
+                                            heightClass="h-24"
+                                        />
                                     ) : (
-                                        <div className="flex items-center p-2 bg-slate-800 rounded border border-slate-700/50"><FileText className="w-4 h-4 text-emerald-500 mr-2" /><p className="text-xs text-slate-300 flex-1">字幕已加载</p><label className="cursor-pointer p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white" title="替换字幕"><RefreshCcw className="w-3 h-3" /><input type="file" accept=".srt,.ass" onChange={handleSubtitleImport} className="hidden" /></label></div>
+                                        <FileUploader
+                                            hasFile={true}
+                                            fileInfo="字幕已加载"
+                                            onFileSelect={handleSubtitleImport}
+                                            accept=".srt,.ass"
+                                            icon={<FileText className="text-emerald-500" />}
+                                            uploadTitle=""
+                                        />
                                     )}
                                 </div>
                             )}
