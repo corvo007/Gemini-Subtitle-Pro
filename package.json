@@ -1,5 +1,5 @@
 {
-  "name": "Gemini Subtitle Pro",
+  "name": "gemini-subtitle-pro",
   "description": "AI-powered subtitle generation tool",
   "author": "Corvo007",
   "private": true,
@@ -15,9 +15,11 @@
     "build:main": "vite build -c vite.config.electron.ts"
   },
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@google/genai": "^1.30.0",
     "@ricky0123/vad-web": "^0.0.30",
     "electron-squirrel-startup": "^1.0.1",
+    "fluent-ffmpeg": "^2.1.3",
     "lucide-react": "^0.554.0",
     "onnxruntime-web": "^1.23.2",
     "openai": "^6.9.1",
@@ -25,6 +27,7 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.28",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "concurrently": "^9.2.1",
@@ -48,6 +51,30 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "resources/whisper-server.exe",
+        "to": "whisper-server.exe",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "resources/whisper-server",
+        "to": "whisper-server",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "nsis": {
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "oneClick": false,
+      "perMachine": false
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}.${ext}"
+    },
     "mac": {
       "target": "dmg"
     },
