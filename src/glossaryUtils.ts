@@ -1,4 +1,4 @@
-import { GlossaryItem, GlossaryExtractionResult, Glossary } from './types';
+import { GlossaryItem, GlossaryExtractionResult, Glossary } from '@/types/glossary';
 
 /**
  * Create a new empty glossary

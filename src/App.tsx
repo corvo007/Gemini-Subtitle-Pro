@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Upload, FileVideo, Download, Trash2, Play, CheckCircle, AlertCircle, Languages, Loader2, Sparkles, Settings, X, Eye, EyeOff, MessageSquareText, AudioLines, Clapperboard, Monitor, CheckSquare, Square, RefreshCcw, Type, Clock, Wand2, FileText, RotateCcw, MessageCircle, GitCommit, ArrowLeft, Plus, Book, ShieldCheck, Scissors, Pencil, Cpu, Layout, Search, Globe, Zap, Volume2, ChevronDown, ChevronRight, Save, Edit2, Ban } from 'lucide-react';
-import { SubtitleItem, GenerationStatus, OutputFormat, AppSettings, Genre, BatchOperationMode, SubtitleSnapshot, ChunkStatus, GENRE_PRESETS, GlossaryItem, GlossaryExtractionResult, GlossaryExtractionMetadata } from './types';
+import { SubtitleItem, SubtitleSnapshot, OutputFormat, BatchOperationMode } from '@/types/subtitle';
+import { AppSettings, Genre, GENRE_PRESETS } from '@/types/settings';
+import { GlossaryItem, GlossaryExtractionResult, GlossaryExtractionMetadata } from '@/types/glossary';
+import { GenerationStatus, ChunkStatus } from '@/types/api';
 import { generateSrtContent, generateAssContent, downloadFile, parseSrt, parseAss, decodeAudio, logger, LogEntry } from './utils';
 import { mergeGlossaryResults, createGlossary, migrateFromLegacyGlossary } from './glossaryUtils';
 import { generateSubtitles, runBatchOperation, generateGlossary, retryGlossaryExtraction } from './gemini';

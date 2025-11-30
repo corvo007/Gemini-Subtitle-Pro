@@ -1,5 +1,5 @@
 
-import { SubtitleItem, OutputFormat, GeminiSubtitleSchema, OpenAIWhisperSegment } from './types';
+import { SubtitleItem, OutputFormat, GeminiSubtitleSchema, OpenAIWhisperSegment } from '@/types/subtitle';
 
 // --- Time Formatting Utils ---
 

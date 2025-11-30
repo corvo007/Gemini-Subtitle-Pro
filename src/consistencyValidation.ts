@@ -1,4 +1,4 @@
-import { SubtitleItem } from "./types";
+import { SubtitleItem } from "@/types/subtitle";
 
 export interface ConsistencyIssue {
     type: 'punctuation' | 'spacing' | 'length' | 'brackets' | 'ai_consistency' | 'other';

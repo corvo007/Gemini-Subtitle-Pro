@@ -1,4 +1,5 @@
-import { SubtitleItem, GlossaryItem } from "./types";
+import { SubtitleItem } from "@/types/subtitle";
+import { GlossaryItem } from "@/types/glossary";
 import { logger } from "./utils";
 
 export interface TerminologyIssue {

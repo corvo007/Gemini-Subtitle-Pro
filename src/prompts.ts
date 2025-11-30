@@ -1,4 +1,5 @@
-import { BatchOperationMode, GlossaryItem } from "./types";
+import { BatchOperationMode } from "@/types/subtitle";
+import { GlossaryItem } from "@/types/glossary";
 
 // --- Helper Functions ---
 

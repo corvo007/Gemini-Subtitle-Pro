@@ -1,7 +1,10 @@
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold, Content, Part } from "@google/genai";
 import { ConsistencyIssue } from "./consistencyValidation";
 import { parseGeminiResponse, formatTime, decodeAudio, sliceAudioBuffer, transcribeAudio, timeToSeconds, blobToBase64, extractJsonArray, mapInParallel, logger } from "./utils";
-import { SubtitleItem, AppSettings, BatchOperationMode, ChunkStatus, GlossaryItem, GlossaryExtractionResult, GlossaryExtractionMetadata } from "./types";
+import { SubtitleItem, BatchOperationMode } from "@/types/subtitle";
+import { AppSettings } from "@/types/settings";
+import { ChunkStatus } from "@/types/api";
+import { GlossaryItem, GlossaryExtractionResult, GlossaryExtractionMetadata } from "@/types/glossary";
 import { getSystemInstruction, GLOSSARY_EXTRACTION_PROMPT } from "./prompts";
 import { selectChunksByDuration } from "./glossaryUtils";
 import { SmartSegmenter } from "./smartSegmentation";
