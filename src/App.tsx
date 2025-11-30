@@ -1,22 +1,19 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Upload, FileVideo, Download, Trash2, Play, CheckCircle, AlertCircle, Languages, Loader2, Sparkles, Settings, X, Eye, EyeOff, MessageSquareText, AudioLines, Clapperboard, Monitor, CheckSquare, Square, RefreshCcw, Type, Clock, Wand2, FileText, RotateCcw, MessageCircle, GitCommit, ArrowLeft, Plus, Book, ShieldCheck, Scissors, Pencil, Cpu, Layout, Search, Globe, Zap, Volume2, ChevronDown, ChevronRight, Save, Edit2, Ban } from 'lucide-react';
-import { SubtitleItem, SubtitleSnapshot, OutputFormat, BatchOperationMode } from '@/types/subtitle';
+import React, { useState, useEffect, useRef } from 'react';
+import { FileVideo, Download, Play, AlertCircle, Loader2, X, FileText, RotateCcw, Upload, Plus, Clapperboard, Edit2, Book, GitCommit } from 'lucide-react';
+import { SubtitleItem, SubtitleSnapshot, BatchOperationMode } from '@/types/subtitle';
 import { AppSettings, GENRE_PRESETS } from '@/types/settings';
 import { GlossaryItem, GlossaryExtractionResult, GlossaryExtractionMetadata } from '@/types/glossary';
 import { GenerationStatus, ChunkStatus } from '@/types/api';
 import { generateSrtContent, generateAssContent } from '@/services/subtitle/generator';
 import { downloadFile } from '@/services/subtitle/downloader';
 import { parseSrt, parseAss } from '@/services/subtitle/parser';
-import { decodeAudio } from '@/services/audio/decoder';
 import { logger, LogEntry } from '@/services/utils/logger';
 import { mergeGlossaryResults } from '@/services/glossary/merger';
 
-import { migrateFromLegacyGlossary } from '@/services/glossary/migrator';
 import { generateSubtitles } from '@/services/api/gemini/subtitle';
 import { runBatchOperation } from '@/services/api/gemini/batch';
 import { retryGlossaryExtraction } from '@/services/api/gemini/glossary';
 
-import { SmartSegmenter } from '@/services/audio/segmenter';
 import { TerminologyChecker, TerminologyIssue } from './terminologyChecker';
 import { GlossaryManager } from './GlossaryManager';
 import { Header } from '@/components/layout/Header';
@@ -27,6 +24,13 @@ import { SettingsModal, GenreSettingsDialog, CustomSelect } from '@/components/s
 import { GlossaryExtractionFailedDialog, GlossaryConfirmationModal, SimpleConfirmationModal } from '@/components/modals';
 import { ToastContainer, TimeTracker, StatusBadge, ProgressOverlay } from '@/components/ui';
 import type { ToastMessage } from '@/components/ui';
+
+// Custom Hooks
+import { useSettings, useToast, useSnapshots, useGlossaryFlow } from '@/hooks';
+
+// Page Components
+import { LogViewerModal } from '@/components/layout/LogViewerModal';
+import { HomePage } from '@/components/pages/HomePage';
 
 
 const SETTINGS_KEY = 'gemini_subtitle_settings';
@@ -86,7 +90,6 @@ export default function App() {
     const [progressMsg, setProgressMsg] = useState('');
     const [chunkProgress, setChunkProgress] = useState<Record<string, ChunkStatus>>({});
     const [subtitles, setSubtitles] = useState<SubtitleItem[]>([]);
-    const [snapshots, setSnapshots] = useState<SubtitleSnapshot[]>([]);
 
     const [showSnapshots, setShowSnapshots] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
@@ -94,9 +97,24 @@ export default function App() {
     const [showGlossaryManager, setShowGlossaryManager] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Settings State
-    const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-    const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
+    // Custom Hooks
+    const { settings, isSettingsLoaded, updateSetting } = useSettings();
+    const { toasts, addToast, removeToast } = useToast();
+    const { snapshots, createSnapshot, clearSnapshots, setSnapshots } = useSnapshots();
+    const {
+        showGlossaryConfirmation,
+        setShowGlossaryConfirmation,
+        showGlossaryFailure,
+        setShowGlossaryFailure,
+        pendingGlossaryResults,
+        setPendingGlossaryResults,
+        glossaryMetadata,
+        setGlossaryMetadata,
+        glossaryConfirmCallback,
+        setGlossaryConfirmCallback,
+        isGeneratingGlossary,
+        setIsGeneratingGlossary
+    } = useGlossaryFlow();
 
     // Batch Selection & Comment State
     const [selectedBatches, setSelectedBatches] = useState<Set<number>>(new Set());
@@ -106,19 +124,6 @@ export default function App() {
     const [showSourceText, setShowSourceText] = useState(true);
     const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
     const [startTime, setStartTime] = useState<number | null>(null);
-
-    // Toast State
-    const [toasts, setToasts] = useState<ToastMessage[]>([]);
-
-    const addToast = (message: string, type: 'info' | 'warning' | 'error' | 'success' = 'info') => {
-        const id = Date.now().toString() + Math.random().toString();
-        setToasts(prev => [...prev, { id, message, type }]);
-        setTimeout(() => removeToast(id), 5000);
-    };
-
-    const removeToast = (id: string) => {
-        setToasts(prev => prev.filter(t => t.id !== id));
-    };
 
     const handleProgress = (update: ChunkStatus) => {
         setChunkProgress(prev => ({ ...prev, [update.id]: update }));
@@ -131,12 +136,6 @@ export default function App() {
     // Phase 4 State
     const [glossary, setGlossary] = useState<GlossaryItem[]>([]);
     const [termIssues, setTermIssues] = useState<TerminologyIssue[]>([]);
-    const [isGeneratingGlossary, setIsGeneratingGlossary] = useState(false);
-    const [showGlossaryConfirmation, setShowGlossaryConfirmation] = useState(false);
-    const [pendingGlossaryResults, setPendingGlossaryResults] = useState<GlossaryExtractionResult[]>([]);
-    const [glossaryMetadata, setGlossaryMetadata] = useState<GlossaryExtractionMetadata | null>(null);
-    const [showGlossaryFailure, setShowGlossaryFailure] = useState(false);
-    const [glossaryConfirmCallback, setGlossaryConfirmCallback] = useState<((glossary: GlossaryItem[]) => void) | null>(null);
 
     // Confirmation Modal State
     const [confirmation, setConfirmation] = useState<{
@@ -177,43 +176,12 @@ export default function App() {
 
     const isCustomGenre = !GENRE_PRESETS.includes(settings.genre);
 
-    // --- Initialization ---
+    // Scroll to bottom on new subtitles
     useEffect(() => {
-        const storedSettings = localStorage.getItem(SETTINGS_KEY);
-        if (storedSettings) {
-            try {
-                const parsed = JSON.parse(storedSettings);
-                let newSettings = { ...DEFAULT_SETTINGS, ...parsed };
-
-                // Migration: Legacy glossary to Multi-Glossary
-                if (parsed.glossary && parsed.glossary.length > 0 && (!parsed.glossaries || parsed.glossaries.length === 0)) {
-                    const defaultGlossary = migrateFromLegacyGlossary(parsed.glossary);
-                    newSettings.glossaries = [defaultGlossary];
-                    newSettings.activeGlossaryId = defaultGlossary.id;
-                    logger.info('Migrated legacy glossary to new format');
-                }
-
-                // Ensure glossaries array exists and fix malformed data
-                if (!newSettings.glossaries) {
-                    newSettings.glossaries = [];
-                } else {
-                    // Fix potential migration issues (items vs terms)
-                    newSettings.glossaries = newSettings.glossaries.map((g: any) => ({
-                        ...g,
-                        terms: g.terms || g.items || []
-                    }));
-                }
-
-                setSettings(newSettings);
-            } catch (e) { logger.warn("Settings load error", e); }
+        if (status === GenerationStatus.PROCESSING && subtitleListRef.current) {
+            subtitleListRef.current.scrollTop = subtitleListRef.current.scrollHeight;
         }
-        setIsSettingsLoaded(true);
-    }, []);
-
-    useEffect(() => {
-        if (!isSettingsLoaded) return;
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    }, [settings, isSettingsLoaded]);
+    }, [subtitles, status]);
 
     useEffect(() => {
         if (status === GenerationStatus.PROCESSING && subtitleListRef.current) {
@@ -233,16 +201,6 @@ export default function App() {
         });
     };
 
-    const createSnapshot = (description: string, subtitlesOverride?: SubtitleItem[]) => {
-        const newSnapshot: SubtitleSnapshot = {
-            id: Date.now().toString(),
-            timestamp: new Date().toLocaleTimeString(),
-            description,
-            subtitles: JSON.parse(JSON.stringify(subtitlesOverride || subtitles)),
-            batchComments: { ...batchComments }
-        };
-        setSnapshots(prev => [newSnapshot, ...prev].slice(0, 20));
-    };
 
     const restoreSnapshot = (snapshot: SubtitleSnapshot) => {
         showConfirm(
@@ -475,12 +433,7 @@ export default function App() {
 
 
 
-    const updateSetting = (key: keyof AppSettings, value: any) => {
-        setSettings(prev => {
-            const newSettings = { ...prev, [key]: value };
-            return newSettings;
-        });
-    };
+
 
     const handleDownload = (format: 'srt' | 'ass') => {
         if (subtitles.length === 0) return;
