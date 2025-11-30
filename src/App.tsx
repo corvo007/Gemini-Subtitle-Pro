@@ -25,7 +25,7 @@ import { FileUploader } from '@/components/upload/FileUploader';
 import { SubtitleEditor } from '@/components/editor/SubtitleEditor';
 import { SettingsModal, GenreSettingsDialog, CustomSelect } from '@/components/settings';
 import { SimpleConfirmationModal } from '@/components/modals';
-import { ToastContainer, TimeTracker } from '@/components/ui';
+import { ToastContainer, TimeTracker, StatusBadge } from '@/components/ui';
 import type { ToastMessage } from '@/components/ui';
 
 
@@ -562,13 +562,7 @@ export default function App() {
         );
     };
 
-    const StatusBadge = () => {
-        switch (status) {
-            case GenerationStatus.COMPLETED: return (<div className="flex items-center space-x-2 text-emerald-400 bg-emerald-400/10 px-4 py-2 rounded-full border border-emerald-500/20"><CheckCircle className="w-4 h-4" /><span className="text-sm font-medium">完成</span></div>);
-            case GenerationStatus.ERROR: return (<div className="flex items-center space-x-2 text-red-400 bg-red-400/10 px-4 py-2 rounded-full border border-red-500/20"><AlertCircle className="w-4 h-4" /><span className="text-sm font-medium">错误</span></div>);
-            default: return null;
-        }
-    };
+
 
 
 
