@@ -9,7 +9,7 @@ lerna-debug.log*
 
 node_modules
 yarn.lock
-package-lock.json
+
 dist
 dist-ssr
 dist-electron
