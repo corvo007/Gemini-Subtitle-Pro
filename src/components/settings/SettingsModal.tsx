@@ -57,13 +57,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <div className="space-y-6 animate-fade-in">
                                 {/* API Settings */}
                                 <div className="space-y-3">
-                                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">翻译和校对服务</h3>
+                                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">翻译和润色服务</h3>
                                     <div className="space-y-4">
                                         {/* Gemini */}
                                         <div>
                                             <label className="block text-sm font-medium text-slate-300 mb-1.5">Gemini API 密钥</label>
                                             <div className="relative"><input type="password" value={settings.geminiKey} onChange={(e) => updateSetting('geminiKey', e.target.value.trim())} placeholder="请输入 Gemini API 密钥" className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 pl-3 pr-10 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm" /></div>
-                                            <p className="text-xs text-slate-500 mt-1">翻译使用 <strong>Gemini 2.5 Flash</strong>，术语提取和深度校对使用 <strong>Gemini 3 Pro</strong>。</p>
+                                            <p className="text-xs text-slate-500 mt-1">翻译使用 <strong>Gemini 2.5 Flash</strong>，术语提取和润色使用 <strong>Gemini 3 Pro</strong>。</p>
                                             {envGeminiKey && !settings.geminiKey && (<p className="text-xs text-emerald-400 mt-1 flex items-center"><CheckCircle className="w-3 h-3 mr-1" /> 正在使用环境变量配置的密钥</p>)}
                                             {envGeminiKey && settings.geminiKey && (<p className="text-xs text-amber-400 mt-1">已覆盖环境变量中的默认密钥</p>)}
                                         </div>
@@ -271,13 +271,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-1.5">校对批次大小</label>
+                                        <label className="block text-sm font-medium text-slate-300 mb-1.5">润色翻译批次大小</label>
                                         <input type="text" value={settings.proofreadBatchSize === 0 ? '' : settings.proofreadBatchSize} onChange={(e) => {
                                             const val = e.target.value;
                                             if (val === '') updateSetting('proofreadBatchSize', 0);
                                             else if (/^\d+$/.test(val)) updateSetting('proofreadBatchSize', parseInt(val));
                                         }} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
-                                        <p className="text-xs text-slate-500 mt-1">每次校对的字幕条数。数值越大上下文越完整、质量越高，但会消耗更多 Token。</p>
+                                        <p className="text-xs text-slate-500 mt-1">每次润色翻译的字幕条数。数值越大上下文越完整、质量越高，但会消耗更多 Token。</p>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-slate-300 mb-1.5">翻译批次大小</label>
@@ -313,7 +313,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             if (val === '') updateSetting('concurrencyPro', 0);
                                             else if (/^\d+$/.test(val)) updateSetting('concurrencyPro', parseInt(val));
                                         }} className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm" />
-                                        <p className="text-xs text-slate-500 mt-1">应用于 <strong>Gemini 3 Pro</strong> 术语提取和深度校对。请根据账户限额调整。</p>
+                                        <p className="text-xs text-slate-500 mt-1">应用于 <strong>Gemini 3 Pro</strong> 术语提取和润色翻译。请根据账户限额调整。</p>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-slate-300 mb-1.5">请求超时 (秒)</label>

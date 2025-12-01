@@ -12,8 +12,14 @@ export const transcribeAudio = async (
     timeout?: number,
     useLocalWhisper?: boolean,
     localModelPath?: string,
-    localThreads?: number
+    localThreads?: number,
+    signal?: AbortSignal
 ): Promise<SubtitleItem[]> => {
+    // Check cancellation
+    if (signal?.aborted) {
+        throw new Error('Operation cancelled');
+    }
+
     // Try local Whisper
     if (useLocalWhisper && window.electronAPI) {
         if (!localModelPath) {
@@ -21,7 +27,7 @@ export const transcribeAudio = async (
         }
         try {
             logger.debug('Attempting local whisper');
-            return await transcribeWithLocalWhisper(audioBlob, localModelPath, 'auto', localThreads);
+            return await transcribeWithLocalWhisper(audioBlob, localModelPath, 'auto', localThreads, signal);
         } catch (error: any) {
             logger.warn('Local failed, fallback to API:', error.message);
 
@@ -42,8 +48,8 @@ export const transcribeAudio = async (
 
     logger.debug(`Starting transcription with model: ${model} on endpoint: ${endpoint || 'default'}`);
     if (model.includes('gpt-4o')) {
-        return transcribeWithOpenAIChat(audioBlob, apiKey, model, endpoint, timeout);
+        return transcribeWithOpenAIChat(audioBlob, apiKey, model, endpoint, timeout, signal);
     } else {
-        return transcribeWithWhisper(audioBlob, apiKey, model, endpoint, timeout);
+        return transcribeWithWhisper(audioBlob, apiKey, model, endpoint, timeout, signal);
     }
 };

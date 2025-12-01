@@ -23,12 +23,8 @@ export function parseBackendLog(logLine: string): LogEntry {
         let level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' = 'INFO';
         if (levelStr) {
             level = levelStr.toUpperCase() as any;
-        } else {
-            // Infer level from message content if not explicit
-            const upperMsg = message.toUpperCase();
-            if (upperMsg.includes('ERROR') || upperMsg.includes('FAIL')) level = 'ERROR';
-            else if (upperMsg.includes('WARN')) level = 'WARN';
         }
+        // Don't infer level from message content - trust the explicit level if provided
 
         return {
             timestamp: timestamp, // Use the parsed timestamp string

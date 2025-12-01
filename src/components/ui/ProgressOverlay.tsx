@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, Sparkles, CheckCircle } from 'lucide-react';
+import { Loader2, Sparkles, CheckCircle, FileText, StopCircle } from 'lucide-react';
 import { GenerationStatus, ChunkStatus } from '@/types/api';
 import { TimeTracker } from './TimeTracker';
 
@@ -8,13 +8,17 @@ interface ProgressOverlayProps {
     chunkProgress: Record<string | number, ChunkStatus>;
     status: GenerationStatus;
     startTime: number;
+    onShowLogs?: () => void;
+    onCancel?: () => void;
 }
 
 export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
     isProcessing,
     chunkProgress,
     status,
-    startTime
+    startTime,
+    onShowLogs,
+    onCancel
 }) => {
     if (!isProcessing) return null;
 
@@ -51,10 +55,46 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
             <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-[600px] max-h-[80vh] flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-white flex items-center">
-                        {status === GenerationStatus.PROOFREADING ? <Sparkles className="w-5 h-5 mr-2 text-purple-400 animate-pulse" /> : <Loader2 className="w-5 h-5 mr-2 text-blue-400 animate-spin" />}
-                        {status === GenerationStatus.PROOFREADING ? '批量校对中...' : '正在生成字幕...'}
+                        {status === GenerationStatus.CANCELLED ? (
+                            <>
+                                <StopCircle className="w-5 h-5 mr-2 text-orange-400" />
+                                已终止
+                            </>
+                        ) : status === GenerationStatus.PROOFREADING ? (
+                            <>
+                                <Sparkles className="w-5 h-5 mr-2 text-purple-400 animate-pulse" />
+                                批量润色中...
+                            </>
+                        ) : (
+                            <>
+                                <Loader2 className="w-5 h-5 mr-2 text-blue-400 animate-spin" />
+                                正在生成字幕...
+                            </>
+                        )}
                     </h3>
-                    <span className="text-2xl font-mono font-bold text-slate-200">{percent}%</span>
+                    <div className="flex items-center gap-4">
+                        {onCancel && (
+                            <button
+                                onClick={onCancel}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/30 transition-colors"
+                                title="终止操作"
+                            >
+                                <StopCircle className="w-4 h-4" />
+                                <span className="text-sm font-medium">终止</span>
+                            </button>
+                        )}
+                        {onShowLogs && (
+                            <button
+                                onClick={onShowLogs}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-colors"
+                                title="查看日志"
+                            >
+                                <FileText className="w-4 h-4" />
+                                <span className="text-sm font-medium">日志</span>
+                            </button>
+                        )}
+                        <span className="text-2xl font-mono font-bold text-slate-200">{percent}%</span>
+                    </div>
                 </div>
 
                 {startTime && (
@@ -98,7 +138,13 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
                         <span>{completed}/{total} 已完成</span>
                     </div>
                     <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700/50">
-                        <div className={`h-full transition-all duration-500 ease-out ${status === GenerationStatus.PROOFREADING ? 'bg-purple-500' : 'bg-blue-500'}`} style={{ width: `${percent}%` }}></div>
+                        <div
+                            className={`h-full transition-all duration-500 ease-out ${status === GenerationStatus.CANCELLED ? 'bg-orange-500' :
+                                    status === GenerationStatus.PROOFREADING ? 'bg-purple-500' :
+                                        'bg-blue-500'
+                                }`}
+                            style={{ width: `${percent}%` }}
+                        ></div>
                     </div>
                 </div>
             </div>

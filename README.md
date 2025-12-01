@@ -1,13 +1,13 @@
 # Gemini Subtitle Pro
 
-**Gemini Subtitle Pro** 是一款基于 AI 的字幕创建、翻译和润色工具。它利用 Google 的 Gemini 模型进行高质量的翻译和校对，并使用 OpenAI 的 Whisper 进行精准的语音转写。
+**Gemini Subtitle Pro** 是一款基于 AI 的字幕创建、翻译和润色工具。它利用 Google 的 Gemini 模型进行高质量的翻译和润色，并使用 OpenAI 的 Whisper 进行精准的语音转写。
 
 ## ✨ 功能特性
 
 ### 核心 AI 功能
 - **🤖 AI 转写**: 支持 **OpenAI Whisper API** (在线) 或 **Local Whisper** (离线，仅限桌面版) 转写视频/音频
 - **🌍 智能翻译**: 使用 **Gemini 2.5 Flash** 将字幕翻译为简体中文
-- **🧐 深度校对**: 使用 **Gemini 2.5 Flash** 或 **Gemini 3.0 Pro Preview** 润色和校正字幕，确保措辞自然准确
+- **🧐 翻译润色**: 使用 **Gemini 2.5 Flash** 或 **Gemini 3.0 Pro Preview** 润色和校正字幕，确保措辞自然准确
 - **🎯 智能分割**: 使用 Silero VAD 进行智能音频分割，优化字幕时间轴
 
 ### 术语管理
@@ -22,8 +22,8 @@
 - **⏱️ 请求超时配置**: 可自定义 API 请求超时时间，适应不同网络环境
 
 ### 批量操作
-- **⏱️ 修复时间轴**: 使用 AI 自动对齐字幕时间轴与音频
-- **✏️ 润色**: 结合上下文对选中片段进行批量润色
+- **⏱️ 校对时间轴**: 使用 AI 自动对齐字幕时间轴与音频
+- **✏️ 润色翻译**: 结合上下文对选中片段进行批量润色
 
 ### 工作流功能
 - **📸 版本控制**: 内置快照系统，可保存和恢复不同版本的工作
@@ -66,7 +66,7 @@
 
 ### 1. 常规 (General)
 - **API 配置**:
-  - `Gemini API 密钥`: 必填。用于翻译 (Gemini 2.5 Flash) 和校对 (Gemini 3 Pro)。
+  - `Gemini API 密钥`: 必填。用于翻译 (Gemini 2.5 Flash) 和润色 (Gemini 3 Pro)。
   - `Gemini 端点`: 可选。自定义 Google Gemini API 的 Base URL。
   - `OpenAI API 密钥`: 必填（使用本地 Whisper 时不需要）。用于 Whisper 转写。
   - `OpenAI 端点`: 可选（使用本地 Whisper 时不需要）。自定义 OpenAI API 的 Base URL。
@@ -75,7 +75,7 @@
 
 ### 2. 性能 (Performance)
 - **批处理**:
-  - `校对批次大小`: 单次 API 调用校对的行数。
+  - `润色批次大小`: 单次 API 调用润色的行数。
   - `翻译批次大小`: 单次 API 调用翻译的行数。
 - **并发控制**:
   - `并发数 (Flash)`: Gemini 2.5 Flash 的并发请求限制。

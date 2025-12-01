@@ -3,7 +3,7 @@
   "description": "AI-powered subtitle generation tool",
   "author": "Corvo007",
   "private": true,
-  "version": "2.2.2",
+  "version": "2.3.0",
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
@@ -67,11 +67,6 @@
       "node_modules/@ffprobe-installer/**/*"
     ],
     "extraResources": [],
-    "nsis": {
-      "artifactName": "Gemini-Subtitle-Pro-Setup-${version}.${ext}",
-      "oneClick": false,
-      "perMachine": false
-    },
     "portable": {
       "artifactName": "Gemini-Subtitle-Pro-${version}.${ext}"
     },
@@ -89,15 +84,15 @@
     },
     "win": {
       "target": [
-        "nsis",
         "portable"
       ],
       "extraResources": [
         {
-          "from": "resources/whisper-cli.exe",
-          "to": "whisper-cli.exe",
+          "from": "resources",
+          "to": ".",
           "filter": [
-            "**/*"
+            "whisper-cli.exe",
+            "*.dll"
           ]
         }
       ]

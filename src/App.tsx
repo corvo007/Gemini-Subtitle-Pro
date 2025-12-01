@@ -266,6 +266,8 @@ export default function App() {
                 chunkProgress={workspace.chunkProgress}
                 status={workspace.status}
                 startTime={workspace.startTime || 0}
+                onShowLogs={() => setShowLogs(true)}
+                onCancel={workspace.cancelOperation}
             />
             <ToastContainer toasts={toasts} removeToast={removeToast} />
             <SimpleConfirmationModal

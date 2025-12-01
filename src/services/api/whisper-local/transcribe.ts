@@ -14,6 +14,7 @@ export const transcribeWithLocalWhisper = async (
     modelPath: string,
     language: string = 'auto',
     threads: number = 4,
+    signal?: AbortSignal,
     _port: number = 8080, // Deprecated
     _timeout: number = 300000, // Deprecated (handled by main process if needed)
     _maxRetries: number = 2 // Deprecated

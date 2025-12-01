@@ -193,8 +193,12 @@ export class SmartSegmenter {
                     this.worker.addEventListener('message', handleInitMessage);
 
                     // Send init command
+                    // Calculate base URL for script loading (handles both dev and prod/electron)
+                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+
                     this.worker.postMessage({
                         command: 'init',
+                        base: baseUrl,
                         options: {
                             positiveSpeechThreshold: 0.6,
                             negativeSpeechThreshold: 0.4,

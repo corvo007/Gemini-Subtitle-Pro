@@ -11,10 +11,13 @@ self.onmessage = async (e: MessageEvent) => {
 
     try {
         if (msg.command === 'init') {
-            // Load libraries
-            // We assume these are served at the root
+            // Load libraries using the base URL passed from main thread
+            const base = msg.base || '/';
+
             try {
-                importScripts('/ort.min.js', '/vad.bundle.min.js');
+                const ortUrl = new URL('ort.min.js', base).href;
+                const vadUrl = new URL('vad.bundle.min.js', base).href;
+                importScripts(ortUrl, vadUrl);
             } catch (e) {
                 throw new Error(`Failed to load scripts: ${e}`);
             }

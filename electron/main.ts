@@ -39,6 +39,13 @@ ipcMain.handle('transcribe-local', async (_event, { audioData, modelPath, langua
     }
 });
 
+// IPC Handler: Abort Local Whisper
+ipcMain.handle('local-whisper-abort', async () => {
+    console.log('[Main] Aborting all local whisper processes');
+    localWhisperService.abort();
+    return { success: true };
+});
+
 // IPC Handler: Select Whisper Model
 ipcMain.handle('select-whisper-model', async () => {
     try {
@@ -67,6 +74,32 @@ ipcMain.handle('select-whisper-model', async () => {
         console.error('[Main] Model selection failed:', error);
         dialog.showErrorBox('模型选择失败', error.message || '未知错误');
         return null;
+    }
+});
+
+// IPC Handler: Save Subtitle Dialog
+ipcMain.handle('save-subtitle-dialog', async (_event, defaultName: string, content: string, format: 'srt' | 'ass') => {
+    try {
+        const result = await dialog.showSaveDialog({
+            title: '保存字幕文件',
+            defaultPath: defaultName,
+            filters: [
+                { name: format.toUpperCase() + ' 字幕', extensions: [format] },
+                { name: '所有文件', extensions: ['*'] }
+            ]
+        });
+
+        if (!result.canceled && result.filePath) {
+            // Ensure Windows line endings
+            const windowsContent = content.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+            const bom = '\uFEFF'; // UTF-8 BOM
+            await fs.promises.writeFile(result.filePath, bom + windowsContent, 'utf-8');
+            return { success: true, path: result.filePath };
+        }
+        return { success: false, canceled: true };
+    } catch (error: any) {
+        console.error('[Main] Save subtitle failed:', error);
+        return { success: false, error: error.message };
     }
 });
 
@@ -129,6 +162,17 @@ ipcMain.handle('read-extracted-audio', async (_event, audioPath: string) => {
     }
 });
 
+// IPC Handler: 读取音频文件 (Fallback)
+ipcMain.handle('read-audio-file', async (_event, filePath: string) => {
+    try {
+        const buffer = await fs.promises.readFile(filePath);
+        return buffer.buffer;
+    } catch (error: any) {
+        console.error('[Main] Failed to read audio file:', error);
+        return { success: false, error: error.message };
+    }
+});
+
 // IPC Handler: 清理临时音频文件
 ipcMain.handle('cleanup-temp-audio', async (_event, audioPath: string) => {
     try {
@@ -178,8 +222,39 @@ const originalConsoleError = console.error;
 
 function addLog(message: string) {
     const timestamp = new Date().toLocaleTimeString();
-    const logLine = `[${timestamp}] ${message}`;
-    originalConsoleLog(logLine); // Use original console log to avoid recursion
+
+    // Parse log level from message prefix
+    let level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' = 'INFO';
+    let cleanMessage = message;
+
+    if (message.startsWith('[DEBUG]')) {
+        level = 'DEBUG';
+        cleanMessage = message.substring(7).trim(); // Remove '[DEBUG]'
+    } else if (message.startsWith('[INFO]')) {
+        level = 'INFO';
+        cleanMessage = message.substring(6).trim(); // Remove '[INFO]'
+    } else if (message.startsWith('[WARN]')) {
+        level = 'WARN';
+        cleanMessage = message.substring(6).trim(); // Remove '[WARN]'
+    } else if (message.startsWith('[ERROR]')) {
+        level = 'ERROR';
+        cleanMessage = message.substring(7).trim(); // Remove '[ERROR]'
+    }
+
+    // Format with level prefix for UI
+    const logLine = `[${timestamp}] [${level}] ${cleanMessage}`;
+
+    // Use original console to avoid recursion, but use appropriate level
+    if (level === 'DEBUG') {
+        originalConsoleLog(logLine);
+    } else if (level === 'INFO') {
+        originalConsoleLog(logLine);
+    } else if (level === 'WARN') {
+        originalConsoleWarn(logLine);
+    } else if (level === 'ERROR') {
+        originalConsoleError(logLine);
+    }
+
     BrowserWindow.getAllWindows().forEach((win) => {
         win.webContents.send('new-log', logLine);
     });
@@ -208,6 +283,13 @@ const createWindow = () => {
         width: 1200,
         height: 800,
         icon: path.join(__dirname, '../resources/icon.png'),
+        backgroundColor: '#1a0f2e', // 深紫色背景，与主界面协调
+        titleBarStyle: 'hidden', // 必须设置为hidden才能使用titleBarOverlay
+        titleBarOverlay: {
+            color: '#1a0f2e', // 深紫色标题栏
+            symbolColor: '#ffffff', // 白色控制按钮
+            height: 33
+        },
         webPreferences: {
             preload: path.join(__dirname, '../dist-electron/preload.cjs'),
             nodeIntegration: false,
@@ -286,7 +368,12 @@ const createMenu = () => {
     }
 
     const menu = Menu.buildFromTemplate(template);
-    Menu.setApplicationMenu(menu);
+    // 只在开发环境显示菜单栏，生产环境隐藏以避免白色菜单栏的视觉违和感
+    if (!app.isPackaged) {
+        Menu.setApplicationMenu(menu);
+    } else {
+        Menu.setApplicationMenu(null);
+    }
 };
 
 app.on('ready', async () => {

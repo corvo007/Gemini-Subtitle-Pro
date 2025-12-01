@@ -26,7 +26,8 @@ export async function processTranslationBatchWithRetry(
     batch: any[],
     systemInstruction: string,
     maxRetries = 3,
-    onStatusUpdate?: (update: { toast: { message: string, type: 'info' | 'warning' | 'error' | 'success' } }) => void
+    onStatusUpdate?: (update: { toast: { message: string, type: 'info' | 'warning' | 'error' | 'success' } }) => void,
+    signal?: AbortSignal
 ): Promise<any[]> {
     const payload = batch.map(item => ({ id: item.id, text: item.original }));
 
@@ -76,7 +77,7 @@ export async function processTranslationBatchWithRetry(
                     safetySettings: SAFETY_SETTINGS,
                     maxOutputTokens: 65536,
                 }
-            });
+            }, 3, signal);
 
             const text = response.text || "[]";
             let translatedData: any[] = [];
@@ -133,7 +134,8 @@ export async function translateBatch(
     systemInstruction: string,
     concurrency: number,
     batchSize: number,
-    onStatusUpdate?: (update: { toast: { message: string, type: 'info' | 'warning' | 'error' | 'success' } }) => void
+    onStatusUpdate?: (update: { toast: { message: string, type: 'info' | 'warning' | 'error' | 'success' } }) => void,
+    signal?: AbortSignal
 ): Promise<any[]> {
     const batches: any[][] = [];
     for (let i = 0; i < items.length; i += batchSize) {
@@ -141,8 +143,8 @@ export async function translateBatch(
     }
 
     const batchResults = await mapInParallel(batches, concurrency, async (batch) => {
-        return await processTranslationBatchWithRetry(ai, batch, systemInstruction, 3, onStatusUpdate);
-    });
+        return await processTranslationBatchWithRetry(ai, batch, systemInstruction, 3, onStatusUpdate, signal);
+    }, signal);
 
     return batchResults.flat();
 }
@@ -157,7 +159,8 @@ async function processBatch(
     batchLabel: string,
     totalVideoDuration?: number,
     mode: BatchOperationMode = 'proofread',
-    batchComment?: string
+    batchComment?: string,
+    signal?: AbortSignal
 ): Promise<SubtitleItem[]> {
     if (batch.length === 0) return [];
 
@@ -339,7 +342,8 @@ async function processBatch(
             systemInstruction,
             parts,
             BATCH_SCHEMA, // Use the new schema
-            tools // Enable Search Grounding for proofread
+            tools, // Enable Search Grounding for proofread
+            signal
         );
 
 
@@ -385,7 +389,8 @@ export const runBatchOperation = async (
     settings: AppSettings,
     mode: BatchOperationMode,
     batchComments: Record<number, string> = {}, // Pass map of batch index -> comment
-    onProgress?: (update: ChunkStatus) => void
+    onProgress?: (update: ChunkStatus) => void,
+    signal?: AbortSignal
 ): Promise<SubtitleItem[]> => {
     const geminiKey = getEnvVariable('GEMINI_API_KEY') || settings.geminiKey?.trim();
     if (!geminiKey) throw new Error("API Key is missing.");
@@ -506,7 +511,8 @@ export const runBatchOperation = async (
                 groupLabel,
                 audioBuffer?.duration,
                 mode,
-                mergedComment
+                mergedComment,
+                signal
             );
 
             // Update original subtitles with processed results
@@ -536,8 +542,9 @@ export const runBatchOperation = async (
         } catch (e) {
             logger.error(`Group ${groupLabel} failed`, e);
             onProgress?.({ id: groupLabel, total: groups.length, status: 'error', message: "Failed" });
+            throw e; // Re-throw to stop mapInParallel if needed, or handle cancellation
         }
-    });
+    }, signal);
 
     return currentSubtitles;
 };

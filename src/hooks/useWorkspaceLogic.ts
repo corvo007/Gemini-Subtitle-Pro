@@ -68,8 +68,22 @@ export const useWorkspaceLogic = ({
 
     // Refs
     const audioCacheRef = useRef<{ file: File, buffer: AudioBuffer } | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const [snapshotBeforeOperation, setSnapshotBeforeOperation] = useState<SubtitleItem[] | null>(null);
 
     // Helpers
+    const cancelOperation = React.useCallback(() => {
+        if (abortControllerRef.current) {
+            logger.info('User cancelled operation');
+            abortControllerRef.current.abort();
+
+            // Call local whisper abort if applicable
+            if (window.electronAPI?.abortLocalWhisper) {
+                window.electronAPI.abortLocalWhisper();
+            }
+        }
+    }, []);
+
     const getFileDuration = async (f: File): Promise<number> => {
         // Electron Optimization: Use FFmpeg via Main Process
         if (window.electronAPI && window.electronAPI.getAudioInfo) {
@@ -162,11 +176,19 @@ export const useWorkspaceLogic = ({
 
     const handleGenerate = React.useCallback(async () => {
         if (!file) { setError("请先上传媒体文件。"); return; }
-        if ((!settings.geminiKey && !ENV_GEMINI_KEY) || (!settings.openaiKey && !ENV_OPENAI_KEY)) {
+        const hasGemini = !!(settings.geminiKey || ENV_GEMINI_KEY);
+        const hasOpenAI = !!(settings.openaiKey || ENV_OPENAI_KEY);
+        const hasLocalWhisper = !!settings.useLocalWhisper;
+
+        if (!hasGemini || (!hasOpenAI && !hasLocalWhisper)) {
             setError("API 密钥未配置，请在设置中添加。"); setShowSettings(true); return;
         }
         setStatus(GenerationStatus.UPLOADING); setError(null); setSubtitles([]); snapshotsValues.setSnapshots([]); setBatchComments({}); setSelectedBatches(new Set()); setChunkProgress({}); setStartTime(Date.now());
         logger.info("Starting subtitle generation", { file: file.name, duration, settings: { ...settings, geminiKey: '***', openaiKey: '***' } });
+        // Create new AbortController
+        abortControllerRef.current = new AbortController();
+        const signal = abortControllerRef.current.signal;
+
         try {
             setStatus(GenerationStatus.PROCESSING);
 
@@ -259,7 +281,8 @@ export const useWorkspaceLogic = ({
                             }
                         }
                     });
-                }
+                },
+                signal
             );
 
             // Then check subtitle results
@@ -272,36 +295,77 @@ export const useWorkspaceLogic = ({
             logger.info("Subtitle generation completed", { count: result.length });
             addToast("字幕生成成功！", "success");
         } catch (err: any) {
-            setStatus(GenerationStatus.ERROR);
-            setError(err.message);
-            logger.error("Subtitle generation failed", err);
-            addToast(`生成失败：${err.message}`, "error");
+            // Check if it was a cancellation
+            if (err.message === 'Operation cancelled' || signal.aborted) {
+                setStatus(GenerationStatus.CANCELLED);
+                logger.info('Generation cancelled by user');
+
+                // Keep partial results (subtitles state already updated via onIntermediateResult)
+                if (subtitles.length > 0) {
+                    snapshotsValues.createSnapshot('部分生成 (已终止)', subtitles, batchComments);
+                    addToast('生成已终止，保留部分结果', 'warning');
+                } else {
+                    addToast('生成已终止', 'info');
+                }
+            } else {
+                setStatus(GenerationStatus.ERROR);
+                setError(err.message);
+                logger.error("Subtitle generation failed", err);
+                addToast(`生成失败：${err.message}`, "error");
+            }
+        } finally {
+            abortControllerRef.current = null;
         }
-    }, [file, settings, duration, glossaryFlow, snapshotsValues, updateSetting, addToast, setShowSettings]);
+    }, [file, settings, duration, glossaryFlow, snapshotsValues, updateSetting, addToast, setShowSettings, subtitles, batchComments]);
 
     const handleBatchAction = React.useCallback(async (mode: BatchOperationMode, singleIndex?: number) => {
         const indices: number[] = singleIndex !== undefined ? [singleIndex] : Array.from(selectedBatches) as number[];
         if (indices.length === 0) return;
         if (!settings.geminiKey && !ENV_GEMINI_KEY) { setError("缺少 API 密钥。"); return; }
-        if (mode === 'fix_timestamps' && !file) { setError("修复时间轴需要源视频或音频文件。"); return; }
+        if (mode === 'fix_timestamps' && !file) { setError("校对时间轴需要源视频或音频文件。"); return; }
+
+        // Save current state BEFORE operation
+        setSnapshotBeforeOperation([...subtitles]);
+
+        // Create new AbortController
+        abortControllerRef.current = new AbortController();
+        const signal = abortControllerRef.current.signal;
+
         setStatus(GenerationStatus.PROOFREADING); setError(null); setChunkProgress({}); setStartTime(Date.now());
         logger.info(`Starting batch action: ${mode}`, { indices, mode });
         try {
-            const refined = await runBatchOperation(file, subtitles, indices, settings, mode, batchComments, handleProgress);
+            const refined = await runBatchOperation(file, subtitles, indices, settings, mode, batchComments, handleProgress, signal);
             setSubtitles(refined); setStatus(GenerationStatus.COMPLETED);
             setBatchComments(prev => { const next = { ...prev }; indices.forEach(idx => delete next[idx]); return next; });
             if (singleIndex === undefined) setSelectedBatches(new Set());
-            const actionName = mode === 'fix_timestamps' ? '修复时间轴' : '校对';
+            const actionName = mode === 'fix_timestamps' ? '校对时间轴' : '润色翻译';
             snapshotsValues.createSnapshot(`${actionName} (${indices.length} 个片段)`, refined);
             logger.info(`Batch action ${mode} completed`);
             addToast(`批量操作 '${actionName}' 完成！`, "success");
         } catch (err: any) {
-            setStatus(GenerationStatus.ERROR);
-            setError(`操作失败: ${err.message}`);
-            logger.error(`Batch action ${mode} failed`, err);
-            addToast(`操作失败：${err.message}`, "error");
+            // Check if it was a cancellation
+            if (err.message === 'Operation cancelled' || signal.aborted) {
+                setStatus(GenerationStatus.CANCELLED);
+                logger.info('Batch operation cancelled by user');
+
+                // Restore from snapshot
+                if (snapshotBeforeOperation) {
+                    setSubtitles(snapshotBeforeOperation);
+                    addToast('操作已终止，已恢复原状态', 'warning');
+                } else {
+                    addToast('操作已终止', 'info');
+                }
+            } else {
+                setStatus(GenerationStatus.ERROR);
+                setError(`操作失败: ${err.message}`);
+                logger.error(`Batch action ${mode} failed`, err);
+                addToast(`操作失败：${err.message}`, "error");
+            }
+        } finally {
+            abortControllerRef.current = null;
+            setSnapshotBeforeOperation(null);
         }
-    }, [file, subtitles, selectedBatches, settings, batchComments, snapshotsValues, addToast]);
+    }, [file, subtitles, selectedBatches, settings, batchComments, snapshotsValues, addToast, snapshotBeforeOperation]);
 
     const handleDownload = React.useCallback((format: 'srt' | 'ass') => {
         if (subtitles.length === 0) return;
@@ -435,7 +499,8 @@ export const useWorkspaceLogic = ({
         selectBatchesWithComments,
         updateBatchComment,
         updateLineComment,
-        resetWorkspace
+        resetWorkspace,
+        cancelOperation
     }), [
         file,
         duration,
@@ -460,6 +525,7 @@ export const useWorkspaceLogic = ({
         selectBatchesWithComments,
         updateBatchComment,
         updateLineComment,
-        resetWorkspace
+        resetWorkspace,
+        cancelOperation
     ]);
 };

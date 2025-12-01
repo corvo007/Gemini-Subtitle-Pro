@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     selectWhisperModel: () => ipcRenderer.invoke('select-whisper-model'),
     transcribeLocal: (data: { audioData: ArrayBuffer, modelPath: string, language?: string, threads?: number }) =>
         ipcRenderer.invoke('transcribe-local', data),
+    abortLocalWhisper: () => ipcRenderer.invoke('local-whisper-abort'),
 
     // FFmpeg APIs
     extractAudioFFmpeg: (videoPath: string, options?: any) =>

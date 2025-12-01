@@ -1,12 +1,17 @@
-import React from 'react';
-import { X, FileText, Download } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, FileText, Download, Filter } from 'lucide-react';
 import type { LogEntry } from '@/services/utils/logger';
+import { CustomSelect } from '../settings/CustomSelect';
 
 interface LogViewerModalProps {
     isOpen: boolean;
     logs: LogEntry[];
     onClose: () => void;
 }
+
+type LogLevel = 'ALL' | 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+
+const LOG_LEVELS: LogLevel[] = ['ALL', 'DEBUG', 'INFO', 'WARN', 'ERROR'];
 
 /**
  * Modal component for viewing application logs
@@ -16,6 +21,27 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({
     logs,
     onClose
 }) => {
+    const [filterLevel, setFilterLevel] = useState<LogLevel>('ALL');
+
+    // Filter logs based on minimum level
+    const filteredLogs = useMemo(() => {
+        if (filterLevel === 'ALL') return logs;
+
+        const levelPriority: Record<string, number> = {
+            'DEBUG': 0,
+            'INFO': 1,
+            'WARN': 2,
+            'ERROR': 3
+        };
+
+        const minPriority = levelPriority[filterLevel] ?? 0;
+
+        return logs.filter(log => {
+            const logPriority = levelPriority[log.level] ?? 0;
+            return logPriority >= minPriority;
+        });
+    }, [logs, filterLevel]);
+
     if (!isOpen) return null;
 
     const handleExportLogs = async () => {
@@ -66,11 +92,22 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({
                         <FileText className="w-5 h-5 mr-2 text-blue-400" /> 应用日志
                     </h2>
                     <div className="flex items-center gap-2">
+                        {/* Log Level Filter */}
+                        <CustomSelect
+                            value={filterLevel}
+                            onChange={(value) => setFilterLevel(value as LogLevel)}
+                            options={LOG_LEVELS.map(level => ({
+                                value: level,
+                                label: level === 'ALL' ? '全部' : level
+                            }))}
+                            icon={<Filter className="w-4 h-4" />}
+                            className="w-40"
+                        />
                         <button
                             onClick={handleExportLogs}
                             disabled={logs.length === 0}
                             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="导出日志"
+                            title="导出所有日志"
                         >
                             <Download className="w-4 h-4" />
                             <span className="text-sm font-medium">导出</span>
@@ -86,9 +123,14 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({
                             <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                             <p>暂无日志</p>
                         </div>
+                    ) : filteredLogs.length === 0 ? (
+                        <div className="text-center text-slate-500 py-12">
+                            <Filter className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                            <p>当前级别没有日志</p>
+                        </div>
                     ) : (
                         <div className="space-y-2 font-mono text-sm">
-                            {logs.map((log, idx) => (
+                            {filteredLogs.map((log, idx) => (
                                 <div key={idx} className={`p-3 rounded-lg border ${log.level === 'ERROR' ? 'bg-red-500/10 border-red-500/30 text-red-300' :
                                     log.level === 'WARN' ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' :
                                         log.level === 'INFO' ? 'bg-blue-500/10 border-blue-500/30 text-blue-300' :

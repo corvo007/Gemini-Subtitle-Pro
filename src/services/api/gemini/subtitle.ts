@@ -28,14 +28,15 @@ export const generateSubtitles = async (
     settings: AppSettings,
     onProgress?: (update: ChunkStatus) => void,
     onIntermediateResult?: (subs: SubtitleItem[]) => void,
-    onGlossaryReady?: (metadata: GlossaryExtractionMetadata) => Promise<GlossaryItem[]>
+    onGlossaryReady?: (metadata: GlossaryExtractionMetadata) => Promise<GlossaryItem[]>,
+    signal?: AbortSignal
 ): Promise<{ subtitles: SubtitleItem[], glossaryResults?: GlossaryExtractionResult[] }> => {
 
     const geminiKey = getEnvVariable('GEMINI_API_KEY') || settings.geminiKey?.trim();
     const openaiKey = getEnvVariable('OPENAI_API_KEY') || settings.openaiKey?.trim();
 
     if (!geminiKey) throw new Error("Gemini API Key is missing.");
-    if (!openaiKey) throw new Error("OpenAI API Key is missing.");
+    if (!openaiKey && !settings.useLocalWhisper) throw new Error("OpenAI API Key is missing.");
 
     const ai = new GoogleGenAI({
         apiKey: geminiKey,
@@ -217,7 +218,8 @@ export const generateSubtitles = async (
                 (settings.requestTimeout || 600) * 1000,
                 settings.useLocalWhisper,
                 settings.whisperModelPath,
-                settings.whisperThreads
+                settings.whisperThreads,
+                signal
             );
 
             logger.debug(`[Chunk ${index}] Transcription complete. Segments: ${rawSegments.length}`);
@@ -308,7 +310,7 @@ export const generateSubtitles = async (
                         safetySettings: SAFETY_SETTINGS,
                         maxOutputTokens: 65536,
                     }
-                });
+                }, 3, signal);
 
                 refinedSegments = parseGeminiResponse(refineResponse.text, chunkDuration);
 
@@ -341,7 +343,8 @@ export const generateSubtitles = async (
                     translateSystemInstruction,
                     concurrency,
                     chunkSettings.translationBatchSize || 20,
-                    (update) => onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'translating', ...update })
+                    (update) => onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'translating', ...update }),
+                    signal
                 );
                 logger.debug(`[Chunk ${index}] Translation complete. Items: ${translatedItems.length}`);
 

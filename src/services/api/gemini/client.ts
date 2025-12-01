@@ -36,11 +36,14 @@ export function isRetryableError(error: any): boolean {
     return false;
 }
 
-export async function generateContentWithRetry(ai: GoogleGenAI, params: any, retries = 3) {
+export async function generateContentWithRetry(ai: GoogleGenAI, params: any, retries = 3, signal?: AbortSignal) {
     for (let i = 0; i < retries; i++) {
+        // Check cancellation before request
+        if (signal?.aborted) {
+            throw new Error('Operation cancelled');
+        }
+
         try {
-
-
             const result = await ai.models.generateContent(params);
 
             const candidates = (result as any).candidates;
@@ -122,7 +125,8 @@ export async function generateContentWithLongOutput(
     systemInstruction: string,
     parts: Part[],
     schema: any,
-    tools?: any[]
+    tools?: any[],
+    signal?: AbortSignal
 ): Promise<string> {
     let fullText = "";
 
@@ -133,6 +137,11 @@ export async function generateContentWithLongOutput(
     ];
 
     try {
+        // Check before initial generation
+        if (signal?.aborted) {
+            throw new Error('Operation cancelled');
+        }
+
         // Initial generation
         logger.debug(`Generating content with model: ${modelName}`, { systemInstruction: systemInstruction.substring(0, 100) + "..." });
         let response = await generateContentWithRetry(ai, {
@@ -146,7 +155,7 @@ export async function generateContentWithLongOutput(
                 maxOutputTokens: 65536,
                 tools: tools, // Pass tools for Search Grounding
             }
-        });
+        }, 3, signal);
 
         let text = response.text || "";
         fullText += text;
@@ -184,6 +193,10 @@ export async function generateContentWithLongOutput(
             // But since we are in a single-turn or few-shot, we might need to append the response so far 
             // and ask to continue.
 
+            if (signal?.aborted) {
+                throw new Error('Operation cancelled');
+            }
+
             messages.push({ role: 'model', parts: [{ text: text }] });
             messages.push({ role: 'user', parts: [{ text: "The response was truncated. Please continue exactly where you left off." }] });
 
@@ -197,7 +210,7 @@ export async function generateContentWithLongOutput(
                     safetySettings: SAFETY_SETTINGS,
                     maxOutputTokens: 65536,
                 }
-            });
+            }, 3, signal);
 
             text = response.text || "";
             fullText += text;

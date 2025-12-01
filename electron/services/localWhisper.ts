@@ -116,7 +116,7 @@ export class LocalWhisperService {
                 '-oj', // Output JSON
                 '-l', language,
                 '-t', threads.toString(),
-                '-np' // No print
+                // '-np' // No print - Removed to capture stdout
             ];
 
             if (onLog) onLog(`[LocalWhisper] Spawning (Job ${jobId}): ${binaryPath} ${args.join(' ')}`);
@@ -126,12 +126,41 @@ export class LocalWhisperService {
                 const process = spawn(binaryPath, args);
                 this.activeProcesses.set(jobId, process);
 
+                let stdout = '';
                 let stderr = '';
+                let stdoutBuffer = '';
+                let stderrBuffer = '';
+
+                process.stdout?.on('data', (data) => {
+                    const chunk = data.toString();
+                    stdout += chunk;
+                    stdoutBuffer += chunk;
+
+                    const lines = stdoutBuffer.split('\n');
+                    stdoutBuffer = lines.pop() || ''; // Keep the last incomplete line
+
+                    lines.forEach(line => {
+                        if (line.trim()) {
+                            // Intermediate output from stdout (if any) -> DEBUG
+                            if (onLog) onLog(`[DEBUG] [Whisper CLI] ${line}`);
+                        }
+                    });
+                });
 
                 process.stderr?.on('data', (data) => {
-                    const msg = data.toString();
-                    stderr += msg;
-                    if (onLog) onLog(`[Whisper CLI] ${msg}`);
+                    const chunk = data.toString();
+                    stderr += chunk;
+                    stderrBuffer += chunk;
+
+                    const lines = stderrBuffer.split('\n');
+                    stderrBuffer = lines.pop() || ''; // Keep the last incomplete line
+
+                    lines.forEach(line => {
+                        if (line.trim()) {
+                            // Intermediate output from stderr (progress) -> DEBUG
+                            if (onLog) onLog(`[DEBUG] [Whisper CLI Info] ${line}`);
+                        }
+                    });
                 });
 
                 process.on('close', async (code) => {
@@ -157,6 +186,11 @@ export class LocalWhisperService {
                         }
 
                         const jsonContent = await fs.promises.readFile(outputPath, 'utf-8');
+
+                        // Log the raw JSON content (or a summary if too large, but user asked for "all")
+                        console.log(`[LocalWhisper] JSON Output: ${jsonContent}`);
+                        if (onLog) onLog(`[LocalWhisper] JSON Output: ${jsonContent}`);
+
                         const result = JSON.parse(jsonContent);
 
                         const subtitles: SubtitleItem[] = (result.transcription || []).map((item: any) => ({

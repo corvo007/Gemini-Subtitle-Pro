@@ -38,6 +38,7 @@ export interface ElectronAPI {
         segments?: { start: string; end: string; text: string }[];
         error?: string;
     }>;
+    abortLocalWhisper: () => Promise<void>;
 
     // FFmpeg 新增方法
     extractAudioFFmpeg: (videoPath: string, options?: AudioExtractionOptions) => Promise<{

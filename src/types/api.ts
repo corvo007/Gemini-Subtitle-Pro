@@ -5,6 +5,7 @@ export enum GenerationStatus {
     PROOFREADING = 'proofreading',
     COMPLETED = 'completed',
     ERROR = 'error',
+    CANCELLED = 'cancelled',
 }
 
 export interface ChunkStatus {

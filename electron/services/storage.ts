@@ -2,7 +2,7 @@ import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 
-const SETTINGS_FILE = 'settings.json';
+const SETTINGS_FILE = 'gemini-subtitle-pro-settings.json';
 
 export class StorageService {
     private filePath: string;

@@ -40,13 +40,13 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
             <div className="flex items-center space-x-2">
                 <div className="text-xs text-slate-500 font-mono mr-2 hidden sm:block">已选 {selectedBatches.size} 项</div>
                 {file && (
-                    <button onClick={() => handleBatchAction('fix_timestamps')} disabled={selectedBatches.size === 0} title="修复时间轴 (保留翻译)" className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border ${selectedBatches.size > 0 ? 'bg-slate-700 border-slate-600 text-emerald-400 hover:bg-slate-600 hover:border-emerald-400/50' : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'}`}>
-                        <Clock className="w-3 h-3" /><span className="hidden sm:inline">修复时间</span>
+                    <button onClick={() => handleBatchAction('fix_timestamps')} disabled={selectedBatches.size === 0} title="校对时间轴 (保留翻译)" className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border ${selectedBatches.size > 0 ? 'bg-slate-700 border-slate-600 text-emerald-400 hover:bg-slate-600 hover:border-emerald-400/50' : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'}`}>
+                        <Clock className="w-3 h-3" /><span className="hidden sm:inline">校对时间轴</span>
                     </button>
                 )}
 
-                <button onClick={() => handleBatchAction('proofread')} disabled={selectedBatches.size === 0} title="校对翻译 (保留时间轴)" className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border ${selectedBatches.size > 0 ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500' : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'}`}>
-                    <Sparkles className="w-3 h-3" /><span className="hidden sm:inline">校对</span>
+                <button onClick={() => handleBatchAction('proofread')} disabled={selectedBatches.size === 0} title="润色翻译 (保留时间轴)" className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border ${selectedBatches.size > 0 ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500' : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'}`}>
+                    <Sparkles className="w-3 h-3" /><span className="hidden sm:inline">润色翻译</span>
                 </button>
             </div>
         </div>

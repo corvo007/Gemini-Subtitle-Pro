@@ -6,8 +6,12 @@ import os from 'os';
 import fs from 'fs';
 
 // 设置 FFmpeg 路径
-ffmpeg.setFfmpegPath(ffmpegPath.path);
-ffmpeg.setFfprobePath(ffprobePath.path);
+const fixPathForAsar = (pathStr: string) => {
+  return pathStr.replace('app.asar', 'app.asar.unpacked');
+};
+
+ffmpeg.setFfmpegPath(fixPathForAsar(ffmpegPath.path));
+ffmpeg.setFfprobePath(fixPathForAsar(ffprobePath.path));
 
 export interface AudioExtractionOptions {
   format?: 'wav' | 'mp3' | 'flac';

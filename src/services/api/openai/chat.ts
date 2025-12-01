@@ -9,7 +9,8 @@ export const transcribeWithOpenAIChat = async (
     apiKey: string,
     model: string,
     endpoint?: string,
-    timeout?: number
+    timeout?: number,
+    signal?: AbortSignal
 ): Promise<SubtitleItem[]> => {
     logger.debug(`Starting OpenAI Chat transcription with model: ${model}`);
     const base64Audio = await blobToBase64(audioBlob);
@@ -40,8 +41,18 @@ export const transcribeWithOpenAIChat = async (
     const baseUrl = endpoint || 'https://api.openai.com/v1';
 
     try {
+        // Check cancellation
+        if (signal?.aborted) {
+            throw new Error('Operation cancelled');
+        }
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout || 600000); // Default 10 minutes
+
+        // Handle external signal
+        if (signal) {
+            signal.addEventListener('abort', () => controller.abort());
+        }
 
         const response = await fetch(`${baseUrl}/chat/completions`, {
             method: "POST",

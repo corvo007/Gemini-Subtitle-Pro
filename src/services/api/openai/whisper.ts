@@ -7,7 +7,8 @@ export const transcribeWithWhisper = async (
     apiKey: string,
     model: string,
     endpoint?: string,
-    timeout?: number
+    timeout?: number,
+    signal?: AbortSignal
 ): Promise<SubtitleItem[]> => {
     const formData = new FormData();
     formData.append('file', audioBlob, 'audio.wav');
@@ -22,8 +23,18 @@ export const transcribeWithWhisper = async (
 
     while (attempt < maxRetries) {
         try {
+            // Check cancellation
+            if (signal?.aborted) {
+                throw new Error('Operation cancelled');
+            }
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeout || 600000); // Default 10 minutes
+
+            // Handle external signal
+            if (signal) {
+                signal.addEventListener('abort', () => controller.abort());
+            }
 
             const response = await fetch(`${baseUrl}/audio/transcriptions`, {
                 method: 'POST',

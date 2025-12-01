@@ -3,6 +3,7 @@ import { Book, X, AlertCircle, CheckCircle, Sparkles, Edit2, Plus, Check } from 
 import { GlossaryItem, GlossaryExtractionResult, AppSettings } from '@/types';
 import { mergeGlossaryResults } from '@/services/glossary/merger';
 import { CustomSelect } from '@/components/settings';
+import { createGlossary } from '@/services/glossary/manager';
 
 interface GlossaryConfirmationModalProps {
     isOpen: boolean;
@@ -26,6 +27,8 @@ export const GlossaryConfirmationModal: React.FC<GlossaryConfirmationModalProps>
     const [editValue, setEditValue] = useState<GlossaryItem | null>(null);
     const [overrides, setOverrides] = useState<Record<string, GlossaryItem>>({});
     const [conflictCustomValues, setConflictCustomValues] = useState<Record<string, GlossaryItem>>({});
+    const [showNewGlossaryDialog, setShowNewGlossaryDialog] = useState(false);
+    const [newGlossaryName, setNewGlossaryName] = useState('');
 
     // Track if state has been initialized to prevent resets during editing
     const initialized = useRef(false);
@@ -35,7 +38,24 @@ export const GlossaryConfirmationModal: React.FC<GlossaryConfirmationModalProps>
     const [targetGlossaryId, setTargetGlossaryId] = useState<string | null>(settings.activeGlossaryId || null);
 
     const handleGlossaryChange = (val: string | null) => {
+        if (val === 'create-new') {
+            setShowNewGlossaryDialog(true);
+            return;
+        }
         setTargetGlossaryId(val);
+        initialized.current = false;
+    };
+
+    const handleCreateNewGlossary = () => {
+        if (!newGlossaryName.trim()) return;
+
+        const newGlossary = createGlossary(newGlossaryName.trim());
+        const updatedGlossaries = [...(settings.glossaries || []), newGlossary];
+        onUpdateSetting('glossaries', updatedGlossaries);
+
+        setTargetGlossaryId(newGlossary.id);
+        setShowNewGlossaryDialog(false);
+        setNewGlossaryName('');
         initialized.current = false;
     };
 
@@ -534,7 +554,8 @@ export const GlossaryConfirmationModal: React.FC<GlossaryConfirmationModalProps>
                                 onChange={handleGlossaryChange}
                                 options={[
                                     ...(settings.glossaries?.map(g => ({ value: g.id, label: g.name })) || []),
-                                    { value: 'temporary', label: '临时 (仅本次会话)' }
+                                    { value: 'temporary', label: '临时 (仅本次会话)' },
+                                    { value: 'create-new', label: '+ 新建术语表' }
                                 ]}
                                 className="w-48"
                                 placeholder="选择术语表"
@@ -547,6 +568,48 @@ export const GlossaryConfirmationModal: React.FC<GlossaryConfirmationModalProps>
                     </div>
                 </div>
             </div>
+
+            {/* New Glossary Dialog */}
+            {showNewGlossaryDialog && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => {
+                    setShowNewGlossaryDialog(false);
+                    setNewGlossaryName('');
+                }}>
+                    <div className="bg-slate-900 border border-indigo-500/30 rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <Plus className="w-5 h-5 text-indigo-400" />
+                            新建术语表
+                        </h3>
+                        <input
+                            type="text"
+                            value={newGlossaryName}
+                            onChange={(e) => setNewGlossaryName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleCreateNewGlossary()}
+                            placeholder="输入术语表名称"
+                            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 mb-4"
+                            autoFocus
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => {
+                                    setShowNewGlossaryDialog(false);
+                                    setNewGlossaryName('');
+                                }}
+                                className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={handleCreateNewGlossary}
+                                disabled={!newGlossaryName.trim()}
+                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                创建
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

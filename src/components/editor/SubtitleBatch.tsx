@@ -61,7 +61,7 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(({
                 </div>
                 {status === GenerationStatus.COMPLETED && (
                     <div className="flex items-center space-x-1">
-                        <button onClick={() => handleBatchAction('proofread', chunkIdx)} title="深度校对" className="p-2 text-slate-500 hover:text-indigo-400 hover:bg-slate-700 rounded-lg transition-colors">
+                        <button onClick={() => handleBatchAction('proofread', chunkIdx)} title="润色翻译" className="p-2 text-slate-500 hover:text-indigo-400 hover:bg-slate-700 rounded-lg transition-colors">
                             <Wand2 className="w-4 h-4" />
                         </button>
                     </div>
