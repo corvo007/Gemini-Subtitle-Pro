@@ -77,12 +77,8 @@
       }
     ],
     "nsis": {
-      "artifactName": "Gemini-Subtitle-Pro-Setup-${version}.${ext}",
       "oneClick": false,
       "perMachine": false
-    },
-    "portable": {
-      "artifactName": "Gemini-Subtitle-Pro-${version}.${ext}"
     },
     "mac": {
       "target": "dmg"
