@@ -10,15 +10,16 @@ export const useToast = () => {
 
     const addToast = useCallback((
         message: string,
-        type: 'info' | 'warning' | 'error' | 'success' = 'info'
+        type: 'info' | 'warning' | 'error' | 'success' = 'info',
+        duration: number = 5000
     ) => {
         const id = Date.now().toString() + Math.random().toString();
         setToasts(prev => [...prev, { id, message, type }]);
 
-        // Auto-remove after 5 seconds
+        // Auto-remove after duration
         setTimeout(() => {
             setToasts(prev => prev.filter(t => t.id !== id));
-        }, 5000);
+        }, duration);
     }, []);
 
     const removeToast = useCallback((id: string) => {

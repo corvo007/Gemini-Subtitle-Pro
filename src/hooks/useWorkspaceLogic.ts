@@ -11,6 +11,7 @@ import { mergeGlossaryResults } from '@/services/glossary/merger';
 import { generateSubtitles } from '@/services/api/gemini/subtitle';
 import { runBatchOperation } from '@/services/api/gemini/batch';
 import { retryGlossaryExtraction } from '@/services/api/gemini/glossary';
+import { useFileParserWorker } from '@/hooks/useFileParserWorker';
 
 import { getEnvVariable } from "@/services/utils/env";
 
@@ -20,7 +21,7 @@ const ENV_OPENAI_KEY = getEnvVariable('OPENAI_API_KEY') || '';
 interface UseWorkspaceLogicProps {
     settings: AppSettings;
     updateSetting: (key: keyof AppSettings, value: any) => void;
-    addToast: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+    addToast: (message: string, type: 'success' | 'error' | 'info' | 'warning', duration?: number) => void;
     showConfirm: (title: string, message: string, onConfirm: () => void, type?: 'info' | 'warning' | 'danger') => void;
     glossaryFlow: {
         glossaryMetadata: GlossaryExtractionMetadata | null;
@@ -49,6 +50,7 @@ export const useWorkspaceLogic = ({
     setShowSettings
 }: UseWorkspaceLogicProps) => {
     // State
+    const { parseSubtitle, cleanup } = useFileParserWorker();
     const [file, setFile] = useState<File | null>(null);
     const [duration, setDuration] = useState<number>(0);
     const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);
@@ -68,7 +70,23 @@ export const useWorkspaceLogic = ({
     const audioCacheRef = useRef<{ file: File, buffer: AudioBuffer } | null>(null);
 
     // Helpers
-    const getFileDuration = (f: File): Promise<number> => {
+    const getFileDuration = async (f: File): Promise<number> => {
+        // Electron Optimization: Use FFmpeg via Main Process
+        if (window.electronAPI && window.electronAPI.getAudioInfo) {
+            const path = window.electronAPI.getFilePath(f);
+            if (path) {
+                try {
+                    const result = await window.electronAPI.getAudioInfo(path);
+                    if (result.success && result.info) {
+                        return result.info.duration;
+                    }
+                } catch (e) {
+                    logger.warn("Failed to get duration via Electron API, falling back to DOM", e);
+                }
+            }
+        }
+
+        // Web / Fallback: Use DOM
         return new Promise((resolve) => {
             const element = f.type.startsWith('audio') ? new Audio() : document.createElement('video');
             element.preload = 'metadata';
@@ -116,25 +134,31 @@ export const useWorkspaceLogic = ({
         }
     }, [subtitles.length, status, snapshotsValues, showConfirm]);
 
-    const handleSubtitleImport = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSubtitleImport = React.useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const subFile = e.target.files[0];
             logger.info("Subtitle file imported", { name: subFile.name });
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const content = ev.target?.result as string;
-                let parsed: SubtitleItem[] = [];
-                if (subFile.name.endsWith('.ass')) parsed = parseAss(content);
-                else parsed = parseSrt(content);
+
+            try {
+                addToast("正在解析字幕...", "info", 2000);
+
+                const content = await subFile.text();
+                const fileType = subFile.name.endsWith('.ass') ? 'ass' : 'srt';
+
+                const parsed = await parseSubtitle(content, fileType);
+
                 setSubtitles(parsed);
                 setStatus(GenerationStatus.COMPLETED);
                 snapshotsValues.setSnapshots([]);
                 setBatchComments({});
                 snapshotsValues.createSnapshot("初始导入", parsed, {});
-            };
-            reader.readAsText(subFile);
+            } catch (error: any) {
+                logger.error("Failed to parse subtitle", error);
+                setError(`解析字幕失败: ${error.message}`);
+                setStatus(GenerationStatus.ERROR);
+            }
         }
-    }, [snapshotsValues]);
+    }, [snapshotsValues, parseSubtitle]);
 
     const handleGenerate = React.useCallback(async () => {
         if (!file) { setError("请先上传媒体文件。"); return; }
@@ -373,6 +397,12 @@ export const useWorkspaceLogic = ({
         setSelectedBatches(new Set());
         setError(null);
     }, [snapshotsValues]);
+
+    useEffect(() => {
+        return () => {
+            cleanup();
+        };
+    }, [cleanup]);
 
     return React.useMemo(() => ({
         // State
