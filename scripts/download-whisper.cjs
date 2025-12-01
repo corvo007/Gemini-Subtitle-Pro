@@ -63,8 +63,11 @@ async function main() {
         fs.unlinkSync(zipPath);
         console.log('Done!');
     } catch (error) {
-        console.error('Error:', error);
-        process.exit(1);
+        console.warn('Warning: Failed to download whisper.cpp binary.');
+        console.warn('Local Whisper functionality will not be available in this build.');
+        console.warn('Error details:', error.message);
+        // Do not fail the build
+        process.exit(0);
     }
 }
 
