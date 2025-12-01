@@ -54,7 +54,8 @@
       "dist/**/*",
       "dist-electron/**/*",
       "node_modules/@ffmpeg-installer/**/*",
-      "node_modules/@ffprobe-installer/**/*"
+      "node_modules/@ffprobe-installer/**/*",
+      "resources/icon.png"
     ],
     "asarUnpack": [
       "node_modules/@ffmpeg-installer/**/*",

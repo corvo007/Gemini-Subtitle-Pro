@@ -51,10 +51,27 @@ function startWhisperServer(modelPath: string): Promise<any> {
         }
 
         // 2. Find binary
+        // 2. Find binary
         const binaryName = process.platform === 'win32' ? 'whisper-server.exe' : 'whisper-server';
-        const binaryPath = path.join(process.resourcesPath || app.getAppPath(), binaryName);
 
-        if (!fs.existsSync(binaryPath)) {
+        // Check multiple locations:
+        // 1. Standard resources path (Installer version)
+        // 2. Executable directory (Portable version)
+        const possiblePaths = [
+            path.join(process.resourcesPath || app.getAppPath(), binaryName),
+            path.join(path.dirname(app.getPath('exe')), binaryName),
+            path.join(path.dirname(app.getPath('exe')), 'resources', binaryName)
+        ];
+
+        let binaryPath = '';
+        for (const p of possiblePaths) {
+            if (fs.existsSync(p)) {
+                binaryPath = p;
+                break;
+            }
+        }
+
+        if (!binaryPath) {
             serverStatus = 'error';
             resolve({ status: 'error', message: ERROR_MESSAGES['BINARY_NOT_FOUND'] });
             return;
@@ -135,6 +152,7 @@ const createWindow = () => {
     const mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
+        icon: path.join(__dirname, '../resources/icon.png'),
         webPreferences: {
             preload: path.join(__dirname, path.basename(__dirname) === 'dist-electron' ? 'preload.cjs' : '../dist-electron/preload.cjs'),
             nodeIntegration: false,
