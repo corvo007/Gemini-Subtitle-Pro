@@ -3,7 +3,7 @@ const path = require('path');
 const https = require('https');
 const AdmZip = require('adm-zip');
 
-const WHISPER_VERSION = 'v1.7.1';
+const WHISPER_VERSION = 'v1.8.2';
 const DOWNLOAD_URL = `https://github.com/ggerganov/whisper.cpp/releases/download/${WHISPER_VERSION}/whisper-bin-x64.zip`;
 const RESOURCES_DIR = path.join(__dirname, '../resources');
 const TARGET_FILE = path.join(RESOURCES_DIR, 'whisper-server.exe');
