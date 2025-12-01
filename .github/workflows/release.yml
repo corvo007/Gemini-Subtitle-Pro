@@ -32,6 +32,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Clean up release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view ${{ github.ref_name }} > /dev/null 2>&1 || exit 0
+          echo "Release ${{ github.ref_name }} exists. Cleaning up assets..."
+          gh release view ${{ github.ref_name }} --json assets --jq '.assets[].name' | while read asset; do
+            echo "Deleting $asset..."
+            gh release delete-asset ${{ github.ref_name }} "$asset" -y
+          done
+
       - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
