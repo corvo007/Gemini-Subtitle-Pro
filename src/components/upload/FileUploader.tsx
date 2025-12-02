@@ -69,9 +69,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
             <div className="flex flex-col items-center justify-center py-4">
                 <div className="mb-2 group-hover:scale-110 transition-transform">
                     {/* We clone the icon to add specific classes if needed, or just render it */}
-                    {React.cloneElement(icon as React.ReactElement, {
-                        className: `w-8 h-8 ${(icon as React.ReactElement).props.className || ''}`
-                    })}
+                    {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, {
+                        className: `w-8 h-8 ${(icon as React.ReactElement<any>).props.className || ''}`
+                    }) : icon}
                 </div>
                 <div className="text-xs font-bold text-slate-300">
                     {uploadTitle}
