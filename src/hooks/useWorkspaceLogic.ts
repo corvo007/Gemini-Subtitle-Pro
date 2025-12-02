@@ -286,7 +286,7 @@ export const useWorkspaceLogic = ({
             );
 
             // Then check subtitle results
-            if (result.length === 0) throw new Error("No subtitles were generated.");
+            if (result.length === 0) throw new Error("未生成任何字幕。");
 
             setSubtitles(result);
             setStatus(GenerationStatus.COMPLETED);

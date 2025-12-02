@@ -66,7 +66,7 @@ export const transcribeWithOpenAIChat = async (
 
         if (!response.ok) {
             const err = await response.json();
-            throw new Error(`GPT-4o Transcription Error: ${err.error?.message || response.statusText}`);
+            throw new Error(`GPT-4o 转录错误：${err.error?.message || response.statusText}`);
         }
 
         const data = await response.json();
@@ -97,6 +97,6 @@ export const transcribeWithOpenAIChat = async (
         }));
 
     } catch (e: any) {
-        throw new Error(`GPT-4o Audio Transcription failed: ${e.message}`);
+        throw new Error(`GPT-4o 音频转录失败：${e.message}`);
     }
 };

@@ -11,7 +11,7 @@ export const checkGlobalConsistency = async (
     genre: string,
     timeout?: number
 ): Promise<ConsistencyIssue[]> => {
-    if (!apiKey) throw new Error("Gemini API Key is missing.");
+    if (!apiKey) throw new Error("缺少 Gemini API 密钥。");
     const ai = new GoogleGenAI({
         apiKey,
         httpOptions: { timeout: timeout || 600000 }

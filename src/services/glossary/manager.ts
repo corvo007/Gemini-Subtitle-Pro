@@ -42,7 +42,7 @@ export function importGlossary(jsonContent: string): Glossary {
 
         // Basic validation
         if (!parsed.name || !Array.isArray(parsed.terms)) {
-            throw new Error('Invalid glossary format');
+            throw new Error('术语表格式无效');
         }
 
         // Validate items
@@ -58,6 +58,6 @@ export function importGlossary(jsonContent: string): Glossary {
             updatedAt: new Date().toISOString()
         };
     } catch (e) {
-        throw new Error('Failed to parse glossary file');
+        throw new Error('术语表文件解析失败');
     }
 }

@@ -116,7 +116,7 @@ export async function generateContentWithRetry(ai: GoogleGenAI, params: any, ret
             }
         }
     }
-    throw new Error("Gemini API request failed after retries.");
+    throw new Error("Gemini API 请求重试后仍然失败。");
 }
 
 export async function generateContentWithLongOutput(

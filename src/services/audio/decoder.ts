@@ -41,7 +41,7 @@ export const decodeAudio = async (
     }
 
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) throw new Error("Web Audio API not supported");
+    if (!AudioContext) throw new Error("不支持 Web Audio API");
     const ctx = new AudioContext();
     return await ctx.decodeAudioData(arrayBuffer);
 };
@@ -66,5 +66,5 @@ export async function decodeAudioWithRetry(
             }
         }
     }
-    throw new Error("Audio decoding failed after retries.");
+    throw new Error("音频解码重试后仍然失败。");
 }

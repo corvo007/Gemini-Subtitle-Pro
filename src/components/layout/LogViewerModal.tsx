@@ -76,7 +76,10 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `gemini-subtitle-pro-logs-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+            // Generate local timestamp for filename
+            const now = new Date();
+            const localTimestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}-${String(now.getMilliseconds()).padStart(3, '0')}Z`;
+            link.download = `gemini-subtitle-pro-logs-${localTimestamp}.txt`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

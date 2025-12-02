@@ -23,7 +23,7 @@ export const transcribeAudio = async (
     // Try local Whisper
     if (useLocalWhisper && window.electronAPI) {
         if (!localModelPath) {
-            throw new Error('Local Whisper enabled but no model path provided');
+            throw new Error('已启用本地 Whisper 但未提供模型路径');
         }
         try {
             logger.debug('Attempting local whisper');

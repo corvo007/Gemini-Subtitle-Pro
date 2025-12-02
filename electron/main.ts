@@ -106,9 +106,13 @@ ipcMain.handle('save-subtitle-dialog', async (_event, defaultName: string, conte
 // IPC Handler: Save Logs Dialog
 ipcMain.handle('save-logs-dialog', async (_event, content: string) => {
     try {
+        // Generate local timestamp for filename
+        const now = new Date();
+        const localTimestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}-${String(now.getMilliseconds()).padStart(3, '0')}Z`;
+
         const result = await dialog.showSaveDialog({
             title: '导出日志',
-            defaultPath: `gemini-subtitle-pro-logs-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`,
+            defaultPath: `gemini-subtitle-pro-logs-${localTimestamp}.txt`,
             filters: [
                 { name: '文本文件', extensions: ['txt'] },
                 { name: '所有文件', extensions: ['*'] }

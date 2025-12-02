@@ -35,8 +35,8 @@ export const generateSubtitles = async (
     const geminiKey = getEnvVariable('GEMINI_API_KEY') || settings.geminiKey?.trim();
     const openaiKey = getEnvVariable('OPENAI_API_KEY') || settings.openaiKey?.trim();
 
-    if (!geminiKey) throw new Error("Gemini API Key is missing.");
-    if (!openaiKey && !settings.useLocalWhisper) throw new Error("OpenAI API Key is missing.");
+    if (!geminiKey) throw new Error("缺少 Gemini API 密钥。");
+    if (!openaiKey && !settings.useLocalWhisper) throw new Error("缺少 OpenAI API 密钥。");
 
     const ai = new GoogleGenAI({
         apiKey: geminiKey,
@@ -54,7 +54,7 @@ export const generateSubtitles = async (
         onProgress?.({ id: 'decoding', total: 1, status: 'completed', message: `解码完成，时长: ${formatTime(audioBuffer.duration)}` });
     } catch (e) {
         logger.error("Failed to decode audio", e);
-        throw new Error("Failed to decode audio. Please ensure the file is a valid video/audio format.");
+        throw new Error("音频解码失败，请确保文件是有效的视频或音频格式。");
     }
 
     const totalDuration = audioBuffer.duration;

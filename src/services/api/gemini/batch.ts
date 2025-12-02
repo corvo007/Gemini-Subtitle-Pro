@@ -108,7 +108,7 @@ export async function processTranslationBatchWithRetry(
                 logger.warn(`Translation batch failed (Attempt ${attempt + 1}/${maxRetries}). Retrying entire batch...`, e);
                 onStatusUpdate?.({
                     toast: {
-                        message: `Translation batch failed (Attempt ${attempt + 1}/${maxRetries}). Retrying...`,
+                        message: `批量翻译失败 (尝试 ${attempt + 1}/${maxRetries})。正在重试...`,
                         type: 'warning'
                     }
                 });
@@ -117,7 +117,7 @@ export async function processTranslationBatchWithRetry(
                 logger.error(`Translation batch failed after ${maxRetries} attempts`, e);
                 onStatusUpdate?.({
                     toast: {
-                        message: `Translation batch failed after ${maxRetries} attempts. Using original text.`,
+                        message: `批量翻译在 ${maxRetries} 次尝试后失败。将使用原文。`,
                         type: 'error'
                     }
                 });
@@ -393,7 +393,7 @@ export const runBatchOperation = async (
     signal?: AbortSignal
 ): Promise<SubtitleItem[]> => {
     const geminiKey = getEnvVariable('GEMINI_API_KEY') || settings.geminiKey?.trim();
-    if (!geminiKey) throw new Error("API Key is missing.");
+    if (!geminiKey) throw new Error("缺少 API 密钥。");
     const ai = new GoogleGenAI({
         apiKey: geminiKey,
         httpOptions: {

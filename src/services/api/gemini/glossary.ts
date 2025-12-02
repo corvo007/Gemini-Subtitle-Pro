@@ -189,7 +189,7 @@ export const generateGlossary = async (
     genre: string,
     timeout?: number
 ): Promise<GlossaryItem[]> => {
-    if (!apiKey) throw new Error("Gemini API Key is missing.");
+    if (!apiKey) throw new Error("缺少 Gemini API 密钥。");
     const ai = new GoogleGenAI({
         apiKey,
         httpOptions: { timeout: timeout || 600000 }
@@ -254,6 +254,6 @@ export const generateGlossary = async (
         return JSON.parse(textToParse) as GlossaryItem[];
     } catch (e) {
         logger.error("Failed to generate glossary:", e);
-        throw new Error("Failed to generate glossary. Please try again.");
+        throw new Error("术语表生成失败，请重试。");
     }
 };

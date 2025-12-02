@@ -187,14 +187,43 @@ export class SmartSegmenter {
                             resolve();
                         } else if (e.data.type === 'error') {
                             this.worker?.removeEventListener('message', handleInitMessage);
+                            const errorDetails = {
+                                message: e.data.message,
+                                stack: e.data.stack,
+                                details: e.data.details
+                            };
+                            logger.error("VAD Worker initialization error details:", errorDetails);
                             reject(new Error(e.data.message));
                         }
                     };
                     this.worker.addEventListener('message', handleInitMessage);
 
-                    // Send init command
                     // Calculate base URL for script loading (handles both dev and prod/electron)
-                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+                    // In Electron, we need to use the file:// protocol base path
+                    let baseUrl: string;
+
+                    // Check if running in Electron
+                    if (window.electronAPI) {
+                        // In Electron, use the current location without query/hash
+                        baseUrl = window.location.href.split('?')[0].split('#')[0];
+                        if (!baseUrl.endsWith('/')) {
+                            baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1);
+                        }
+
+                        // Fix for ASAR unpacked resources
+                        // ONNX Runtime cannot load files from within ASAR archives
+                        // We unpacked them to app.asar.unpacked, so we need to point there
+                        if (baseUrl.includes('app.asar')) {
+                            baseUrl = baseUrl.replace('app.asar', 'app.asar.unpacked');
+                            logger.debug("Adjusted base URL for unpacked ASAR resources:", baseUrl);
+                        }
+
+                        logger.debug("Electron environment detected, using base URL:", baseUrl);
+                    } else {
+                        // In web browser, use the standard method
+                        baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+                        logger.debug("Web environment detected, using base URL:", baseUrl);
+                    }
 
                     this.worker.postMessage({
                         command: 'init',
@@ -205,6 +234,10 @@ export class SmartSegmenter {
                             minSpeechFrames: 4,
                             redemptionFrames: 8, // ~250ms silence ends segment
                             preSpeechPadFrames: 1,
+                            // Explicitly set URLs using the calculated base URL
+                            // NonRealTimeVAD only supports legacy model in this version
+                            modelURL: new URL('silero_vad_legacy.onnx', baseUrl).href,
+                            workletURL: new URL('vad.worklet.bundle.min.js', baseUrl).href,
                         }
                     });
                 });
@@ -229,6 +262,12 @@ export class SmartSegmenter {
                         logger.debug(`VAD Progress: ${msg.processed} segments (Latest: ${msg.latestTime.toFixed(2)}s)`);
                     } else if (msg.type === 'error') {
                         this.worker?.removeEventListener('message', handleProcessMessage);
+                        const errorDetails = {
+                            message: msg.message,
+                            stack: msg.stack,
+                            details: msg.details
+                        };
+                        logger.error("VAD Worker processing error details:", errorDetails);
                         reject(new Error(msg.message));
                     }
                 };
@@ -244,7 +283,11 @@ export class SmartSegmenter {
             });
 
         } catch (e) {
-            logger.error("Silero VAD failed initialization or execution", e);
+            logger.error("Silero VAD failed initialization or execution", {
+                error: e,
+                message: e instanceof Error ? e.message : String(e),
+                stack: e instanceof Error ? e.stack : undefined
+            });
             logger.warn("Falling back to energy-based segmentation due to VAD error");
             return this.energyBasedSegmentation(audioData, audioBuffer.sampleRate, options.minDurationMs || 1000);
         }

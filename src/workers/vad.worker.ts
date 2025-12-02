@@ -17,22 +17,32 @@ self.onmessage = async (e: MessageEvent) => {
             try {
                 const ortUrl = new URL('ort.min.js', base).href;
                 const vadUrl = new URL('vad.bundle.min.js', base).href;
+
+                console.log('[VAD Worker] Loading scripts from:', { ortUrl, vadUrl, base });
                 importScripts(ortUrl, vadUrl);
-            } catch (e) {
-                throw new Error(`Failed to load scripts: ${e}`);
+                console.log('[VAD Worker] Scripts loaded successfully');
+            } catch (e: any) {
+                const errorMsg = `Failed to load scripts from base '${base}': ${e.message || e}`;
+                console.error('[VAD Worker]', errorMsg, e);
+                throw new Error(errorMsg);
             }
 
             if (typeof vad === 'undefined' || typeof ort === 'undefined') {
-                throw new Error("Failed to load VAD libraries via importScripts");
+                const errorMsg = `Failed to load VAD libraries via importScripts. vad=${typeof vad}, ort=${typeof ort}`;
+                console.error('[VAD Worker]', errorMsg);
+                throw new Error(errorMsg);
             }
 
+            console.log('[VAD Worker] Libraries loaded, configuring ORT...');
             // Configure ORT
-            ort.env.wasm.wasmPaths = "/";
+            ort.env.wasm.wasmPaths = base;
             // ort.env.logLevel = "error"; 
 
+            console.log('[VAD Worker] Initializing VAD with options:', msg.options);
             // Initialize VAD with options
             myVad = await vad.NonRealTimeVAD.new(msg.options);
 
+            console.log('[VAD Worker] VAD initialized successfully');
             self.postMessage({ type: 'ready' });
 
         } else if (msg.command === 'process') {
@@ -63,6 +73,14 @@ self.onmessage = async (e: MessageEvent) => {
             self.postMessage({ type: 'result', segments });
         }
     } catch (error: any) {
-        self.postMessage({ type: 'error', message: error.message || String(error) });
+        const errorMessage = error.message || String(error);
+        const errorStack = error.stack || '';
+        console.error('[VAD Worker] Error:', errorMessage, errorStack);
+        self.postMessage({
+            type: 'error',
+            message: errorMessage,
+            stack: errorStack,
+            details: error
+        });
     }
 };
