@@ -9,6 +9,7 @@ export interface SegmentationOptions {
     minDurationMs?: number;
     maxDurationMs?: number;
     silenceThreshold?: number;
+    signal?: AbortSignal;
 }
 
 export class SmartSegmenter {
@@ -29,11 +30,12 @@ export class SmartSegmenter {
      */
     public async segmentAudio(
         audioBuffer: AudioBuffer,
-        targetDurationSec: number
+        targetDurationSec: number,
+        signal?: AbortSignal
     ): Promise<{ start: number; end: number }[]> {
         // 1. Get speech segments (where speech IS happening)
         // We use a smaller minDuration to detect even short pauses
-        const speechSegments = await this.analyzeAudio(audioBuffer, { minDurationMs: 500 });
+        const speechSegments = await this.analyzeAudio(audioBuffer, { minDurationMs: 500, signal });
 
         const chunks: { start: number; end: number }[] = [];
         const totalDuration = audioBuffer.duration;
@@ -250,18 +252,19 @@ export class SmartSegmenter {
             // Run VAD via worker
             return new Promise((resolve, reject) => {
                 if (!this.worker) return reject("Worker not available");
+                if (options.signal?.aborted) return reject(new Error('Operation cancelled'));
 
                 const handleProcessMessage = (e: MessageEvent) => {
                     const msg = e.data;
                     if (msg.type === 'result') {
-                        this.worker?.removeEventListener('message', handleProcessMessage);
+                        cleanup();
                         const runTime = performance.now() - startTime - initTime;
                         logger.debug(`VAD execution complete in ${runTime.toFixed(2)}ms. Found ${msg.segments.length} speech segments.`);
                         resolve(msg.segments);
                     } else if (msg.type === 'progress') {
                         logger.debug(`VAD Progress: ${msg.processed} segments (Latest: ${msg.latestTime.toFixed(2)}s)`);
                     } else if (msg.type === 'error') {
-                        this.worker?.removeEventListener('message', handleProcessMessage);
+                        cleanup();
                         const errorDetails = {
                             message: msg.message,
                             stack: msg.stack,
@@ -272,7 +275,18 @@ export class SmartSegmenter {
                     }
                 };
 
+                const onAbort = () => {
+                    cleanup();
+                    reject(new Error('Operation cancelled'));
+                };
+
+                const cleanup = () => {
+                    this.worker?.removeEventListener('message', handleProcessMessage);
+                    options.signal?.removeEventListener('abort', onAbort);
+                };
+
                 this.worker.addEventListener('message', handleProcessMessage);
+                options.signal?.addEventListener('abort', onAbort);
 
                 // Send process command
                 this.worker.postMessage({

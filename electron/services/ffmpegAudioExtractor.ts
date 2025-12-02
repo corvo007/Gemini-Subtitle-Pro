@@ -18,6 +18,8 @@ export interface AudioExtractionOptions {
   sampleRate?: number;
   channels?: number;
   bitrate?: string;
+  customFfmpegPath?: string;
+  customFfprobePath?: string;
 }
 
 export interface AudioExtractionProgress {
@@ -39,8 +41,30 @@ export async function extractAudioFromVideo(
     format = 'wav',
     sampleRate = 16000,
     channels = 1,
-    bitrate = '128k'
+    bitrate = '128k',
+    customFfmpegPath,
+    customFfprobePath
   } = options;
+
+  // Set custom FFprobe path if provided
+  if (customFfprobePath) {
+    if (fs.existsSync(customFfprobePath)) {
+      if (onLog) onLog(`[INFO] Using Custom FFprobe Path: ${customFfprobePath}`);
+      ffmpeg.setFfprobePath(customFfprobePath);
+    } else {
+      if (onLog) onLog(`[WARN] Custom FFprobe Path not found: ${customFfprobePath}, using default.`);
+    }
+  }
+
+  // 如果提供了自定义路径，则设置
+  if (customFfmpegPath) {
+    if (fs.existsSync(customFfmpegPath)) {
+      if (onLog) onLog(`[INFO] Using Custom FFmpeg Path: ${customFfmpegPath}`);
+      ffmpeg.setFfmpegPath(customFfmpegPath);
+    } else {
+      if (onLog) onLog(`[WARN] Custom FFmpeg Path not found: ${customFfmpegPath}, using default.`);
+    }
+  }
 
   // 创建临时输出文件路径
   const tempDir = os.tmpdir();
@@ -60,13 +84,19 @@ export async function extractAudioFromVideo(
       command = command.audioBitrate(bitrate);
     }
 
+    // Log FFmpeg path and command
+    if (onLog) {
+      onLog(`[INFO] FFmpeg Path: ${ffmpegPath.path}`);
+      onLog(`[INFO] FFmpeg Probe Path: ${ffprobePath.path}`);
+    }
+
     // 监听日志
     if (onLog) {
       command.on('start', (commandLine) => {
-        onLog(`FFmpeg Start: ${commandLine}`);
+        onLog(`[INFO] FFmpeg Start: ${commandLine}`);
       });
       command.on('stderr', (stderrLine) => {
-        onLog(`FFmpeg: ${stderrLine}`);
+        onLog(`[DEBUG] FFmpeg: ${stderrLine}`);
       });
     }
 

@@ -32,3 +32,32 @@ export async function mapInParallel<T, R>(
     await Promise.all(workers);
     return results;
 }
+
+export class Semaphore {
+    private tasks: (() => void)[] = [];
+    private count: number;
+
+    constructor(public max: number) {
+        this.count = max;
+    }
+
+    async acquire(): Promise<void> {
+        if (this.count > 0) {
+            this.count--;
+            return;
+        }
+
+        return new Promise<void>(resolve => {
+            this.tasks.push(resolve);
+        });
+    }
+
+    release(): void {
+        if (this.tasks.length > 0) {
+            const next = this.tasks.shift();
+            if (next) next();
+        } else {
+            this.count++;
+        }
+    }
+}

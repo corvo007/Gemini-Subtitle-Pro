@@ -13,7 +13,8 @@ export const transcribeAudio = async (
     useLocalWhisper?: boolean,
     localModelPath?: string,
     localThreads?: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    customBinaryPath?: string
 ): Promise<SubtitleItem[]> => {
     // Check cancellation
     if (signal?.aborted) {
@@ -27,7 +28,7 @@ export const transcribeAudio = async (
         }
         try {
             logger.debug('Attempting local whisper');
-            return await transcribeWithLocalWhisper(audioBlob, localModelPath, 'auto', localThreads, signal);
+            return await transcribeWithLocalWhisper(audioBlob, localModelPath, 'auto', localThreads, signal, customBinaryPath);
         } catch (error: any) {
             logger.warn('Local failed, fallback to API:', error.message);
 

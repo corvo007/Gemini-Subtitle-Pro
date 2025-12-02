@@ -14,16 +14,16 @@ import { transcribeAudio } from "@/services/api/openai/transcribe";
 import { blobToBase64 } from "@/services/audio/converter";
 import { getSystemInstruction } from "@/services/api/gemini/prompts";
 import { parseGeminiResponse } from "@/services/subtitle/parser";
-import { mapInParallel } from "@/services/utils/concurrency";
+import { mapInParallel, Semaphore } from "@/services/utils/concurrency";
 import { logger } from "@/services/utils/logger";
 import { REFINEMENT_SCHEMA, SAFETY_SETTINGS } from "./schemas";
-import { generateContentWithRetry } from "./client";
+import { generateContentWithRetry, formatGeminiError } from "./client";
 import { translateBatch } from "./batch";
 
 import { getEnvVariable } from "@/services/utils/env";
 
 export const generateSubtitles = async (
-    file: File,
+    audioSource: File | AudioBuffer,
     duration: number,
     settings: AppSettings,
     onProgress?: (update: ChunkStatus) => void,
@@ -50,8 +50,13 @@ export const generateSubtitles = async (
     onProgress?.({ id: 'decoding', total: 1, status: 'processing', message: "正在解码音频..." });
     let audioBuffer: AudioBuffer;
     try {
-        audioBuffer = await decodeAudioWithRetry(file);
-        onProgress?.({ id: 'decoding', total: 1, status: 'completed', message: `解码完成，时长: ${formatTime(audioBuffer.duration)}` });
+        if (audioSource instanceof AudioBuffer) {
+            audioBuffer = audioSource;
+            onProgress?.({ id: 'decoding', total: 1, status: 'completed', message: `使用缓存音频，时长: ${formatTime(audioBuffer.duration)}` });
+        } else {
+            audioBuffer = await decodeAudioWithRetry(audioSource);
+            onProgress?.({ id: 'decoding', total: 1, status: 'completed', message: `解码完成，时长: ${formatTime(audioBuffer.duration)}` });
+        }
     } catch (e) {
         logger.error("Failed to decode audio", e);
         throw new Error("音频解码失败，请确保文件是有效的视频或音频格式。");
@@ -67,7 +72,7 @@ export const generateSubtitles = async (
     if (settings.useSmartSplit) {
         onProgress?.({ id: 'segmenting', total: 1, status: 'processing', message: "正在智能分段..." });
         const segmenter = new SmartSegmenter();
-        const segments = await segmenter.segmentAudio(audioBuffer, chunkDuration);
+        const segments = await segmenter.segmentAudio(audioBuffer, chunkDuration, signal);
         logger.info("Smart Segmentation Results", { count: segments.length, segments });
 
         segments.forEach((seg, i) => {
@@ -94,15 +99,41 @@ export const generateSubtitles = async (
     }
 
 
-    const concurrency = settings.useLocalWhisper
+    // PIPELINE CONCURRENCY CONFIGURATION
+    // We separate the "Transcription" concurrency from the "Overall Pipeline" concurrency.
+    // This allows chunks to proceed to Refinement/Translation (which use Gemini)
+    // even if the Transcription slot (Local Whisper) is busy or waiting.
+
+    // 1. Overall Pipeline Concurrency (Gemini Flash limit)
+    const pipelineConcurrency = settings.concurrencyFlash || 5;
+
+    // 2. Transcription Concurrency (Local Whisper limit or Cloud limit)
+    const transcriptionLimit = settings.useLocalWhisper
         ? (settings.whisperConcurrency || 1)
-        : (settings.concurrencyFlash || 5);
+        : pipelineConcurrency; // For cloud whisper, we can match pipeline concurrency
+
+    const transcriptionSemaphore = new Semaphore(transcriptionLimit);
+    const refinementSemaphore = new Semaphore(pipelineConcurrency);
+
+    logger.info(`Pipeline Config: Overall Concurrency=${pipelineConcurrency}, Transcription Limit=${transcriptionLimit}`);
+
 
     // --- GLOSSARY EXTRACTION (Parallel) ---
     let glossaryPromise: Promise<GlossaryExtractionResult[]> | null = null;
     let glossaryChunks: { index: number; start: number; end: number }[] | undefined;
 
-    if (settings.enableAutoGlossary !== false) {
+    const isDebug = window.electronAPI?.isDebug;
+
+    if (isDebug && settings.debug?.mockGemini) {
+        const mockGlossary = [{
+            chunkIndex: 0,
+            terms: [{ term: "Mock Term", translation: "模拟术语", category: "Mock Category", confidence: "high" } as any],
+            confidence: "high",
+            source: 'chunk'
+        }];
+        logger.info("⚠️ [MOCK] Glossary Extraction ENABLED. Returning mock data:", mockGlossary);
+        glossaryPromise = Promise.resolve(mockGlossary as any);
+    } else if (settings.enableAutoGlossary !== false) {
         const sampleMinutes = settings.glossarySampleMinutes || 'all';
         glossaryChunks = selectChunksByDuration(chunksParams, sampleMinutes, chunkDuration);
 
@@ -126,7 +157,8 @@ export const generateSubtitles = async (
                     status: completed === total ? 'completed' : 'processing',
                     message: completed === total ? '术语提取完成。' : `正在提取术语 (${completed}/${total})...`
                 });
-            }
+            },
+            signal
         );
     }
 
@@ -179,9 +211,14 @@ export const generateSubtitles = async (
                     logger.info("No glossary extraction needed", { totalTerms, hasFailures });
                     onProgress?.({ id: 'glossary', total: 1, status: 'completed', message: '未发现术语。' });
                 }
-            } catch (e) {
-                logger.warn("Glossary extraction failed or timed out", e);
-                onProgress?.({ id: 'glossary', total: 1, status: 'error', message: '术语提取失败' });
+            } catch (e: any) {
+                if (e.message === 'Operation cancelled' || e.name === 'AbortError') {
+                    logger.info("Glossary extraction cancelled");
+                    onProgress?.({ id: 'glossary', total: 1, status: 'completed', message: '已取消' });
+                } else {
+                    logger.warn("Glossary extraction failed or timed out", e);
+                    onProgress?.({ id: 'glossary', total: 1, status: 'error', message: '术语提取失败' });
+                }
             }
 
             return finalGlossary; // Return only the glossary, not a complex object
@@ -201,26 +238,62 @@ export const generateSubtitles = async (
 
     const chunkResults: SubtitleItem[][] = new Array(totalChunks).fill([]);
 
-    await mapInParallel(chunksParams, concurrency, async (chunk, i) => {
+    // Use a high concurrency limit for the main loop (buffer)
+    // The actual resource usage is controlled by semaphores inside
+    // We use totalChunks to ensure all chunks can enter the "waiting room" (semaphore queue)
+    // preventing the pipeline from stalling due to loop limits.
+    const mainLoopConcurrency = Math.max(totalChunks, pipelineConcurrency, 20);
+
+    await mapInParallel(chunksParams, mainLoopConcurrency, async (chunk, i) => {
         const { index, start, end } = chunk;
 
         try {
             // ===== STEP 1: TRANSCRIPTION =====
-            onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'transcribing', message: '正在转录...' });
-            logger.debug(`[Chunk ${index}] Starting transcription...`);
+            onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'transcribing', message: '等待转录...' });
 
-            const wavBlob = await sliceAudioBuffer(audioBuffer, start, end);
-            const rawSegments = await transcribeAudio(
-                wavBlob,
-                openaiKey,
-                settings.transcriptionModel,
-                settings.openaiEndpoint,
-                (settings.requestTimeout || 600) * 1000,
-                settings.useLocalWhisper,
-                settings.whisperModelPath,
-                settings.whisperThreads,
-                signal
-            );
+            let rawSegments: SubtitleItem[] = [];
+
+            // Acquire Transcription Semaphore
+            await transcriptionSemaphore.acquire();
+            try {
+                if (signal?.aborted) throw new Error('Operation cancelled');
+
+                onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'transcribing', message: '正在转录...' });
+                logger.debug(`[Chunk ${index}] Starting transcription...`);
+
+                const shouldMockTranscription = isDebug && (settings.useLocalWhisper
+                    ? settings.debug?.mockLocalWhisper
+                    : settings.debug?.mockOpenAI);
+
+                if (shouldMockTranscription) {
+                    const mockTranscription = [{
+                        id: 0,
+                        startTime: "00:00:00,000",
+                        endTime: formatTime(end - start),
+                        original: `[Mock] Transcription for Chunk ${index}`,
+                        translated: ""
+                    }];
+                    logger.info(`⚠️ [MOCK] Transcription ENABLED for Chunk ${index}. Returning mock data:`, mockTranscription);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    rawSegments = mockTranscription;
+                } else {
+                    const wavBlob = await sliceAudioBuffer(audioBuffer, start, end);
+                    rawSegments = await transcribeAudio(
+                        wavBlob,
+                        openaiKey,
+                        settings.transcriptionModel,
+                        settings.openaiEndpoint,
+                        (settings.requestTimeout || 600) * 1000,
+                        settings.useLocalWhisper,
+                        settings.whisperModelPath,
+                        settings.whisperThreads,
+                        signal,
+                        settings.debug?.whisperPath
+                    );
+                }
+            } finally {
+                transcriptionSemaphore.release();
+            }
 
             logger.debug(`[Chunk ${index}] Transcription complete. Segments: ${rawSegments.length}`);
 
@@ -236,134 +309,165 @@ export const generateSubtitles = async (
             onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'waiting_glossary', message: '等待术语表...' });
             logger.debug(`[Chunk ${index}] Waiting for glossary confirmation...`);
 
+            if (signal?.aborted) throw new Error('Operation cancelled');
+
             const finalGlossary = await glossaryState.get();
+
+            if (signal?.aborted) throw new Error('Operation cancelled');
+
             const chunkSettings = { ...settings, glossary: finalGlossary };
 
             logger.debug(`[Chunk ${index}] Glossary ready (${finalGlossary.length} terms), proceeding to refinement`);
 
             // ===== STEP 3: REFINEMENT =====
-            // Re-slice audio for Gemini (Refine needs audio)
-            const refineWavBlob = await sliceAudioBuffer(audioBuffer, start, end);
-            const base64Audio = await blobToBase64(refineWavBlob);
-
-            let refinedSegments: SubtitleItem[] = [];
-            onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'refining', message: '正在校对时间轴...' });
-
-            const refineSystemInstruction = getSystemInstruction(chunkSettings.genre, undefined, 'refinement', chunkSettings.glossary);
-            // For refinement, only show original terms (without translations) to prevent language mixing
-            const glossaryInfo = chunkSettings.glossary && chunkSettings.glossary.length > 0
-                ? `\n\nKEY TERMINOLOGY (Listen for these terms in the audio and transcribe them accurately in the ORIGINAL LANGUAGE):\n${chunkSettings.glossary.map(g => `- ${g.term}${g.notes ? ` (${g.notes})` : ''}`).join('\n')}`
-                : '';
-
-            const refinePrompt = `
-        TRANSCRIPTION REFINEMENT TASK
-        Context: ${chunkSettings.genre}
-
-        TASK: Refine the raw OpenAI Whisper transcription by listening to the audio and correcting errors.
-
-        RULES (Priority Order):
-
-        [P1 - ACCURACY] Audio-Based Correction
-        → Listen carefully to the attached audio
-        → Fix misrecognized words and phrases in 'text'
-        → Verify timing accuracy of 'start' and 'end' timestamps
-        ${glossaryInfo ? `→ Pay special attention to key terminology listed below` : ''}
-
-        [P2 - READABILITY] Segment Splitting
-        → SPLIT any segment longer than 4 seconds OR >25 characters
-        → When splitting: distribute timing based on actual audio speech
-        → Ensure splits occur at natural speech breaks
-        
-        [P3 - CLEANING] Remove Non-Speech Elements
-        → Remove filler words (uh, um, 呃, 嗯, etc.)
-        → Remove stuttering and false starts
-        → Keep natural speech flow
-
-        [P4 - OUTPUT] Format Requirements
-        → Return timestamps in HH:MM:SS,mmm format
-        → Timestamps must be relative to the provided audio (starting at 00:00:00,000)
-        → Ensure all required fields are present
-
-        FINAL VERIFICATION:
-        ✓ Long segments (>4s or >25 chars) properly split
-        ✓ Timestamps are relative to chunk start
-        ✓ Terminology from glossary is used correctly
-        ${glossaryInfo ? `✓ Checked against ${chunkSettings.glossary?.length} glossary terms` : ''}
-
-        Input Transcription (JSON):
-        ${JSON.stringify(rawSegments.map(s => ({ start: s.startTime, end: s.endTime, text: s.original })))}
-        `;
-
+            // Acquire Refinement Semaphore (Gemini API limit)
+            await refinementSemaphore.acquire();
             try {
-                const refineResponse = await generateContentWithRetry(ai, {
-                    model: 'gemini-2.5-flash',
-                    contents: {
-                        parts: [
-                            { inlineData: { mimeType: "audio/wav", data: base64Audio } },
-                            { text: refinePrompt }
-                        ]
-                    },
-                    config: {
-                        responseMimeType: "application/json",
-                        responseSchema: REFINEMENT_SCHEMA,
-                        systemInstruction: refineSystemInstruction,
-                        safetySettings: SAFETY_SETTINGS,
-                        maxOutputTokens: 65536,
+                if (signal?.aborted) throw new Error('Operation cancelled');
+
+                // Re-slice audio for Gemini (Refine needs audio)
+                const refineWavBlob = await sliceAudioBuffer(audioBuffer, start, end);
+                const base64Audio = await blobToBase64(refineWavBlob);
+
+                let refinedSegments: SubtitleItem[] = [];
+                onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'refining', message: '正在校对时间轴...' });
+
+                const refineSystemInstruction = getSystemInstruction(chunkSettings.genre, undefined, 'refinement', chunkSettings.glossary);
+                // For refinement, only show original terms (without translations) to prevent language mixing
+                const glossaryInfo = chunkSettings.glossary && chunkSettings.glossary.length > 0
+                    ? `\n\nKEY TERMINOLOGY (Listen for these terms in the audio and transcribe them accurately in the ORIGINAL LANGUAGE):\n${chunkSettings.glossary.map(g => `- ${g.term}${g.notes ? ` (${g.notes})` : ''}`).join('\n')}`
+                    : '';
+
+                const refinePrompt = `
+            TRANSCRIPTION REFINEMENT TASK
+            Context: ${chunkSettings.genre}
+
+            TASK: Refine the raw OpenAI Whisper transcription by listening to the audio and correcting errors.
+
+            RULES (Priority Order):
+
+            [P1 - ACCURACY] Audio-Based Correction
+            → Listen carefully to the attached audio
+            → Fix misrecognized words and phrases in 'text'
+            → Verify timing accuracy of 'start' and 'end' timestamps
+            ${glossaryInfo ? `→ Pay special attention to key terminology listed below` : ''}
+
+            [P2 - READABILITY] Segment Splitting
+            → SPLIT any segment longer than 4 seconds OR >25 characters
+            → When splitting: distribute timing based on actual audio speech
+            → Ensure splits occur at natural speech breaks
+            
+            [P3 - CLEANING] Remove Non-Speech Elements
+            → Remove filler words (uh, um, 呃, 嗯, etc.)
+            → Remove stuttering and false starts
+            → Keep natural speech flow
+
+            [P4 - OUTPUT] Format Requirements
+            → Return timestamps in HH:MM:SS,mmm format
+            → Timestamps must be relative to the provided audio (starting at 00:00:00,000)
+            → Ensure all required fields are present
+
+            FINAL VERIFICATION:
+            ✓ Long segments (>4s or >25 chars) properly split
+            ✓ Timestamps are relative to chunk start
+            ✓ Terminology from glossary is used correctly
+            ${glossaryInfo ? `✓ Checked against ${chunkSettings.glossary?.length} glossary terms` : ''}
+
+            Input Transcription (JSON):
+            ${JSON.stringify(rawSegments.map(s => ({ start: s.startTime, end: s.endTime, text: s.original })))}
+            `;
+
+                try {
+                    if (isDebug && settings.debug?.mockGemini) {
+                        logger.info(`⚠️ [MOCK] Refinement ENABLED for Chunk ${index}. Returning raw segments as refined.`);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        refinedSegments = [...rawSegments];
+                    } else {
+                        const refineResponse = await generateContentWithRetry(ai, {
+                            model: 'gemini-2.5-flash',
+                            contents: {
+                                parts: [
+                                    { inlineData: { mimeType: "audio/wav", data: base64Audio } },
+                                    { text: refinePrompt }
+                                ]
+                            },
+                            config: {
+                                responseMimeType: "application/json",
+                                responseSchema: REFINEMENT_SCHEMA,
+                                systemInstruction: refineSystemInstruction,
+                                safetySettings: SAFETY_SETTINGS,
+                                maxOutputTokens: 65536,
+                            }
+                        }, 3, signal);
+
+                        refinedSegments = parseGeminiResponse(refineResponse.text, chunkDuration);
                     }
-                }, 3, signal);
 
-                refinedSegments = parseGeminiResponse(refineResponse.text, chunkDuration);
-
-                if (refinedSegments.length === 0) {
+                    if (refinedSegments.length === 0) {
+                        refinedSegments = [...rawSegments];
+                    }
+                    logger.debug(`[Chunk ${index}] Refinement complete. Segments: ${refinedSegments.length}`);
+                } catch (e) {
+                    logger.error(`分段 ${index} 时间轴失败，将回退到原始结果。`, formatGeminiError(e));
                     refinedSegments = [...rawSegments];
                 }
-                logger.debug(`[Chunk ${index}] Refinement complete. Segments: ${refinedSegments.length}`);
-            } catch (e) {
-                logger.error(`Refinement failed for chunk ${index}, falling back to raw.`, e);
-                refinedSegments = [...rawSegments];
+
+                // ===== STEP 4: TRANSLATION =====
+                let finalChunkSubs: SubtitleItem[] = [];
+                if (refinedSegments.length > 0) {
+                    onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'translating', message: '正在翻译...' });
+
+                    const toTranslate = refinedSegments.map((seg, idx) => ({
+                        id: idx + 1,
+                        original: seg.original,
+                        start: seg.startTime,
+                        end: seg.endTime
+                    }));
+
+                    const translateSystemInstruction = getSystemInstruction(chunkSettings.genre, chunkSettings.customTranslationPrompt, 'translation', chunkSettings.glossary);
+
+                    let translatedItems: any[] = [];
+                    if (isDebug && settings.debug?.mockGemini) {
+                        logger.info(`⚠️ [MOCK] Translation ENABLED for Chunk ${index}. Generating mock translations.`);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        translatedItems = toTranslate.map(t => ({
+                            ...t,
+                            translated: `[Mock] Translated: ${t.original}`
+                        }));
+                        logger.info(`⚠️ [MOCK] Translation Result for Chunk ${index}:`, translatedItems);
+                    } else {
+                        translatedItems = await translateBatch(
+                            ai,
+                            toTranslate,
+                            translateSystemInstruction,
+                            1, // Internal concurrency (we're already in refinementSemaphore)
+                            chunkSettings.translationBatchSize || 20,
+                            (update) => onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'translating', ...update }),
+                            signal
+                        );
+                    }
+                    logger.debug(`[Chunk ${index}] Translation complete. Items: ${translatedItems.length}`);
+
+                    finalChunkSubs = translatedItems.map(item => ({
+                        id: 0, // Placeholder, will re-index later
+                        startTime: formatTime(timeToSeconds(item.start) + start),
+                        endTime: formatTime(timeToSeconds(item.end) + start),
+                        original: item.original,
+                        translated: item.translated
+                    }));
+                }
+
+                chunkResults[i] = finalChunkSubs;
+
+                // Update Intermediate Result
+                const currentAll = chunkResults.flat().map((s, idx) => ({ ...s, id: idx + 1 }));
+                onIntermediateResult?.(currentAll);
+
+                onProgress?.({ id: index, total: totalChunks, status: 'completed', message: '完成' });
+
+            } finally {
+                refinementSemaphore.release();
             }
-
-            // ===== STEP 4: TRANSLATION =====
-            let finalChunkSubs: SubtitleItem[] = [];
-            if (refinedSegments.length > 0) {
-                onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'translating', message: '正在翻译...' });
-
-                const toTranslate = refinedSegments.map((seg, idx) => ({
-                    id: idx + 1,
-                    original: seg.original,
-                    start: seg.startTime,
-                    end: seg.endTime
-                }));
-
-                const translateSystemInstruction = getSystemInstruction(chunkSettings.genre, chunkSettings.customTranslationPrompt, 'translation', chunkSettings.glossary);
-
-                const translatedItems = await translateBatch(
-                    ai,
-                    toTranslate,
-                    translateSystemInstruction,
-                    concurrency,
-                    chunkSettings.translationBatchSize || 20,
-                    (update) => onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'translating', ...update }),
-                    signal
-                );
-                logger.debug(`[Chunk ${index}] Translation complete. Items: ${translatedItems.length}`);
-
-                finalChunkSubs = translatedItems.map(item => ({
-                    id: 0, // Placeholder, will re-index later
-                    startTime: formatTime(timeToSeconds(item.start) + start),
-                    endTime: formatTime(timeToSeconds(item.end) + start),
-                    original: item.original,
-                    translated: item.translated
-                }));
-            }
-
-            chunkResults[i] = finalChunkSubs;
-
-            // Update Intermediate Result
-            const currentAll = chunkResults.flat().map((s, idx) => ({ ...s, id: idx + 1 }));
-            onIntermediateResult?.(currentAll);
-
-            onProgress?.({ id: index, total: totalChunks, status: 'completed', message: '完成' });
 
         } catch (e) {
             logger.error(`Chunk ${index} failed`, e);

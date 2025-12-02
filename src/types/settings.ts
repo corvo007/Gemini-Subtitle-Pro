@@ -3,7 +3,17 @@ import { GlossaryItem, Glossary } from './glossary';
 export const GENRE_PRESETS = ['general', 'anime', 'movie', 'news', 'tech'];
 export type Genre = 'general' | 'anime' | 'movie' | 'news' | 'tech';
 
+export interface DebugSettings {
+    mockGemini: boolean;
+    mockOpenAI: boolean;
+    mockLocalWhisper: boolean;
+    ffmpegPath?: string;
+    ffprobePath?: string;
+    whisperPath?: string;
+}
+
 export interface AppSettings {
+    debug?: DebugSettings;
     geminiKey: string;
     openaiKey: string;
     openaiEndpoint?: string;

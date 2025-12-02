@@ -15,6 +15,7 @@ export const transcribeWithLocalWhisper = async (
     language: string = 'auto',
     threads: number = 4,
     signal?: AbortSignal,
+    customBinaryPath?: string,
     _port: number = 8080, // Deprecated
     _timeout: number = 300000, // Deprecated (handled by main process if needed)
     _maxRetries: number = 2 // Deprecated
@@ -36,7 +37,8 @@ export const transcribeWithLocalWhisper = async (
             audioData: arrayBuffer,
             modelPath,
             language,
-            threads
+            threads,
+            customBinaryPath
         });
 
         if (!result.success) {

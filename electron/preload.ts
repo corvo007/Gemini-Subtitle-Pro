@@ -3,8 +3,10 @@
 
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
+
 contextBridge.exposeInMainWorld('electronAPI', {
     isElectron: true,
+    isDebug: process.env.DEBUG_BUILD === 'true' || process.env.NODE_ENV === 'development',
     getFilePath: (file: File) => webUtils.getPathForFile(file),
     readAudioFile: (filePath: string) => ipcRenderer.invoke('read-audio-file', filePath),
     saveSubtitleDialog: (defaultName: string, content: string, format: 'srt' | 'ass') =>
@@ -42,5 +44,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     storage: {
         getSettings: () => ipcRenderer.invoke('storage-get'),
         setSettings: (settings: any) => ipcRenderer.invoke('storage-set', settings)
-    }
+    },
+
+    // Open external link
+    openExternal: (url: string) => ipcRenderer.invoke('open-external', url)
 });

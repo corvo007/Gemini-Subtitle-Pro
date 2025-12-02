@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -28,10 +28,10 @@ if (squirrelStartup) {
 import { localWhisperService } from './services/localWhisper.ts';
 
 // IPC Handler: Transcribe Local
-ipcMain.handle('transcribe-local', async (_event, { audioData, modelPath, language, threads }: { audioData: ArrayBuffer, modelPath: string, language?: string, threads?: number }) => {
+ipcMain.handle('transcribe-local', async (_event, { audioData, modelPath, language, threads, customBinaryPath }: { audioData: ArrayBuffer, modelPath: string, language?: string, threads?: number, customBinaryPath?: string }) => {
     try {
-        console.log(`[Main] Received local transcription request. Model: ${modelPath}, Lang: ${language}, Threads: ${threads}`);
-        const result = await localWhisperService.transcribe(audioData, modelPath, language, threads, (msg) => addLog(msg));
+        console.log(`[Main] Received local transcription request. Model: ${modelPath}, Lang: ${language}, Threads: ${threads}, CustomPath: ${customBinaryPath}`);
+        const result = await localWhisperService.transcribe(audioData, modelPath, language, threads, (msg) => addLog(msg), customBinaryPath);
         return { success: true, segments: result };
     } catch (error: any) {
         console.error('[Main] Local transcription failed:', error);
@@ -133,8 +133,14 @@ ipcMain.handle('save-logs-dialog', async (_event, content: string) => {
 // IPC Handler: 提取音频（带进度回调）
 ipcMain.handle(
     'extract-audio-ffmpeg',
-    async (event, videoPath: string, options: AudioExtractionOptions) => {
+    async (event, videoPath: string, options: AudioExtractionOptions & { ffprobePath?: string }) => {
         try {
+            // Inject ffprobePath from options if available (passed from renderer)
+            // Note: The renderer should pass this in the options object
+            if (options.ffprobePath) {
+                options.customFfprobePath = options.ffprobePath;
+            }
+
             const audioPath = await extractAudioFromVideo(
                 videoPath,
                 options,
@@ -144,7 +150,11 @@ ipcMain.handle(
                 },
                 (logMessage: string) => {
                     // Capture FFmpeg logs
-                    addLog(`[FFmpeg] ${logMessage}`);
+                    if (logMessage.startsWith('[DEBUG]')) {
+                        addLog(`[DEBUG] [FFmpeg] ${logMessage.replace('[DEBUG] ', '')}`);
+                    } else {
+                        addLog(`[FFmpeg] ${logMessage}`);
+                    }
                 }
             );
             return { success: true, audioPath };
@@ -218,6 +228,18 @@ ipcMain.handle('storage-set', async (_event, data: any) => {
     }
 });
 
+// IPC Handler: Open External Link
+ipcMain.handle('open-external', async (_event, url: string) => {
+    try {
+        await shell.openExternal(url);
+        return { success: true };
+    } catch (error: any) {
+        console.error('[Main] Failed to open external link:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+
 // Logging
 // Override console methods to capture logs
 const originalConsoleLog = console.log;
@@ -266,7 +288,11 @@ function addLog(message: string) {
 
 console.log = (...args) => {
     const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
-    addLog(`[INFO] ${message}`);
+    if (message.startsWith('[DEBUG]')) {
+        addLog(message);
+    } else {
+        addLog(`[INFO] ${message}`);
+    }
     originalConsoleLog.apply(console, args);
 };
 

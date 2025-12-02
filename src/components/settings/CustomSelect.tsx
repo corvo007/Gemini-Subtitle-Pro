@@ -8,9 +8,10 @@ interface CustomSelectProps {
     className?: string;
     icon?: React.ReactNode;
     placeholder?: string;
+    direction?: 'up' | 'down';
 }
 
-export const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, className = "", icon, placeholder }) => {
+export const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, className = "", icon, placeholder, direction = 'down' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -41,7 +42,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, opt
             </button>
 
             {isOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                <div className={`absolute z-50 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100 ${direction === 'up' ? 'bottom-full mb-1' : 'mt-1'
+                    }`}>
                     <div className="p-1">
                         {options.map((option) => (
                             <button

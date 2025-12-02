@@ -12,6 +12,7 @@ import { generateSubtitles } from '@/services/api/gemini/subtitle';
 import { runBatchOperation } from '@/services/api/gemini/batch';
 import { retryGlossaryExtraction } from '@/services/api/gemini/glossary';
 import { useFileParserWorker } from '@/hooks/useFileParserWorker';
+import { decodeAudioWithRetry } from "@/services/audio/decoder";
 
 import { getEnvVariable } from "@/services/utils/env";
 
@@ -199,8 +200,23 @@ export const useWorkspaceLogic = ({
                 glossary: activeGlossary?.terms || settings.glossary || []
             };
 
+            // Decode audio first to cache it for retries
+            let audioBuffer: AudioBuffer;
+            try {
+                if (audioCacheRef.current && audioCacheRef.current.file === file) {
+                    audioBuffer = audioCacheRef.current.buffer;
+                } else {
+                    handleProgress({ id: 'decoding', total: 1, status: 'processing', message: "正在解码音频..." });
+                    audioBuffer = await decodeAudioWithRetry(file);
+                    audioCacheRef.current = { file, buffer: audioBuffer };
+                }
+            } catch (e) {
+                logger.error("Failed to decode audio in handleGenerate", e);
+                throw new Error("音频解码失败，请确保文件是有效的视频或音频格式。");
+            }
+
             const { subtitles: result, glossaryResults } = await generateSubtitles(
-                file,
+                audioBuffer,
                 duration,
                 runtimeSettings,
                 handleProgress,
@@ -247,12 +263,32 @@ export const useWorkspaceLogic = ({
                     }
 
                     // Manual confirmation required
-                    return new Promise<GlossaryItem[]>((resolve) => {
+                    return new Promise<GlossaryItem[]>((resolve, reject) => {
+                        // Check if already aborted
+                        if (signal?.aborted) {
+                            reject(new Error('Operation cancelled'));
+                            return;
+                        }
+
+                        const onAbort = () => {
+                            logger.info("Glossary confirmation aborted by signal");
+                            // Cleanup UI
+                            glossaryFlow.setShowGlossaryConfirmation(false);
+                            glossaryFlow.setShowGlossaryFailure(false);
+                            glossaryFlow.setPendingGlossaryResults([]);
+                            glossaryFlow.setGlossaryMetadata(null);
+                            glossaryFlow.setGlossaryConfirmCallback(null);
+                            reject(new Error('Operation cancelled'));
+                        };
+
+                        signal?.addEventListener('abort', onAbort);
+
                         logger.info("Setting up UI for manual glossary confirmation...");
                         glossaryFlow.setGlossaryMetadata(metadata);
 
                         // Store the resolve function
                         glossaryFlow.setGlossaryConfirmCallback(() => (confirmedItems: GlossaryItem[]) => {
+                            signal?.removeEventListener('abort', onAbort);
                             logger.info("User confirmed glossary terms:", confirmedItems.length);
                             // Settings are already updated by GlossaryConfirmationModal
 
@@ -273,6 +309,7 @@ export const useWorkspaceLogic = ({
                             glossaryFlow.setShowGlossaryFailure(true);
                         } else {
                             // Should not happen if gemini.ts logic is correct, but safe fallback
+                            signal?.removeEventListener('abort', onAbort);
                             if (settings.activeGlossaryId && settings.glossaries) {
                                 const activeG = settings.glossaries.find(g => g.id === settings.activeGlossaryId);
                                 resolve(activeG?.terms || []);

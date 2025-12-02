@@ -54,7 +54,7 @@ export const LocalWhisperSettings: React.FC<LocalWhisperSettingsProps> = ({
                 <p className="font-medium mb-1 text-slate-300">💡 说明：</p>
                 <ul className="list-disc list-inside space-y-1">
                     <li>需要 <strong>GGML 格式</strong> 的 .bin 模型文件</li>
-                    <li>仅支持 <a href="https://huggingface.co/ggerganov/whisper.cpp" target="_blank" className="text-blue-400 underline hover:text-blue-300">whisper.cpp 官方模型</a>，不支持 Faster-whisper 模型。</li>
+                    <li>仅支持 <a href="#" onClick={(e) => { e.preventDefault(); window.electronAPI?.openExternal('https://huggingface.co/ggerganov/whisper.cpp'); }} className="text-blue-400 underline hover:text-blue-300 cursor-pointer">whisper.cpp 官方模型</a>，不支持 Faster-whisper 模型。</li>
                 </ul>
             </div>
         </div>

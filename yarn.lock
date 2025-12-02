@@ -707,6 +707,11 @@
   dependencies:
     "@types/ms" "*"
 
+"@types/electron-squirrel-startup@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.npmmirror.com/@types/electron-squirrel-startup/-/electron-squirrel-startup-1.0.2.tgz"
+  integrity sha512-AzxnvBzNh8K/0SmxMmZtpJf1/IWoGXLP+pQDuUaVkPyotI8ryvAtBSqgxR/qOSvxWHYWrxkeNsJ+Ca5xOuUxJQ==
+
 "@types/estree@1.0.8":
   version "1.0.8"
   resolved "https://registry.npmmirror.com/@types/estree/-/estree-1.0.8.tgz"

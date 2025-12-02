@@ -85,40 +85,41 @@ export default function App() {
 
             // Auto-toast for errors
             if (log.level === 'ERROR') {
-                // Avoid duplicate toasts if the error message is already in a toast
-                // This is a simple heuristic; might need refinement
                 addToast(log.message, 'error', 5000);
             }
         });
 
-        // Backend logs handling
-        let pollInterval: NodeJS.Timeout;
+        return () => {
+            unsubscribe();
+        };
+    }, []);
+
+    // Backend logs handling - Global subscription
+    useEffect(() => {
         let unsubscribeBackend: (() => void) | undefined;
 
-        if (showLogs && window.electronAPI) {
-            // Subscribe to real-time logs
-            if (window.electronAPI.onNewLog) {
-                unsubscribeBackend = window.electronAPI.onNewLog(async (logLine) => {
-                    try {
-                        const { parseBackendLog } = await import('@/services/utils/logParser');
-                        const parsed = parseBackendLog(logLine);
-                        setLogs(prev => {
-                            if (prev.some(l => l.data?.raw === logLine)) return prev;
-                            return [...prev, parsed];
-                        });
-                    } catch (err) {
-                        console.error("Error parsing real-time log:", err);
-                    }
-                });
-            }
+        if (window.electronAPI && window.electronAPI.onNewLog) {
+            unsubscribeBackend = window.electronAPI.onNewLog(async (logLine) => {
+                // Print to DevTools console for visibility
+                console.log(`[Main] ${logLine}`);
+
+                try {
+                    const { parseBackendLog } = await import('@/services/utils/logParser');
+                    const parsed = parseBackendLog(logLine);
+                    setLogs(prev => {
+                        if (prev.some(l => l.data?.raw === logLine)) return prev;
+                        return [...prev, parsed];
+                    });
+                } catch (err) {
+                    console.error("Error parsing real-time log:", err);
+                }
+            });
         }
 
         return () => {
-            unsubscribe();
-            if (pollInterval) clearInterval(pollInterval);
             if (unsubscribeBackend) unsubscribeBackend();
         };
-    }, [showLogs]);
+    }, []);
 
     // Navigation Handlers
     const goBackHome = () => {

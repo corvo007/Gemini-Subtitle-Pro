@@ -18,7 +18,8 @@ import {
 } from "./schemas";
 import {
     generateContentWithRetry,
-    generateContentWithLongOutput
+    generateContentWithLongOutput,
+    formatGeminiError
 } from "./client";
 
 export async function processTranslationBatchWithRetry(
@@ -26,7 +27,7 @@ export async function processTranslationBatchWithRetry(
     batch: any[],
     systemInstruction: string,
     maxRetries = 3,
-    onStatusUpdate?: (update: { toast: { message: string, type: 'info' | 'warning' | 'error' | 'success' } }) => void,
+    onStatusUpdate?: (update: { message?: string, toast?: { message: string, type: 'info' | 'warning' | 'error' | 'success' } }) => void,
     signal?: AbortSignal
 ): Promise<any[]> {
     const payload = batch.map(item => ({ id: item.id, text: item.original }));
@@ -105,8 +106,9 @@ export async function processTranslationBatchWithRetry(
 
         } catch (e) {
             if (attempt < maxRetries - 1) {
-                logger.warn(`Translation batch failed (Attempt ${attempt + 1}/${maxRetries}). Retrying entire batch...`, e);
+                logger.warn(`Translation batch failed (Attempt ${attempt + 1}/${maxRetries}). Retrying entire batch...`, formatGeminiError(e));
                 onStatusUpdate?.({
+                    message: `正在重试 (${attempt + 1}/${maxRetries})...`,
                     toast: {
                         message: `批量翻译失败 (尝试 ${attempt + 1}/${maxRetries})。正在重试...`,
                         type: 'warning'
@@ -114,7 +116,7 @@ export async function processTranslationBatchWithRetry(
                 });
                 await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
             } else {
-                logger.error(`Translation batch failed after ${maxRetries} attempts`, e);
+                logger.error(`批量翻译在 ${maxRetries} 次尝试后失败`, formatGeminiError(e));
                 onStatusUpdate?.({
                     toast: {
                         message: `批量翻译在 ${maxRetries} 次尝试后失败。将使用原文。`,
@@ -134,7 +136,7 @@ export async function translateBatch(
     systemInstruction: string,
     concurrency: number,
     batchSize: number,
-    onStatusUpdate?: (update: { toast: { message: string, type: 'info' | 'warning' | 'error' | 'success' } }) => void,
+    onStatusUpdate?: (update: { message?: string, toast?: { message: string, type: 'info' | 'warning' | 'error' | 'success' } }) => void,
     signal?: AbortSignal
 ): Promise<any[]> {
     const batches: any[][] = [];

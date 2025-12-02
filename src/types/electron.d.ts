@@ -3,6 +3,7 @@ export interface AudioExtractionOptions {
     sampleRate?: number;
     channels?: number;
     bitrate?: string;
+    customFfmpegPath?: string;
 }
 
 export interface AudioExtractionProgress {
@@ -19,6 +20,8 @@ export interface AudioInfo {
 }
 
 export interface ElectronAPI {
+    isElectron: boolean;
+    isDebug: boolean;
     // 现有方法
     getFilePath: (file: File) => string;
     readAudioFile: (filePath: string) => Promise<ArrayBuffer>;
@@ -33,7 +36,7 @@ export interface ElectronAPI {
         canceled?: boolean;
     }>;
     selectWhisperModel: () => Promise<string | null>;
-    transcribeLocal: (data: { audioData: ArrayBuffer, modelPath: string, language?: string, threads?: number }) => Promise<{
+    transcribeLocal: (data: { audioData: ArrayBuffer, modelPath: string, language?: string, threads?: number, customBinaryPath?: string }) => Promise<{
         success: boolean;
         segments?: { start: string; end: string; text: string }[];
         error?: string;
@@ -61,6 +64,9 @@ export interface ElectronAPI {
         getSettings: () => Promise<any>;
         setSettings: (settings: any) => Promise<void>;
     };
+
+    // Open external link
+    openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 declare global {

@@ -7,6 +7,49 @@ import { extractJsonArray } from "@/services/subtitle/parser";
  * Determines if an error should trigger a retry attempt.
  * Returns true for transient errors (network, server, parsing), false for permanent errors (auth, quota).
  */
+/**
+ * Formats a Gemini API error into a detailed object for logging.
+ * Tries to extract the raw response body if available.
+ */
+export function formatGeminiError(e: any): any {
+    if (!e) return e;
+
+    const errorInfo: any = {
+        name: e.name || 'Error',
+        message: e.message || 'Unknown error',
+        status: e.status,
+        statusText: e.statusText,
+    };
+
+    // Extract raw response if available
+    if (e.response) {
+        errorInfo.response = e.response;
+    }
+
+    if (e.body) {
+        errorInfo.body = e.body;
+    }
+
+    if (e.errorDetails) {
+        errorInfo.errorDetails = e.errorDetails;
+    }
+
+    // Attempt to extract JSON from message if it looks like a raw API error
+    // e.g. "[400 Bad Request] {...}"
+    if (typeof e.message === 'string') {
+        const jsonMatch = e.message.match(/\{.*}/);
+        if (jsonMatch) {
+            try {
+                errorInfo.rawError = JSON.parse(jsonMatch[0]);
+            } catch (ignore) {
+                // Not valid JSON
+            }
+        }
+    }
+
+    return errorInfo;
+}
+
 export function isRetryableError(error: any): boolean {
     if (!error) return false;
 

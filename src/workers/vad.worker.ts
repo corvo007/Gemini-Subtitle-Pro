@@ -33,16 +33,16 @@ self.onmessage = async (e: MessageEvent) => {
                 throw new Error(errorMsg);
             }
 
-            console.log('[VAD Worker] Libraries loaded, configuring ORT...');
+            console.debug('[VAD Worker] [Debug] Libraries loaded, configuring ORT...');
             // Configure ORT
             ort.env.wasm.wasmPaths = base;
             // ort.env.logLevel = "error"; 
 
-            console.log('[VAD Worker] Initializing VAD with options:', msg.options);
+            console.debug('[VAD Worker] [Debug] Initializing VAD with options:', JSON.stringify(msg.options, null, 2));
             // Initialize VAD with options
             myVad = await vad.NonRealTimeVAD.new(msg.options);
 
-            console.log('[VAD Worker] VAD initialized successfully');
+            console.debug('[VAD Worker] [Debug] VAD initialized successfully');
             self.postMessage({ type: 'ready' });
 
         } else if (msg.command === 'process') {

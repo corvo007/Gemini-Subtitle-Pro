@@ -16,7 +16,8 @@ export const extractGlossaryFromAudio = async (
     chunks: { index: number; start: number; end: number }[],
     genre: string,
     concurrency: number,
-    onProgress?: (completed: number, total: number) => void
+    onProgress?: (completed: number, total: number) => void,
+    signal?: AbortSignal
 ): Promise<GlossaryExtractionResult[]> => {
     logger.info(`Starting glossary extraction on ${chunks.length} chunks...`);
 
@@ -51,7 +52,7 @@ export const extractGlossaryFromAudio = async (
                     maxOutputTokens: 65536,
                     tools: [{ googleSearch: {} }],
                 }
-            });
+            }, 3, signal);
 
             const text = response.text || "[]";
             const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -83,8 +84,8 @@ export const extractGlossaryFromAudio = async (
                 return extractSingleChunk(chunk, attemptNumber + 1);
             } else {
                 // All retries exhausted or non-retryable error
-                const reason = isRetryable ? `after ${attemptNumber} attempts` : '(non-retryable error)';
-                logger.error(`[Chunk ${index}] Extraction failed ${reason}`, { error: e.message, status: e.status });
+                const reason = isRetryable ? `在 ${attemptNumber} 次尝试后` : '(不可重试的错误)';
+                logger.error(`[分段 ${index}] 提取失败 ${reason}`, { error: e.message, status: e.status });
                 throw e;
             }
         }
@@ -101,8 +102,9 @@ export const extractGlossaryFromAudio = async (
         } catch (e) {
             // Record failed chunk for aggregated retry
             failedChunks.push(chunk);
-            completed++;
-            onProgress?.(completed, chunks.length);
+            // Do NOT increment completed here, so UI doesn't show 100% yet
+            // completed++; 
+            // onProgress?.(completed, chunks.length);
 
             return {
                 terms: [],
@@ -111,10 +113,16 @@ export const extractGlossaryFromAudio = async (
                 confidence: 'low'
             } as GlossaryExtractionResult;
         }
-    });
+    }, signal);
 
     // ===== SECOND PASS: Aggregated retry for failed chunks =====
     if (failedChunks.length > 0) {
+        if (signal?.aborted) {
+            logger.info("Glossary extraction cancelled before retry pass");
+            // Return what we have so far
+            return results;
+        }
+
         logger.warn(`First pass complete. ${failedChunks.length}/${chunks.length} chunks failed. Starting aggregated retry pass...`);
 
         // Use lower concurrency to reduce load and improve success rate
@@ -133,9 +141,13 @@ export const extractGlossaryFromAudio = async (
                 logger.info(`[Chunk ${failedChunk.index}] Aggregated retry succeeded!`);
 
             } catch (e: any) {
-                logger.error(`[Chunk ${failedChunk.index}] Aggregated retry failed`, { error: e.message, status: e.status });
+                logger.error(`[分块 ${failedChunk.index}] 聚合重试失败`, { error: e.message, status: e.status });
+            } finally {
+                // Now mark this chunk as completed (success or fail)
+                completed++;
+                onProgress?.(completed, chunks.length);
             }
-        });
+        }, signal);
     }
 
     // ===== FINAL STATISTICS =====

@@ -41,10 +41,24 @@ export async function extractAndDecodeAudio(
 
         // 3. 提取音频
         logger.info('Extracting audio with FFmpeg...');
+
+        // Get settings to check for custom FFmpeg path
+        let customFfmpegPath: string | undefined;
+        try {
+            const settings = await window.electronAPI.storage.getSettings();
+            if (settings?.debug?.ffmpegPath) {
+                customFfmpegPath = settings.debug.ffmpegPath;
+                logger.info('Using custom FFmpeg path from settings:', customFfmpegPath);
+            }
+        } catch (e) {
+            logger.warn('Failed to read settings for FFmpeg path:', e);
+        }
+
         const options: AudioExtractionOptions = {
             format: 'wav',
             sampleRate: 16000,  // Whisper 推荐采样率
-            channels: 1         // 单声道
+            channels: 1,         // 单声道
+            customFfmpegPath
         };
 
         const extractResult = await window.electronAPI.extractAudioFFmpeg(filePath, options);

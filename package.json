@@ -2,16 +2,18 @@
   "name": "gemini-subtitle-pro",
   "description": "AI-powered subtitle generation tool",
   "author": "Corvo007",
+  "license": "MIT",
   "private": true,
-  "version": "2.3.2",
+  "version": "2.4.0",
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "electron:dev": "concurrently -k \"cross-env BROWSER=none yarn dev\" \"wait-on http://localhost:3000 && electron -r ts-node/register electron/main.ts\"",
+    "electron:dev": "concurrently -k \"cross-env BROWSER=none yarn dev\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron -r ts-node/register electron/main.ts\"",
     "electron:build": "yarn build:main && vite build && electron-builder",
+    "build:debug": "cross-env DEBUG_BUILD=true yarn electron:build",
     "build:main": "vite build -c vite.config.electron.ts"
   },
   "dependencies": {
@@ -30,6 +32,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.17",
+    "@types/electron-squirrel-startup": "^1.0.2",
     "@types/fluent-ffmpeg": "^2.1.28",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.7",
@@ -98,7 +101,8 @@
           "to": ".",
           "filter": [
             "whisper-cli.exe",
-            "*.dll"
+            "*.dll",
+            "ggml-silero-v6.2.0.bin"
           ]
         }
       ]

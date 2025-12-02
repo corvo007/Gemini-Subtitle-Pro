@@ -45,6 +45,7 @@
     "noEmit": true
   },
   "include": [
-    "src"
+    "src",
+    "electron"
   ]
 }

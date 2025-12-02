@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, X, CheckCircle, Languages, Type, Clock, Book } from 'lucide-react';
+import { Settings, X, CheckCircle, Languages, Type, Clock, Book, Bug } from 'lucide-react';
 import { AppSettings } from '@/types/settings';
 import { CustomSelect } from './CustomSelect';
 import { LocalWhisperSettings } from './LocalWhisperSettings';
@@ -39,7 +39,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <h2 className="text-xl font-bold text-white mb-6 flex items-center"><Settings className="w-5 h-5 mr-2 text-indigo-400" /> 设置</h2>
 
                     <div className="flex space-x-1 border-b border-slate-700 mb-6 overflow-x-auto">
-                        {['general', 'performance', 'glossary'].map((tab) => (
+                        {['general', 'performance', 'glossary', ...(window.electronAPI?.isDebug ? ['debug'] : [])].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -48,6 +48,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 {tab === 'general' && '常规'}
                                 {tab === 'performance' && '性能'}
                                 {tab === 'glossary' && '术语表'}
+                                {tab === 'debug' && '调试'}
                             </button>
                         ))}
                     </div>
@@ -404,6 +405,97 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     >
                                         <Book className="w-4 h-4 mr-2" /> 管理术语表
                                     </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'debug' && (
+                            <div className="space-y-3 animate-fade-in">
+                                <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4 mb-4">
+                                    <h3 className="text-sm font-semibold text-amber-300 mb-2 flex items-center">
+                                        <Bug className="w-4 h-4 mr-2" /> 调试模式
+                                    </h3>
+                                    <p className="text-xs text-slate-400 mb-4">
+                                        启用 Mock 模式可以跳过实际 API 请求，直接返回模拟数据。用于测试流程或节省 API 额度。
+                                    </p>
+
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-300">Mock Gemini API</label>
+                                                <p className="text-xs text-slate-500">跳过术语提取、润色和翻译请求</p>
+                                            </div>
+                                            <button
+                                                onClick={() => updateSetting('debug', { ...settings.debug, mockGemini: !settings.debug?.mockGemini })}
+                                                className={`w-10 h-5 rounded-full transition-colors relative ${settings.debug?.mockGemini ? 'bg-amber-500' : 'bg-slate-600'}`}
+                                            >
+                                                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.debug?.mockGemini ? 'left-6' : 'left-1'}`} />
+                                            </button>
+                                        </div>
+
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-300">Mock OpenAI API</label>
+                                                <p className="text-xs text-slate-500">跳过 OpenAI Whisper 转录请求</p>
+                                            </div>
+                                            <button
+                                                onClick={() => updateSetting('debug', { ...settings.debug, mockOpenAI: !settings.debug?.mockOpenAI })}
+                                                className={`w-10 h-5 rounded-full transition-colors relative ${settings.debug?.mockOpenAI ? 'bg-amber-500' : 'bg-slate-600'}`}
+                                            >
+                                                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.debug?.mockOpenAI ? 'left-6' : 'left-1'}`} />
+                                            </button>
+                                        </div>
+
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-300">Mock Local Whisper</label>
+                                                <p className="text-xs text-slate-500">跳过本地 Whisper 转录</p>
+                                            </div>
+                                            <button
+                                                onClick={() => updateSetting('debug', { ...settings.debug, mockLocalWhisper: !settings.debug?.mockLocalWhisper })}
+                                                className={`w-10 h-5 rounded-full transition-colors relative ${settings.debug?.mockLocalWhisper ? 'bg-amber-500' : 'bg-slate-600'}`}
+                                            >
+                                                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.debug?.mockLocalWhisper ? 'left-6' : 'left-1'}`} />
+                                            </button>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-slate-700">
+                                            <h4 className="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider">Custom Paths</h4>
+
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <label className="block text-xs text-slate-400 mb-1">Custom ffmpeg.exe Path</label>
+                                                    <input
+                                                        type="text"
+                                                        value={settings.debug?.ffmpegPath || ''}
+                                                        onChange={(e) => updateSetting('debug', { ...settings.debug, ffmpegPath: e.target.value })}
+                                                        placeholder="Default (Auto-detected)"
+                                                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-slate-400 mb-1">Custom ffprobe.exe Path</label>
+                                                    <input
+                                                        type="text"
+                                                        value={settings.debug?.ffprobePath || ''}
+                                                        onChange={(e) => updateSetting('debug', { ...settings.debug, ffprobePath: e.target.value })}
+                                                        placeholder="Default (Auto-detected)"
+                                                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-slate-400 mb-1">Custom whisper-cli.exe Path</label>
+                                                    <input
+                                                        type="text"
+                                                        value={settings.debug?.whisperPath || ''}
+                                                        onChange={(e) => updateSetting('debug', { ...settings.debug, whisperPath: e.target.value })}
+                                                        placeholder="Default (Auto-detected)"
+                                                        className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}

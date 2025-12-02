@@ -15,6 +15,10 @@ export const transcribeWithWhisper = async (
     formData.append('model', model); // usually 'whisper-1'
     formData.append('response_format', 'verbose_json');
 
+    // VAD (Voice Activity Detection) parameters to reduce hallucinations in silent segments
+    formData.append('vad_filter', 'true');           // Enable VAD filtering to skip non-speech segments
+    formData.append('no_speech_threshold', '0.6');   // Non-speech detection threshold (default: 0.6)
+
     let attempt = 0;
     const maxRetries = 3;
     let lastError: any;

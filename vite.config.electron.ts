@@ -26,4 +26,7 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
         },
     },
+    define: {
+        'process.env.DEBUG_BUILD': JSON.stringify(process.env.DEBUG_BUILD || 'false'),
+    },
 });
