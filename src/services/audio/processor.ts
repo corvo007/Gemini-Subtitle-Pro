@@ -70,3 +70,67 @@ export function audioBufferToWav(buffer: AudioBuffer): Blob {
     }
     return new Blob([arrayBuffer], { type: 'audio/wav' });
 }
+
+/**
+ * Extracts a slice of an AudioBuffer as a new AudioBuffer (synchronous).
+ */
+export function extractBufferSlice(buffer: AudioBuffer, start: number, end: number): AudioBuffer {
+    const sampleRate = buffer.sampleRate;
+    const startOffset = Math.floor(start * sampleRate);
+    const endOffset = Math.floor(end * sampleRate);
+    const frameCount = endOffset - startOffset;
+
+    if (frameCount <= 0) {
+        return new AudioContext().createBuffer(buffer.numberOfChannels, 1, sampleRate);
+    }
+
+    const newBuffer = new AudioContext().createBuffer(
+        buffer.numberOfChannels,
+        frameCount,
+        sampleRate
+    );
+
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+        const channelData = buffer.getChannelData(channel);
+        const newChannelData = newBuffer.getChannelData(channel);
+        for (let i = 0; i < frameCount; i++) {
+            // Check bounds to avoid errors
+            if (i + startOffset < channelData.length) {
+                newChannelData[i] = channelData[i + startOffset];
+            }
+        }
+    }
+
+    return newBuffer;
+}
+
+/**
+ * Merges multiple AudioBuffers into a single AudioBuffer.
+ * Assumes all buffers have the same number of channels.
+ * Resamples if necessary to match the target sample rate.
+ */
+export function mergeAudioBuffers(buffers: AudioBuffer[], sampleRate: number): AudioBuffer {
+    if (buffers.length === 0) {
+        return new AudioContext().createBuffer(1, 0, sampleRate);
+    }
+
+    const numberOfChannels = buffers[0].numberOfChannels;
+    const totalLength = buffers.reduce((acc, buf) => acc + buf.length, 0);
+
+    const result = new AudioContext().createBuffer(
+        numberOfChannels,
+        totalLength,
+        sampleRate
+    );
+
+    let offset = 0;
+    for (const buffer of buffers) {
+        for (let channel = 0; channel < numberOfChannels; channel++) {
+            const channelData = buffer.getChannelData(channel);
+            result.copyToChannel(channelData, channel, offset);
+        }
+        offset += buffer.length;
+    }
+
+    return result;
+}

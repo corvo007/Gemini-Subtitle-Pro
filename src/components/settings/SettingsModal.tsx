@@ -39,13 +39,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <h2 className="text-xl font-bold text-white mb-6 flex items-center"><Settings className="w-5 h-5 mr-2 text-indigo-400" /> 设置</h2>
 
                     <div className="flex space-x-1 border-b border-slate-700 mb-6 overflow-x-auto">
-                        {['general', 'performance', 'glossary', ...(window.electronAPI?.isDebug ? ['debug'] : [])].map((tab) => (
+                        {['general', 'services', 'performance', 'glossary', ...(window.electronAPI?.isDebug ? ['debug'] : [])].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
                                 className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-slate-800 text-indigo-400 border-t border-x border-slate-700' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
                             >
                                 {tab === 'general' && '常规'}
+                                {tab === 'services' && '服务'}
                                 {tab === 'performance' && '性能'}
                                 {tab === 'glossary' && '术语表'}
                                 {tab === 'debug' && '调试'}
@@ -55,6 +56,54 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                     <div className="space-y-6 min-h-[400px]">
                         {activeTab === 'general' && (
+                            <div className="space-y-6 animate-fade-in">
+                                {/* Output Settings */}
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">输出设置</h3>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-300 mb-1.5">导出模式</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button onClick={() => updateSetting('outputMode', 'bilingual')} className={`p-3 rounded-lg border text-sm flex items-center justify-center space-x-2 transition-all ${settings.outputMode === 'bilingual' ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'}`}><Languages className="w-4 h-4" /><span>双语字幕</span></button>
+                                            <button onClick={() => updateSetting('outputMode', 'target_only')} className={`p-3 rounded-lg border text-sm flex items-center justify-center space-x-2 transition-all ${settings.outputMode === 'target_only' ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'}`}><Type className="w-4 h-4" /><span>仅译文</span></button>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-2">双语模式会在字幕中同时显示原文和译文。</p>
+                                    </div>
+
+                                    {/* Speaker Diarization Settings */}
+                                    <div className="space-y-4 mt-4 pt-4 border-t border-slate-700/50">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-300">启用说话人区分</label>
+                                                <p className="text-xs text-slate-500">在校对时间轴阶段识别不同说话人</p>
+                                            </div>
+                                            <button
+                                                onClick={() => updateSetting('enableDiarization', !settings.enableDiarization)}
+                                                className={`w-10 h-5 rounded-full transition-colors relative ${settings.enableDiarization ? 'bg-indigo-500' : 'bg-slate-600'}`}
+                                            >
+                                                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.enableDiarization ? 'left-6' : 'left-1'}`} />
+                                            </button>
+                                        </div>
+
+                                        {settings.enableDiarization && (
+                                            <div className="flex items-center justify-between pl-4 animate-fade-in">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-slate-300">导出时包含说话人名称</label>
+                                                    <p className="text-xs text-slate-500">在字幕文件中显示说话人（如：Speaker 1：对话内容）</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => updateSetting('includeSpeakerInExport', !settings.includeSpeakerInExport)}
+                                                    className={`w-10 h-5 rounded-full transition-colors relative ${settings.includeSpeakerInExport ? 'bg-indigo-500' : 'bg-slate-600'}`}
+                                                >
+                                                    <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.includeSpeakerInExport ? 'left-6' : 'left-1'}`} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'services' && (
                             <div className="space-y-6 animate-fade-in">
                                 {/* API Settings */}
                                 <div className="space-y-3">
@@ -190,50 +239,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             </div>
                                         </div>
                                     )}
-                                </div>
-
-                                {/* Output Settings */}
-                                <div className="space-y-3 pt-4 border-t border-slate-800">
-                                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">输出设置</h3>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-1.5">导出模式</label>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <button onClick={() => updateSetting('outputMode', 'bilingual')} className={`p-3 rounded-lg border text-sm flex items-center justify-center space-x-2 transition-all ${settings.outputMode === 'bilingual' ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'}`}><Languages className="w-4 h-4" /><span>双语字幕</span></button>
-                                            <button onClick={() => updateSetting('outputMode', 'target_only')} className={`p-3 rounded-lg border text-sm flex items-center justify-center space-x-2 transition-all ${settings.outputMode === 'target_only' ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'}`}><Type className="w-4 h-4" /><span>仅译文</span></button>
-                                        </div>
-                                        <p className="text-xs text-slate-500 mt-2">双语模式会在字幕中同时显示原文和译文。</p>
-                                    </div>
-
-                                    {/* Speaker Diarization Settings */}
-                                    <div className="space-y-4 mt-4 pt-4 border-t border-slate-700/50">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <label className="block text-sm font-medium text-slate-300">启用说话人区分</label>
-                                                <p className="text-xs text-slate-500">在校对时间轴阶段识别不同说话人</p>
-                                            </div>
-                                            <button
-                                                onClick={() => updateSetting('enableDiarization', !settings.enableDiarization)}
-                                                className={`w-10 h-5 rounded-full transition-colors relative ${settings.enableDiarization ? 'bg-indigo-500' : 'bg-slate-600'}`}
-                                            >
-                                                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.enableDiarization ? 'left-6' : 'left-1'}`} />
-                                            </button>
-                                        </div>
-
-                                        {settings.enableDiarization && (
-                                            <div className="flex items-center justify-between pl-4 animate-fade-in">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-slate-300">导出时包含说话人名称</label>
-                                                    <p className="text-xs text-slate-500">在字幕文件中显示说话人（如：Speaker 1：对话内容）</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => updateSetting('includeSpeakerInExport', !settings.includeSpeakerInExport)}
-                                                    className={`w-10 h-5 rounded-full transition-colors relative ${settings.includeSpeakerInExport ? 'bg-indigo-500' : 'bg-slate-600'}`}
-                                                >
-                                                    <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.includeSpeakerInExport ? 'left-6' : 'left-1'}`} />
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
                                 </div>
                             </div>
                         )}

@@ -10,6 +10,7 @@ import { blobToBase64 } from "@/services/audio/converter";
 import { mapInParallel } from "@/services/utils/concurrency";
 import { logger } from "@/services/utils/logger";
 import { getSystemInstructionWithDiarization } from "@/services/api/gemini/prompts";
+import { SpeakerProfile } from "./speakerProfile";
 import {
     TRANSLATION_SCHEMA,
     BATCH_SCHEMA,
@@ -392,7 +393,8 @@ export const runBatchOperation = async (
     mode: BatchOperationMode,
     batchComments: Record<number, string> = {}, // Pass map of batch index -> comment
     onProgress?: (update: ChunkStatus) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    speakerProfiles?: SpeakerProfile[]
 ): Promise<SubtitleItem[]> => {
     const geminiKey = getEnvVariable('GEMINI_API_KEY') || settings.geminiKey?.trim();
     if (!geminiKey) throw new Error("缺少 API 密钥。");
@@ -423,7 +425,8 @@ export const runBatchOperation = async (
         mode === 'proofread' ? settings.customProofreadingPrompt : settings.customTranslationPrompt,
         mode,
         settings.glossary,
-        settings.enableDiarization  // Pass diarization flag
+        settings.enableDiarization,  // Pass diarization flag
+        speakerProfiles
     );
 
     const currentSubtitles = [...allSubtitles];

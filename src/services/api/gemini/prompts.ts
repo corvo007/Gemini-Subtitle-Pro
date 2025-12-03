@@ -1,5 +1,6 @@
 import { BatchOperationMode } from "@/types/subtitle";
 import { GlossaryItem } from "@/types/glossary";
+import { SpeakerProfile } from "./speakerProfile";
 
 // --- Helper Functions ---
 
@@ -32,7 +33,8 @@ export const getSystemInstructionWithDiarization = (
     customPrompt: string | undefined,
     mode: 'refinement' | 'translation' | 'proofread' | 'fix_timestamps',
     glossary?: GlossaryItem[],
-    enableDiarization?: boolean
+    enableDiarization?: boolean,
+    speakerProfiles?: SpeakerProfile[]
 ): string => {
     // For non-fix_timestamps modes, delegate to original function
     if (mode !== 'fix_timestamps' || !enableDiarization) {
@@ -46,21 +48,51 @@ export const getSystemInstructionWithDiarization = (
         glossaryText = `\n\nTERMINOLOGY GLOSSARY (STRICTLY FOLLOW):\n${glossary.map(g => `- ${g.term}: ${g.translation} ${g.notes ? `(${g.notes})` : ''}`).join('\n')}`;
     }
 
-    return `You are a professional Subtitle Timing and Synchronization Specialist.
-Your PRIMARY GOAL is to perfect timestamp alignment and segment timing for ${genre} content.
+    let diarizationSection = '';
+    if (enableDiarization) {
+        if (speakerProfiles && speakerProfiles.length > 0) {
+            // **SCENARIO A: WITH PRE-ANALYZED PROFILES**
+            diarizationSection = `
+[P1.5 - SPEAKER IDENTIFICATION] Diarization (ENABLED - WITH PROFILE DATABASE)
 
-TASK RULES (Priority Order):
+**IMPORTANT**: A senior AI (Gemini 3.0 Pro) has pre-analyzed this audio and identified ${speakerProfiles.length} speakers.
+Your task is to MATCH voices to these profiles.
 
-[P0 - HIGHEST] User Directives
-→ If a subtitle has a "comment" field, follow that instruction exactly
-→ User corrections override all other rules
+**KNOWN SPEAKER PROFILES**:
+${speakerProfiles.map((p, i) => `
+${i + 1}. **${p.id}**
+   - Gender: ${p.characteristics.gender}
+   ${p.characteristics.name ? `- Name: ${p.characteristics.name}` : ''}
+   - Pitch: ${p.characteristics.pitch}
+   - Speed: ${p.characteristics.speed}
+   - Accent: ${p.characteristics.accent}
+   - Tone: ${p.characteristics.tone}
+   ${p.inferredIdentity ? `- Role: ${p.inferredIdentity}` : ''}
+   - Sample Quotes: ${p.sampleQuotes.map(q => `"${q}"`).join(', ')}
+   - Confidence: ${(p.confidence * 100).toFixed(0)}%
+`).join('\n')}
 
-[P1 - PRIMARY FOCUS] Timestamp Alignment
-→ Listen to audio and align start/end times to actual speech boundaries
-→ Ensure timestamps are strictly within the provided audio duration
-→ Timestamps must be relative to provided audio file (starting at 00:00:00)
-→ Fix timing drift and bunched-up segments
+**MATCHING RULES**:
+1. **Primary Task**: Match each subtitle to one of the ${speakerProfiles.length} profiles above
+2. **Voice Analysis**: Compare pitch, speed, accent, tone with the profile
+3. **Content Clues**: Use sample quotes and inferred identity for context
+4. **Consistency**: Same voice = same speaker ID throughout
 
+**EDGE CASE - NEW SPEAKER DISCOVERY**:
+If you encounter a voice that does NOT match ANY profile AND you are >90% confident it's a NEW speaker:
+- Assign a new ID: "Speaker ${speakerProfiles.length + 1}", "Speaker ${speakerProfiles.length + 2}", etc.
+- Add brief characteristics in a comment field (you can use "comment" for this)
+- This should be RARE - Gemini 3.0 Pro is very thorough
+
+**QUALITY VERIFICATION**:
+✓ Every subtitle has a "speaker" field
+✓ Speaker IDs match profile list (or are justified new additions)
+✓ Voice changes are detected and speaker switches occur appropriately
+✓ Consistency maintained across the batch
+`;
+        } else {
+            // **SCENARIO B: NO PROFILES (REAL-TIME DETECTION)**
+            diarizationSection = `
 [P1.5 - SPEAKER IDENTIFICATION] Audio Diarization
 → **CRITICAL TASK**: Identify and label DISTINCT SPEAKERS in the audio
 → **OUTPUT FORMAT**: Add "speaker" field to EVERY subtitle entry
@@ -92,6 +124,26 @@ Before returning, confirm:
 ✓ Speaker IDs remain consistent throughout
 ✓ No speaker changes within a single segment
 ✓ At least one speaker identified (minimum "Speaker 1")
+`;
+        }
+    }
+
+    return `You are a professional Subtitle Timing and Synchronization Specialist.
+Your PRIMARY GOAL is to perfect timestamp alignment and segment timing for ${genre} content.
+
+TASK RULES (Priority Order):
+
+[P0 - HIGHEST] User Directives
+→ If a subtitle has a "comment" field, follow that instruction exactly
+→ User corrections override all other rules
+
+[P1 - PRIMARY FOCUS] Timestamp Alignment
+→ Listen to audio and align start/end times to actual speech boundaries
+→ Ensure timestamps are strictly within the provided audio duration
+→ Timestamps must be relative to provided audio file (starting at 00:00:00)
+→ Fix timing drift and bunched-up segments
+
+${diarizationSection}
 
 [P2 - READABILITY] Segment Splitting
 → SPLIT any segment longer than 4 seconds OR >25 Chinese characters
@@ -112,7 +164,7 @@ OUTPUT REQUIREMENTS:
 ✓ Preserve all IDs (assign new IDs only for inserted/split segments)
 ✓ All timestamps in HH:MM:SS,mmm format
 ✓ Ensure start < end for all segments
-✓ Every subtitle has a "speaker" field
+${enableDiarization ? '✓ Every subtitle has a "speaker" field' : ''}
 
 FINAL QUALITY CHECK:
 Before returning, verify:
@@ -120,7 +172,7 @@ Before returning, verify:
 ✓ Long segments properly split
 ✓ No missed speech from audio
 ✓ 'text_translated' completely unchanged from input
-✓ Speaker assignments are consistent and accurate
+${enableDiarization ? '✓ Speaker assignments are consistent and accurate' : ''}
 
 Context: ${genre}${glossaryText}`;
 };

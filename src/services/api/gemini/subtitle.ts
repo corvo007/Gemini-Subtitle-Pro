@@ -12,7 +12,9 @@ import { GlossaryState } from "./glossary-state";
 import { sliceAudioBuffer } from "@/services/audio/processor";
 import { transcribeAudio } from "@/services/api/openai/transcribe";
 import { blobToBase64 } from "@/services/audio/converter";
-import { getSystemInstruction } from "@/services/api/gemini/prompts";
+import { intelligentAudioSampling } from "@/services/audio/sampler";
+import { extractSpeakerProfiles, SpeakerProfile } from "./speakerProfile";
+import { getSystemInstruction, getSystemInstructionWithDiarization } from "@/services/api/gemini/prompts";
 import { parseGeminiResponse } from "@/services/subtitle/parser";
 import { mapInParallel, Semaphore } from "@/services/utils/concurrency";
 import { logger } from "@/services/utils/logger";
@@ -232,7 +234,38 @@ export const generateSubtitles = async (
     const glossaryState = new GlossaryState(glossaryHandlingPromise);
     logger.info("🔄 GlossaryState created - chunks can now access glossary independently");
 
-    // --- UNIFIED PARALLEL PIPELINE: Transcription → Wait for Glossary → Refine & Translate ---
+    // --- SPEAKER PROFILE EXTRACTION (Parallel) ---
+    let speakerProfilePromise: Promise<SpeakerProfile[]> | null = null;
+    if (settings.enableDiarization) {
+        logger.info("Starting parallel speaker profile extraction...");
+        onProgress?.({ id: 'diarization', total: 1, status: 'processing', message: '正在分析说话人...' });
+
+        speakerProfilePromise = (async () => {
+            try {
+                // 1. Intelligent Sampling (returns blob and duration)
+                const { blob: sampledAudioBlob, duration } = await intelligentAudioSampling(audioBuffer, 300, 8);
+
+                // 2. Extract Profiles
+                const profileSet = await extractSpeakerProfiles(
+                    ai,
+                    sampledAudioBlob,
+                    duration,
+                    settings.genre,
+                    300000
+                );
+
+                logger.info(`Extracted ${profileSet.profiles.length} speaker profiles`, profileSet.profiles);
+                onProgress?.({ id: 'diarization', total: 1, status: 'completed', message: `已识别 ${profileSet.profiles.length} 位说话人` });
+                return profileSet.profiles;
+            } catch (e) {
+                logger.error("Speaker profile extraction failed", e);
+                onProgress?.({ id: 'diarization', total: 1, status: 'error', message: '说话人分析失败' });
+                return [];
+            }
+        })();
+    }
+
+    // --- UNIFIED PARALLEL PIPELINE: Transcription → Wait for Glossary/Profiles → Refine & Translate ---
     // Each chunk proceeds independently without waiting for others
     logger.info("Starting Unified Pipeline: Each chunk will proceed independently");
 
@@ -332,7 +365,24 @@ export const generateSubtitles = async (
                 let refinedSegments: SubtitleItem[] = [];
                 onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'refining', message: '正在校对时间轴...' });
 
-                const refineSystemInstruction = getSystemInstruction(chunkSettings.genre, undefined, 'refinement', chunkSettings.glossary);
+                // Wait for speaker profiles if diarization is enabled
+                let speakerProfiles: SpeakerProfile[] | undefined;
+                if (speakerProfilePromise) {
+                    try {
+                        speakerProfiles = await speakerProfilePromise;
+                    } catch (e) {
+                        logger.warn("Failed to get speaker profiles, proceeding without them", e);
+                    }
+                }
+
+                const refineSystemInstruction = getSystemInstructionWithDiarization(
+                    chunkSettings.genre,
+                    undefined,
+                    'fix_timestamps',
+                    chunkSettings.glossary,
+                    chunkSettings.enableDiarization,
+                    speakerProfiles
+                );
                 // For refinement, only show original terms (without translations) to prevent language mixing
                 const glossaryInfo = chunkSettings.glossary && chunkSettings.glossary.length > 0
                     ? `\n\nKEY TERMINOLOGY (Listen for these terms in the audio and transcribe them accurately in the ORIGINAL LANGUAGE):\n${chunkSettings.glossary.map(g => `- ${g.term}${g.notes ? ` (${g.notes})` : ''}`).join('\n')}`
