@@ -49,4 +49,5 @@ export interface AppSettings {
     enableDiarization?: boolean;        // Enable speaker identification (default: false)
     includeSpeakerInExport?: boolean;   // Include speaker names in exported subtitles (default: false)
     useSpeakerColors?: boolean;         // Apply different colors for each speaker in ASS export (default: false)
+    useSpeakerStyledTranslation?: boolean; // Use speaker characteristics to guide translation style (default: false)
 }

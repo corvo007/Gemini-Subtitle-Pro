@@ -240,7 +240,8 @@ export const getSystemInstruction = (
   genre: string,
   customPrompt: string | undefined,
   mode: 'refinement' | 'translation' | 'proofread' | 'fix_timestamps' = 'translation',
-  glossary?: GlossaryItem[]
+  glossary?: GlossaryItem[],
+  speakerProfiles?: SpeakerProfile[]
 ): string => {
 
   // Helper to format glossary for different modes
@@ -275,7 +276,6 @@ export const getSystemInstruction = (
     3. FIX TIMESTAMPS: Ensure start/end times match the audio speech perfectly. **Timestamps MUST be strictly within the provided audio duration.**
     4. FIX TRANSCRIPTION: Correct mishearings, typos, and proper nouns (names, terminology).
     5. IGNORE FILLERS: Do not transcribe stuttering or meaningless filler words (uh, um, ah, eto, ano, 呃, 那个).
-    5.5. **REMOVE NON-SPEECH ANNOTATIONS**: Delete any sound effect descriptions like (laughter), (music), (applause), (笑), (音楽), etc. These should NOT appear in the final subtitles.
     6. SPLIT LINES: STRICT RULE. If a segment is longer than 4 seconds or > 22 characters, YOU MUST SPLIT IT into shorter, natural segments.
     7. **LANGUAGE RULE**: Keep the transcription in the ORIGINAL LANGUAGE spoken in the audio. DO NOT translate to any other language.
     8. FORMAT: Return a valid JSON array.
@@ -334,7 +334,25 @@ export const getSystemInstruction = (
     ✓ Is the Chinese fluent and natural?
     ✓ Did I remove all filler words?
 
-    ${genreContext}${glossaryText}`;
+    ${genreContext}${glossaryText}${speakerProfiles && speakerProfiles.length > 0 ? `
+
+**SPEAKER PROFILES**:
+${speakerProfiles.map(p => `
+[${p.id}]
+- Gender: ${p.characteristics.gender}
+- Role: ${p.inferredIdentity || 'unknown'}
+- Style: ${p.speakingStyle?.formality || 'normal'}
+- Vocabulary: ${p.speakingStyle?.vocabulary || 'standard'}
+`).join('')}
+**TRANSLATION STYLE EXAMPLES**:
+- formal style → polite/literary expressions
+- casual style → colloquial expressions
+- technical vocabulary → preserve domain terms
+
+Example:
+Speaker (casual): "すごい！" → "太棒了！"
+Speaker (formal): "すごいですね" → "真是令人印象深刻。"
+` : ''}`;
   }
 
   // 3. Fix Timestamps Prompt (Flash 2.5)

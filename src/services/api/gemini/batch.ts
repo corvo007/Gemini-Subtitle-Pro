@@ -68,11 +68,61 @@ export async function processTranslationBatchWithRetry(
                 throw e;
             }
 
-            const transMap = new Map(translatedData.map((t: any) => [t.id, t.text_translated]));
+            // Normalize ID type (LLM may return "5" instead of 5)
+            const transMap = new Map(translatedData.map((t: any) => [Number(t.id), t.text_translated]));
+
+            // Collect missing items for retry
+            const missingItems = batch.filter(item => {
+                const translated = transMap.get(Number(item.id));
+                return !translated || translated.trim().length === 0;
+            });
+
+            // Retry missing items once (if partial failure, not total failure)
+            if (missingItems.length > 0 && missingItems.length < batch.length) {
+                logger.info(`Retrying ${missingItems.length} missing translations...`);
+                onStatusUpdate?.({ message: `重试 ${missingItems.length} 条漏翻...` });
+
+                try {
+                    const retryPayload = missingItems.map(item => ({ id: item.id, text: item.original, speaker: item.speaker }));
+                    const retryPrompt = getTranslationBatchPrompt(missingItems.length, retryPayload);
+
+                    const retryResponse = await generateContentWithRetry(ai, {
+                        model: 'gemini-2.5-flash',
+                        contents: { parts: [{ text: retryPrompt }] },
+                        config: {
+                            responseMimeType: "application/json",
+                            responseSchema: TRANSLATION_SCHEMA,
+                            systemInstruction: systemInstruction,
+                            safetySettings: SAFETY_SETTINGS,
+                            maxOutputTokens: 65536,
+                        }
+                    }, 2, signal, onUsage, timeoutMs); // Only 2 retries for missing items
+
+                    const retryText = retryResponse.text || "[]";
+                    const retryClean = retryText.replace(/```json/g, '').replace(/```/g, '').trim();
+                    let retryData = JSON.parse(retryClean);
+                    if (!Array.isArray(retryData) && retryData.items) retryData = retryData.items;
+
+                    // Merge retry results
+                    let recoveredCount = 0;
+                    retryData.forEach((t: any) => {
+                        if (t.text_translated && t.text_translated.trim().length > 0) {
+                            transMap.set(Number(t.id), t.text_translated);
+                            recoveredCount++;
+                        }
+                    });
+
+                    if (recoveredCount > 0) {
+                        logger.info(`Recovered ${recoveredCount}/${missingItems.length} translations on retry`);
+                    }
+                } catch (retryError) {
+                    logger.warn(`Retry failed for missing translations`, formatGeminiError(retryError));
+                }
+            }
 
             let fallbackCount = 0;
             const result = batch.map(item => {
-                const translatedText = transMap.get(item.id);
+                const translatedText = transMap.get(Number(item.id));
 
                 // Log missing translations
                 if (!translatedText || translatedText.trim().length === 0) {

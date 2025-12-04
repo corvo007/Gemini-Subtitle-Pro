@@ -15,7 +15,7 @@ import { blobToBase64 } from "@/services/audio/converter";
 import { intelligentAudioSampling } from "@/services/audio/sampler";
 import { extractSpeakerProfiles, SpeakerProfile } from "./speakerProfile";
 import { getSystemInstruction, getSystemInstructionWithDiarization, getRefinementPrompt } from "@/services/api/gemini/prompts";
-import { parseGeminiResponse } from "@/services/subtitle/parser";
+import { parseGeminiResponse, cleanNonSpeechAnnotations } from "@/services/subtitle/parser";
 import { mapInParallel, Semaphore } from "@/services/utils/concurrency";
 import { logger } from "@/services/utils/logger";
 import { calculateDetailedCost } from "@/services/api/gemini/pricing";
@@ -370,7 +370,13 @@ export const generateSubtitles = async (
 
             logger.debug(`[Chunk ${index}] Transcription complete. Segments: ${rawSegments.length}`);
 
-            // Skip if no segments
+            // Clean non-speech annotations (e.g., "(laughter)", "[MUSIC]")
+            rawSegments = rawSegments.map(seg => ({
+                ...seg,
+                original: cleanNonSpeechAnnotations(seg.original)
+            })).filter(seg => seg.original.length > 0);
+
+            // Skip if no segments (after cleaning)
             if (rawSegments.length === 0) {
                 logger.warn(`[Chunk ${index}] No speech detected, skipping`);
                 chunkResults[i] = [];
@@ -488,7 +494,9 @@ export const generateSubtitles = async (
                         speaker: seg.speaker
                     }));
 
-                    const translateSystemInstruction = getSystemInstruction(chunkSettings.genre, chunkSettings.customTranslationPrompt, 'translation', chunkSettings.glossary);
+                    // Pass speaker profiles to translation only if useSpeakerStyledTranslation is enabled
+                    const profilesForTranslation = chunkSettings.useSpeakerStyledTranslation && speakerProfiles ? speakerProfiles : undefined;
+                    const translateSystemInstruction = getSystemInstruction(chunkSettings.genre, chunkSettings.customTranslationPrompt, 'translation', chunkSettings.glossary, profilesForTranslation);
 
                     let translatedItems: any[] = [];
                     if (isDebug && settings.debug?.mockGemini) {

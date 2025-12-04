@@ -1,6 +1,45 @@
 import { SubtitleItem, GeminiSubtitleSchema } from '@/types/subtitle';
 import { timeToSeconds, normalizeTimestamp, formatTime } from './time';
 
+/**
+ * Known non-speech annotations from Whisper transcription
+ * Format: [TEXT], (text), *text*
+ * Add new patterns here when encountered
+ */
+const NON_SPEECH_KEYWORDS = [
+    // English
+    'laughter', 'laughing', 'laugh',
+    'music', 'music playing',
+    'applause', 'clapping',
+    'cough', 'coughing',
+    'sigh', 'sighing',
+    'door', 'footsteps',
+    'silence', 'pause',
+    'inaudible', 'unintelligible',
+    'background noise', 'static',
+    // Japanese
+    '笑', '笑い', '笑い声',
+    '音楽', '音楽再生',
+    '拍手',
+    '咳', '咳払い',
+    'ため息',
+    // Chinese
+    '笑声', '掌声', '音乐',
+];
+
+// Build regex pattern from keywords
+const keywordPattern = NON_SPEECH_KEYWORDS.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+// Match: [keyword], (keyword), *keyword* - case insensitive
+const NON_SPEECH_PATTERN = new RegExp(`\\s*(?:\\[[^\\]]*(?:${keywordPattern})[^\\]]*\\]|\\([^)]*(?:${keywordPattern})[^)]*\\)|\\*[^*]*(?:${keywordPattern})[^*]*\\*)\\s*`, 'gi');
+
+/**
+ * Remove known non-speech annotations from Whisper transcription
+ * e.g., "(laughter)", "[MUSIC]", "*coughing*"
+ */
+export function cleanNonSpeechAnnotations(text: string): string {
+    return text.replace(NON_SPEECH_PATTERN, ' ').replace(/\s+/g, ' ').trim();
+}
+
 export const parseSrt = (content: string): SubtitleItem[] => {
     const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     const blocks = normalized.split(/\n\n+/);

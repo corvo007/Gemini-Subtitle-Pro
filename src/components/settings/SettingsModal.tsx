@@ -110,6 +110,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.useSpeakerColors ? 'left-6' : 'left-1'}`} />
                                                     </button>
                                                 </div>
+                                                <div className="flex items-center justify-between pl-4 animate-fade-in mt-3">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-slate-300">角色风格化翻译</label>
+                                                        <p className="text-xs text-slate-500">根据说话人特征调整翻译语气（正式/口语）</p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => updateSetting('useSpeakerStyledTranslation', !settings.useSpeakerStyledTranslation)}
+                                                        className={`w-10 h-5 rounded-full transition-colors relative ${settings.useSpeakerStyledTranslation ? 'bg-indigo-500' : 'bg-slate-600'}`}
+                                                    >
+                                                        <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.useSpeakerStyledTranslation ? 'left-6' : 'left-1'}`} />
+                                                    </button>
+                                                </div>
                                             </>
                                         )}
                                     </div>
