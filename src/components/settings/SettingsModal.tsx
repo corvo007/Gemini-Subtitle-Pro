@@ -74,7 +74,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <label className="block text-sm font-medium text-slate-300">启用说话人区分</label>
-                                                <p className="text-xs text-slate-500">在校对时间轴阶段识别不同说话人</p>
+                                                <p className="text-xs text-slate-500">识别音频或视频中的不同说话人，并打上标签</p>
                                             </div>
                                             <button
                                                 onClick={() => updateSetting('enableDiarization', !settings.enableDiarization)}
@@ -89,7 +89,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 <div className="flex items-center justify-between pl-4 animate-fade-in">
                                                     <div>
                                                         <label className="block text-sm font-medium text-slate-300">导出时包含说话人名称</label>
-                                                        <p className="text-xs text-slate-500">在字幕文件中显示说话人（如：Speaker 1：对话内容）</p>
+                                                        <p className="text-xs text-slate-500">在字幕文件中显示说话人（如：羊宫妃那：对话内容）</p>
                                                     </div>
                                                     <button
                                                         onClick={() => updateSetting('includeSpeakerInExport', !settings.includeSpeakerInExport)}
