@@ -1,6 +1,7 @@
 import { BatchOperationMode } from "@/types/subtitle";
 import { GlossaryItem } from "@/types/glossary";
 import { SpeakerProfile } from "./speakerProfile";
+import { formatTime } from "@/services/subtitle/time";
 
 // --- Helper Functions ---
 
@@ -604,3 +605,202 @@ export const getSpeakerProfileExtractionPrompt = (genre: string) => `
 }
 \`\`\`
 `;
+
+/**
+ * Generate translation batch prompt
+ */
+export const getTranslationBatchPrompt = (batchLength: number, payload: any[]): string => `
+    TRANSLATION BATCH TASK
+    
+    TASK: Translate ${batchLength} subtitle segments to Simplified Chinese.
+    
+    RULES (Priority Order):
+    
+    [P1 - ACCURACY] Complete and Accurate Translation
+    → Translate all ${batchLength} items (one-to-one mapping with input IDs)
+    → Ensure no meaning is lost from source text
+    → ID matching is critical - do not skip any ID
+    → Output exactly ${batchLength} items in the response
+    
+    [P2 - QUALITY] Translation Excellence
+    → Remove filler words and stuttering (uh, um, 呃, 嗯, etc.)
+    → Produce fluent, natural Simplified Chinese
+    → Use terminology from system instruction if provided
+    → Maintain appropriate tone and style
+    
+    [P3 - OUTPUT] Format Requirements
+    → 'text_translated' MUST BE in Simplified Chinese
+    → Never output English, Japanese, or other languages in 'text_translated'
+    → Maintain exact ID values from input
+    
+    FINAL VERIFICATION:
+    ✓ All ${batchLength} IDs present in output
+    ✓ All translations are Simplified Chinese
+    ✓ No meaning lost from original text
+    ✓ Filler words removed
+    
+    Input JSON:
+    ${JSON.stringify(payload)}
+    `;
+
+/**
+ * Parameters for fix timestamps prompt
+ */
+export interface FixTimestampsPromptParams {
+  batchLabel: string;
+  lastEndTime: string;
+  payload: any[];
+  glossaryContext: string;
+  specificInstruction: string;
+}
+
+/**
+ * Generate fix timestamps prompt
+ */
+export const getFixTimestampsPrompt = (params: FixTimestampsPromptParams): string => `
+    Batch ${params.batchLabel}.
+    TIMESTAMP ALIGNMENT & SEGMENTATION TASK
+    Previous batch ended at: "${params.lastEndTime}"
+    ${params.glossaryContext}
+    ${params.specificInstruction}
+
+    TASK RULES (Priority Order):
+    
+    [P1 - PRIMARY] Perfect Timestamp Alignment
+    → Listen to audio carefully
+    → Align "start" and "end" to actual speech boundaries in audio
+    → Timestamps MUST be relative to provided audio file (starting at 00:00:00)
+    → Fix bunched-up or spread-out timing issues
+    
+    [P2 - MANDATORY] Segment Splitting for Readability
+    → SPLIT any segment >4 seconds OR >25 Chinese characters
+    → When splitting: distribute timing based on actual audio speech
+    → Ensure splits occur at natural speech breaks
+    
+    [P3 - CONTENT] Audio Verification
+    → If you hear speech NOT in the text → ADD new subtitle entries
+    → Remove filler words from 'text_original' (uh, um, 呃, 嗯, etc.)
+    
+    [P4 - ABSOLUTE] Translation Preservation
+    → DO NOT modify 'text_translated' under ANY circumstances
+    → Even if it's English, wrong, or nonsensical → LEAVE IT
+    → Translation is handled by Proofread function, not here
+    
+    FINAL VERIFICATION:
+    ✓ All timestamps aligned to audio
+    ✓ Long segments split appropriately  
+    ✓ No missed speech
+    ✓ 'text_translated' completely unchanged
+
+    Input JSON:
+    ${JSON.stringify(params.payload)}
+        `;
+
+/**
+ * Parameters for proofread prompt
+ */
+export interface ProofreadPromptParams {
+  batchLabel: string;
+  lastEndTime: string;
+  totalVideoDuration?: number;
+  payload: any[];
+  glossaryContext: string;
+  specificInstruction: string;
+}
+
+/**
+ * Generate proofread prompt
+ */
+export const getProofreadPrompt = (params: ProofreadPromptParams): string => `
+    Batch ${params.batchLabel}.
+    TRANSLATION QUALITY IMPROVEMENT TASK
+    Previous batch ended at: "${params.lastEndTime}"
+    Total video duration: ${params.totalVideoDuration ? formatTime(params.totalVideoDuration) : 'Unknown'}
+    ${params.glossaryContext}
+    ${params.specificInstruction}
+
+    TASK RULES (Priority Order):
+    
+    [P1 - PRIMARY] Translation Quality Excellence
+    → Fix mistranslations and missed meanings
+    → Improve awkward or unnatural Chinese phrasing
+    → Ensure ALL 'text_translated' are fluent Simplified Chinese (never English/Japanese/etc.)
+    → Verify translation captures full intent of 'text_original'
+    
+    [P2 - CONTENT] Audio Content Verification
+    → Listen to audio carefully
+    → If you hear speech NOT in subtitles → ADD new subtitle entries
+    → Verify 'text_original' matches what was actually said
+    
+    [P3 - ABSOLUTE] Timestamp Preservation
+    → DO NOT modify timestamps of existing subtitles
+    → Exception: When adding NEW entries for missed speech, assign appropriate timestamps
+    → Even if existing lines are very long → LEAVE their timing unchanged
+    → Your job is TRANSLATION quality, not timing adjustment
+    
+    [P4 - PRESERVATION] Default Behavior
+    → For subtitles WITHOUT issues: preserve them as-is
+    → Only modify when there's a clear translation quality problem
+    
+    FINAL VERIFICATION:
+    ✓ All 'text_translated' are fluent Simplified Chinese
+    ✓ No missed meaning from 'text_original'
+    ✓ No missed speech from audio
+    ✓ Translation quality significantly improved
+
+    Current Subtitles JSON:
+    ${JSON.stringify(params.payload)}
+        `;
+
+/**
+ * Parameters for refinement prompt
+ */
+export interface RefinementPromptParams {
+  genre: string;
+  rawSegments: any[];
+  glossaryInfo: string;
+  enableDiarization: boolean;
+}
+
+/**
+ * Generate refinement prompt for transcription refinement
+ */
+export const getRefinementPrompt = (params: RefinementPromptParams): string => `
+            TRANSCRIPTION REFINEMENT TASK
+            Context: ${params.genre}
+
+            TASK: Refine the raw OpenAI Whisper transcription by listening to the audio and correcting errors.
+
+            RULES (Priority Order):
+
+            [P1 - ACCURACY] Audio-Based Correction
+            → Listen carefully to the attached audio
+            → Fix misrecognized words and phrases in 'text'
+            → Verify timing accuracy of 'start' and 'end' timestamps
+            ${params.glossaryInfo ? `→ Pay special attention to key terminology listed below` : ''}
+
+            [P2 - READABILITY] Segment Splitting
+            → SPLIT any segment longer than 4 seconds OR >25 characters
+            → When splitting: distribute timing based on actual audio speech
+            → Ensure splits occur at natural speech breaks
+            
+            [P3 - CLEANING] Remove Non-Speech Elements
+            → Remove filler words (uh, um, 呃, 嗯, etc.)
+            → Remove stuttering and false starts
+            → Keep natural speech flow
+
+            [P4 - OUTPUT] Format Requirements
+            → Return timestamps in HH:MM:SS,mmm format
+            → Timestamps must be relative to the provided audio (starting at 00:00:00,000)
+            → Ensure all required fields are present
+            ${params.enableDiarization ? `→ INCLUDE "speaker" field for every segment (e.g., "Speaker 1")` : ''}
+
+            FINAL VERIFICATION:
+            ✓ Long segments (>4s or >25 chars) properly split
+            ✓ Timestamps are relative to chunk start
+            ✓ Terminology from glossary is used correctly
+            ${params.glossaryInfo ? `✓ Checked against glossary terms` : ''}
+
+            Input Transcription (JSON):
+            ${JSON.stringify(params.rawSegments.map(s => ({ start: s.startTime, end: s.endTime, text: s.original })))}
+            `;

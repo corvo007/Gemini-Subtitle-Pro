@@ -9,7 +9,7 @@ import { sliceAudioBuffer } from "@/services/audio/processor";
 import { blobToBase64 } from "@/services/audio/converter";
 import { mapInParallel } from "@/services/utils/concurrency";
 import { logger } from "@/services/utils/logger";
-import { getSystemInstructionWithDiarization } from "@/services/api/gemini/prompts";
+import { getSystemInstructionWithDiarization, getTranslationBatchPrompt, getFixTimestampsPrompt, getProofreadPrompt } from "@/services/api/gemini/prompts";
 import { SpeakerProfile } from "./speakerProfile";
 import {
     TRANSLATION_SCHEMA,
@@ -36,39 +36,8 @@ export async function processTranslationBatchWithRetry(
 ): Promise<any[]> {
     const payload = batch.map(item => ({ id: item.id, text: item.original, speaker: item.speaker }));
 
-    const prompt = `
-    TRANSLATION BATCH TASK
-    
-    TASK: Translate ${batch.length} subtitle segments to Simplified Chinese.
-    
-    RULES (Priority Order):
-    
-    [P1 - ACCURACY] Complete and Accurate Translation
-    → Translate all ${batch.length} items (one-to-one mapping with input IDs)
-    → Ensure no meaning is lost from source text
-    → ID matching is critical - do not skip any ID
-    → Output exactly ${batch.length} items in the response
-    
-    [P2 - QUALITY] Translation Excellence
-    → Remove filler words and stuttering (uh, um, 呃, 嗯, etc.)
-    → Produce fluent, natural Simplified Chinese
-    → Use terminology from system instruction if provided
-    → Maintain appropriate tone and style
-    
-    [P3 - OUTPUT] Format Requirements
-    → 'text_translated' MUST BE in Simplified Chinese
-    → Never output English, Japanese, or other languages in 'text_translated'
-    → Maintain exact ID values from input
-    
-    FINAL VERIFICATION:
-    ✓ All ${batch.length} IDs present in output
-    ✓ All translations are Simplified Chinese
-    ✓ No meaning lost from original text
-    ✓ Filler words removed
-    
-    Input JSON:
-    ${JSON.stringify(payload)}
-    `;
+
+    const prompt = getTranslationBatchPrompt(batch.length, payload);
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
@@ -263,86 +232,23 @@ async function processBatch(
 
 
     if (mode === 'fix_timestamps') {
-        prompt = `
-    Batch ${batchLabel}.
-    TIMESTAMP ALIGNMENT & SEGMENTATION TASK
-    Previous batch ended at: "${lastEndTime}"
-    ${glossaryContext}
-    ${specificInstruction}
-
-    TASK RULES (Priority Order):
-    
-    [P1 - PRIMARY] Perfect Timestamp Alignment
-    → Listen to audio carefully
-    → Align "start" and "end" to actual speech boundaries in audio
-    → Timestamps MUST be relative to provided audio file (starting at 00:00:00)
-    → Fix bunched-up or spread-out timing issues
-    
-    [P2 - MANDATORY] Segment Splitting for Readability
-    → SPLIT any segment >4 seconds OR >25 Chinese characters
-    → When splitting: distribute timing based on actual audio speech
-    → Ensure splits occur at natural speech breaks
-    
-    [P3 - CONTENT] Audio Verification
-    → If you hear speech NOT in the text → ADD new subtitle entries
-    → Remove filler words from 'text_original' (uh, um, 呃, 嗯, etc.)
-    
-    [P4 - ABSOLUTE] Translation Preservation
-    → DO NOT modify 'text_translated' under ANY circumstances
-    → Even if it's English, wrong, or nonsensical → LEAVE IT
-    → Translation is handled by Proofread function, not here
-    
-    FINAL VERIFICATION:
-    ✓ All timestamps aligned to audio
-    ✓ Long segments split appropriately  
-    ✓ No missed speech
-    ✓ 'text_translated' completely unchanged
-
-    Input JSON:
-    ${JSON.stringify(payload)}
-        `;
+        prompt = getFixTimestampsPrompt({
+            batchLabel,
+            lastEndTime,
+            payload,
+            glossaryContext,
+            specificInstruction
+        });
     } else {
         // Proofread - Focus on TRANSLATION quality, may adjust timing when necessary
-        prompt = `
-    Batch ${batchLabel}.
-    TRANSLATION QUALITY IMPROVEMENT TASK
-    Previous batch ended at: "${lastEndTime}"
-    Total video duration: ${totalVideoDuration ? formatTime(totalVideoDuration) : 'Unknown'}
-    ${glossaryContext}
-    ${specificInstruction}
-
-    TASK RULES (Priority Order):
-    
-    [P1 - PRIMARY] Translation Quality Excellence
-    → Fix mistranslations and missed meanings
-    → Improve awkward or unnatural Chinese phrasing
-    → Ensure ALL 'text_translated' are fluent Simplified Chinese (never English/Japanese/etc.)
-    → Verify translation captures full intent of 'text_original'
-    
-    [P2 - CONTENT] Audio Content Verification
-    → Listen to audio carefully
-    → If you hear speech NOT in subtitles → ADD new subtitle entries
-    → Verify 'text_original' matches what was actually said
-    
-    [P3 - ABSOLUTE] Timestamp Preservation
-    → DO NOT modify timestamps of existing subtitles
-    → Exception: When adding NEW entries for missed speech, assign appropriate timestamps
-    → Even if existing lines are very long → LEAVE their timing unchanged
-    → Your job is TRANSLATION quality, not timing adjustment
-    
-    [P4 - PRESERVATION] Default Behavior
-    → For subtitles WITHOUT issues: preserve them as-is
-    → Only modify when there's a clear translation quality problem
-    
-    FINAL VERIFICATION:
-    ✓ All 'text_translated' are fluent Simplified Chinese
-    ✓ No missed meaning from 'text_original'
-    ✓ No missed speech from audio
-    ✓ Translation quality significantly improved
-
-    Current Subtitles JSON:
-    ${JSON.stringify(payload)}
-        `;
+        prompt = getProofreadPrompt({
+            batchLabel,
+            lastEndTime,
+            totalVideoDuration,
+            payload,
+            glossaryContext,
+            specificInstruction
+        });
     }
 
     try {

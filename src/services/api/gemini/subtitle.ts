@@ -14,7 +14,7 @@ import { transcribeAudio } from "@/services/api/openai/transcribe";
 import { blobToBase64 } from "@/services/audio/converter";
 import { intelligentAudioSampling } from "@/services/audio/sampler";
 import { extractSpeakerProfiles, SpeakerProfile } from "./speakerProfile";
-import { getSystemInstruction, getSystemInstructionWithDiarization } from "@/services/api/gemini/prompts";
+import { getSystemInstruction, getSystemInstructionWithDiarization, getRefinementPrompt } from "@/services/api/gemini/prompts";
 import { parseGeminiResponse } from "@/services/subtitle/parser";
 import { mapInParallel, Semaphore } from "@/services/utils/concurrency";
 import { logger } from "@/services/utils/logger";
@@ -422,45 +422,12 @@ export const generateSubtitles = async (
                     ? `\n\nKEY TERMINOLOGY (Listen for these terms in the audio and transcribe them accurately in the ORIGINAL LANGUAGE):\n${chunkSettings.glossary.map(g => `- ${g.term}${g.notes ? ` (${g.notes})` : ''}`).join('\n')}`
                     : '';
 
-                const refinePrompt = `
-            TRANSCRIPTION REFINEMENT TASK
-            Context: ${chunkSettings.genre}
-
-            TASK: Refine the raw OpenAI Whisper transcription by listening to the audio and correcting errors.
-
-            RULES (Priority Order):
-
-            [P1 - ACCURACY] Audio-Based Correction
-            → Listen carefully to the attached audio
-            → Fix misrecognized words and phrases in 'text'
-            → Verify timing accuracy of 'start' and 'end' timestamps
-            ${glossaryInfo ? `→ Pay special attention to key terminology listed below` : ''}
-
-            [P2 - READABILITY] Segment Splitting
-            → SPLIT any segment longer than 4 seconds OR >25 characters
-            → When splitting: distribute timing based on actual audio speech
-            → Ensure splits occur at natural speech breaks
-            
-            [P3 - CLEANING] Remove Non-Speech Elements
-            → Remove filler words (uh, um, 呃, 嗯, etc.)
-            → Remove stuttering and false starts
-            → Keep natural speech flow
-
-            [P4 - OUTPUT] Format Requirements
-            → Return timestamps in HH:MM:SS,mmm format
-            → Timestamps must be relative to the provided audio (starting at 00:00:00,000)
-            → Ensure all required fields are present
-            ${chunkSettings.enableDiarization ? `→ INCLUDE "speaker" field for every segment (e.g., "Speaker 1")` : ''}
-
-            FINAL VERIFICATION:
-            ✓ Long segments (>4s or >25 chars) properly split
-            ✓ Timestamps are relative to chunk start
-            ✓ Terminology from glossary is used correctly
-            ${glossaryInfo ? `✓ Checked against ${chunkSettings.glossary?.length} glossary terms` : ''}
-
-            Input Transcription (JSON):
-            ${JSON.stringify(rawSegments.map(s => ({ start: s.startTime, end: s.endTime, text: s.original })))}
-            `;
+                const refinePrompt = getRefinementPrompt({
+                    genre: chunkSettings.genre,
+                    rawSegments,
+                    glossaryInfo,
+                    enableDiarization: chunkSettings.enableDiarization
+                });
 
                 try {
                     if (isDebug && settings.debug?.mockGemini) {
