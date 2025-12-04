@@ -1,0 +1,9 @@
+# Auto detect text files and normalize line endings
+* text=auto
+
+# Force LF for shell scripts (critical for Linux/Docker)
+*.sh text eol=lf
+
+# Force CRLF for Windows batch files
+*.bat text eol=crlf
+*.cmd text eol=crlf
