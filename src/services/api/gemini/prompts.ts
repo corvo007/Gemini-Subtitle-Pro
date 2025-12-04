@@ -759,6 +759,7 @@ export interface RefinementPromptParams {
   genre: string;
   rawSegments: any[];
   glossaryInfo: string;
+  glossaryCount?: number;
   enableDiarization: boolean;
 }
 
@@ -799,7 +800,7 @@ export const getRefinementPrompt = (params: RefinementPromptParams): string => `
             ✓ Long segments (>4s or >25 chars) properly split
             ✓ Timestamps are relative to chunk start
             ✓ Terminology from glossary is used correctly
-            ${params.glossaryInfo ? `✓ Checked against glossary terms` : ''}
+            ${params.glossaryInfo ? `✓ Checked against ${params.glossaryCount} glossary terms` : ''}
 
             Input Transcription (JSON):
             ${JSON.stringify(params.rawSegments.map(s => ({ start: s.startTime, end: s.endTime, text: s.original })))}

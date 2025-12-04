@@ -433,6 +433,7 @@ export const generateSubtitles = async (
                     genre: chunkSettings.genre,
                     rawSegments,
                     glossaryInfo,
+                    glossaryCount: chunkSettings.glossary?.length,
                     enableDiarization: chunkSettings.enableDiarization
                 });
 
