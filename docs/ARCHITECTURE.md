@@ -4,7 +4,7 @@
 
 **Gemini Subtitle Pro** 是一款基于 AI 的字幕创建、翻译和润色工具。采用 React + Vite + Electron 技术栈，支持 Web 和桌面客户端双平台部署。
 
-- **版本**: 2.5.2
+- **版本**: 2.6.0
 - **技术栈**: React 19, Vite 6, Electron 39, TypeScript
 - **AI 引擎**: Google Gemini (翻译/润色), OpenAI Whisper (语音识别)
 
@@ -69,7 +69,7 @@ flowchart TB
     subgraph NATIVE["🖥️ 原生层 (Native Layer)"]
         direction TB
         FFMPEG_BIN["FFmpeg<br/>音视频处理"]
-        FFPROBE["FFprobe<br/>媒体信息"]
+        YT_DLP["yt-dlp<br/>视频下载"]
         CUDA["CUDA (可选)<br/>GPU 加速"]
     end
 
@@ -109,6 +109,8 @@ flowchart TB
             HOME["HomePage<br/>上传入口"]
             WORKSPACE["WorkspacePage<br/>编辑工作区"]
             GLOSSARY_PAGE["GlossaryManager<br/>术语管理"]
+            DOWNLOAD_PAGE["DownloadPage<br/>视频下载"]
+            COMPRESS_PAGE["CompressionPage<br/>视频压制"]
         end
         
         APP --> PAGES
@@ -125,6 +127,7 @@ flowchart TB
         subgraph FEATURE_HOOKS["功能 Hooks"]
             USE_GLOSSARY["useGlossaryFlow<br/>术语流程"]
             USE_SNAPSHOTS["useSnapshots<br/>版本快照"]
+            USE_DOWNLOAD["useDownload<br/>下载逻辑"]
             USE_TOAST["useToast<br/>通知系统"]
         end
     end
@@ -191,6 +194,8 @@ flowchart TB
         subgraph ELECTRON_SVC["桌面服务"]
             LOCAL_WHISPER_SVC["localWhisper.ts (13KB)"]
             FFMPEG_SVC["ffmpegAudioExtractor.ts"]
+            COMPRESSOR_SVC["videoCompressor.ts"]
+            YTDLP_SVC["ytdlp.ts"]
             STORAGE_SVC["storage.ts"]
         end
         
@@ -281,7 +286,9 @@ Gemini-Subtitle-Pro/
 │   │   ├── 📂 progress/             # 进度展示组件
 │   │   ├── 📂 settings/             # 设置组件
 │   │   ├── 📂 ui/                   # 基础 UI 组件
-│   │   └── 📂 upload/               # 上传组件
+│   │   ├── 📂 upload/               # 上传组件
+│   │   ├── 📂 download/             # 下载页面组件
+│   │   └── 📂 compression/          # 压制页面组件
 │   │
 │   ├── 📂 hooks/                    # React Hooks (7个文件)
 │   │   ├── 📄 useWorkspaceLogic.ts  # 核心工作区逻辑 (28KB)
@@ -338,6 +345,8 @@ Gemini-Subtitle-Pro/
 │   └── 📂 services/                 # 桌面端服务 (3个文件)
 │       ├── 📄 localWhisper.ts       # 本地 Whisper (13KB)
 │       ├── 📄 ffmpegAudioExtractor.ts # FFmpeg 音频提取 (5KB)
+│       ├── 📄 videoCompressor.ts    # 视频压缩服务
+│       ├── 📄 ytdlp.ts              # 视频下载服务
 │       └── 📄 storage.ts            # 存储服务
 │
 ├── 📂 resources/                    # 资源文件
@@ -626,6 +635,47 @@ flowchart TB
 
 ---
 
+### 6. 桌面端全流程 (下载-制作-压制)
+
+桌面版独有的完整工作流，打通了从素材获取到成片输出的链路：
+
+```mermaid
+flowchart LR
+    subgraph DOWNLOAD["📥 资源获取"]
+        direction TB
+        YTB["YouTube<br/>(yt-dlp)"]
+        BILI["Bilibili<br/>(yt-dlp)"]
+        LOCAL_FILE["本地视频文件"]
+        
+        YTB --> DOWNLOADER["视频下载器"]
+        BILI --> DOWNLOADER
+        DOWNLOADER --> LOCAL_FILE
+    end
+
+    subgraph PROCESS["⚙️ 字幕制作"]
+        direction TB
+        LOCAL_FILE --> IMPORT["导入/解码"]
+        IMPORT --> GEN["AI 字幕生成<br/>(Whisper + Gemini)"]
+        GEN --> EDIT["工作区编辑/校对"]
+        
+        EDIT --> SRT_ASS["导出字幕文件<br/>(.srt / .ass)"]
+    end
+
+    subgraph COMPRESS["🎬 成片压制"]
+        direction TB
+        LOCAL_FILE --> COMPRESSOR["视频压制引擎<br/>(FFmpeg)"]
+        EDIT -.->|"自动传递字幕路径"| COMPRESSOR
+        SRT_ASS -.->|"手动选择字幕"| COMPRESSOR
+        
+        COMPRESSOR --> OUTPUT["硬字幕视频<br/>(Hardsub Video)"]
+    end
+
+    DOWNLOAD --> PROCESS
+    PROCESS --> COMPRESS
+```
+
+---
+
 ## 🧩 核心模块说明
 
 ### 1. Gemini API 模块 (`src/services/api/gemini/`)
@@ -714,6 +764,7 @@ async function generateContentWithRetry(
 flowchart TB
     subgraph INPUT["📥 输入层"]
         direction LR
+        URL["视频链接<br/>(URL)"]
         FILE["媒体文件<br/>(MP4/MP3/WAV)"]
         SRT_IN["已有字幕<br/>(SRT/ASS/VTT)"]
         GLOSSARY_IN["术语表<br/>(JSON)"]
@@ -782,6 +833,8 @@ flowchart TB
         MERGE --> ASS_OUT["ASS 文件<br/>(样式化字幕)"]
         MERGE --> EDITOR["编辑器显示"]
         FINAL_GLOSSARY --> GLOSSARY_OUT["更新术语表<br/>(JSON)"]
+        
+        SRT_OUT -.-> VIDEO_OUT["压制视频<br/>(MP4/Hardsub)"]
     end
 
     SRT_IN --> REFINED_SUBS
@@ -789,6 +842,7 @@ flowchart TB
     SETTINGS_IN --> TRANSCRIBE
     SETTINGS_IN --> REFINEMENT
     SETTINGS_IN --> TRANSLATION
+    FILE -.-> VIDEO_OUT
 ```
 
 ### 数据类型转换链

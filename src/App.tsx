@@ -14,6 +14,8 @@ import { useSettings, useToast, useSnapshots, useGlossaryFlow, useWorkspaceLogic
 import { LogViewerModal } from '@/components/layout/LogViewerModal';
 import { HomePage } from '@/components/pages/HomePage';
 import { WorkspacePage } from '@/components/pages/WorkspacePage';
+import { DownloadPage } from '@/components/download';
+import { CompressionPage } from '@/components/compression/CompressionPage';
 
 import { getEnvVariable } from "@/services/utils/env";
 
@@ -22,7 +24,7 @@ const ENV_OPENAI_KEY = getEnvVariable('OPENAI_API_KEY') || '';
 
 export default function App() {
     // View State
-    const [view, setView] = useState<'home' | 'workspace'>('home');
+    const [view, setView] = useState<'home' | 'workspace' | 'download' | 'compression'>('home');
     const [activeTab, setActiveTab] = useState<'new' | 'import'>('new');
     const [settingsTab, setSettingsTab] = useState('general');
 
@@ -30,6 +32,9 @@ export default function App() {
     const [showSettings, setShowSettings] = useState(false);
     const [showGenreSettings, setShowGenreSettings] = useState(false);
     const [showGlossaryManager, setShowGlossaryManager] = useState(false);
+
+    // Downloaded video path - for passing to compression page
+    const [downloadedVideoPath, setDownloadedVideoPath] = useState<string | null>(null);
 
     // Custom Hooks
     const { settings, isSettingsLoaded, updateSetting } = useSettings();
@@ -123,21 +128,8 @@ export default function App() {
 
     // Navigation Handlers
     const goBackHome = () => {
-        const doGoBack = () => {
-            setView('home');
-            workspace.resetWorkspace();
-        };
-
-        if (workspace.subtitles.length > 0) {
-            showConfirm(
-                "返回主页",
-                "返回主页？未保存的进度将丢失。",
-                doGoBack,
-                'warning'
-            );
-        } else {
-            doGoBack();
-        }
+        // Preserve workspace state when navigating back
+        setView('home');
     };
 
     return (
@@ -196,15 +188,44 @@ export default function App() {
                     onStartNew={() => {
                         setActiveTab('new');
                         setView('workspace');
-                        workspace.resetWorkspace();
+                        // Preserve existing workspace state
                     }}
                     onStartImport={() => {
                         setActiveTab('import');
                         setView('workspace');
-                        workspace.resetWorkspace();
+                        // Preserve existing workspace state
                     }}
+                    onStartDownload={() => setView('download')}
                     onShowLogs={() => setShowLogs(true)}
                     onShowGlossary={() => setShowGlossaryManager(true)}
+                    onShowSettings={() => setShowSettings(true)}
+                    onStartCompression={() => setView('compression')}
+                />
+            )}
+            {view === 'download' && (
+                <DownloadPage
+                    onGoBack={() => setView('home')}
+                    onShowLogs={() => setShowLogs(true)}
+                    onShowSettings={() => setShowSettings(true)}
+                    onDownloadComplete={(videoPath) => {
+                        // Save the downloaded video path for later use (e.g., compression)
+                        setDownloadedVideoPath(videoPath);
+                        // Switch to workspace and set the downloaded video
+                        setActiveTab('new');
+                        setView('workspace');
+                        workspace.resetWorkspace();
+                        // Load the downloaded video
+                        workspace.loadFileFromPath(videoPath);
+                    }}
+                />
+            )}
+            {view === 'compression' && (
+                <CompressionPage
+                    onGoBack={() => setView('home')}
+                    workspaceSubtitles={workspace.subtitles}
+                    workspaceVideoFile={workspace.file}
+                    downloadedVideoPath={downloadedVideoPath}
+                    onShowLogs={() => setShowLogs(true)}
                     onShowSettings={() => setShowSettings(true)}
                 />
             )}
@@ -257,6 +278,10 @@ export default function App() {
                     updateSubtitleText={workspace.updateSubtitleText}
                     updateSubtitleOriginal={workspace.updateSubtitleOriginal}
                     updateSpeaker={workspace.updateSpeaker}
+                    onStartCompression={() => setView('compression')}
+                    histories={workspace.getHistories()}
+                    onLoadHistory={workspace.loadHistory}
+                    onDeleteHistory={workspace.deleteHistory}
                 />
             )}
             <GenreSettingsDialog

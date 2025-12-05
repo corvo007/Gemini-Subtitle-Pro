@@ -4,7 +4,7 @@
   "author": "Corvo007",
   "license": "MIT",
   "private": true,
-  "version": "2.5.3",
+  "version": "2.6.0",
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
@@ -101,6 +101,8 @@
           "to": ".",
           "filter": [
             "whisper-cli.exe",
+            "yt-dlp.exe",
+            "qjs.exe",
             "*.dll",
             "ggml-silero-v6.2.0.bin"
           ]

@@ -215,7 +215,7 @@ export class LocalWhisperService {
                     lines.forEach(line => {
                         if (line.trim()) {
                             // Intermediate output from stdout (if any) -> DEBUG
-                            if (onLog) onLog(`[DEBUG] [Whisper CLI] ${line}`);
+                            // if (onLog) onLog(`[DEBUG] [Whisper CLI] ${line}`);
                         }
                     });
                 });
@@ -231,7 +231,7 @@ export class LocalWhisperService {
                     lines.forEach(line => {
                         if (line.trim()) {
                             // Intermediate output from stderr (progress) -> DEBUG
-                            if (onLog) onLog(`[DEBUG] [Whisper CLI Info] ${line}`);
+                            // if (onLog) onLog(`[DEBUG] [Whisper CLI Info] ${line}`);
                         }
                     });
                 });

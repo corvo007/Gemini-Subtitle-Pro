@@ -403,8 +403,20 @@ export const generateSubtitles = async (
             if (speakerProfilePromise) {
                 onProgress?.({ id: index, total: totalChunks, status: 'processing', stage: 'waiting_speakers', message: '等待说话人分析...' });
                 try {
-                    speakerProfiles = await speakerProfilePromise;
+                    // Race with signal to ensure immediate response even if promise hangs
+                    if (signal) {
+                        speakerProfiles = await Promise.race([
+                            speakerProfilePromise,
+                            new Promise<never>((_, reject) => {
+                                if (signal.aborted) reject(new Error('Operation cancelled'));
+                                else signal.addEventListener('abort', () => reject(new Error('Operation cancelled')));
+                            })
+                        ]);
+                    } else {
+                        speakerProfiles = await speakerProfilePromise;
+                    }
                 } catch (e) {
+                    if (signal?.aborted) throw new Error('操作已取消');
                     logger.warn("Failed to get speaker profiles, proceeding without them", e);
                 }
             }

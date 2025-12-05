@@ -50,14 +50,14 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
             <div className="flex items-center space-x-2">
                 <button
                     onClick={onToggleSnapshots}
-                    disabled={!hasSnapshots}
                     className={`flex items-center space-x-2 px-4 py-2 border rounded-lg transition-colors text-sm font-medium ${hasSnapshots
-                            ? 'bg-indigo-900/30 border-indigo-500/50 text-indigo-200'
-                            : 'bg-slate-900 border-slate-800 text-slate-600'
+                        ? 'bg-indigo-900/30 border-indigo-500/50 text-indigo-200'
+                        : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
                         }`}
+                    title="历史记录"
                 >
                     <GitCommit className="w-4 h-4" />
-                    <span className="hidden sm:inline">版本</span>
+                    <span className="hidden sm:inline">历史</span>
                 </button>
                 <button
                     onClick={onShowLogs}

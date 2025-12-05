@@ -109,20 +109,38 @@ export async function generateContentWithRetry(
             let result;
             if (timeoutMs && timeoutMs > 0) {
                 let timeoutHandle: NodeJS.Timeout | null = null;
+                let abortHandler: (() => void) | null = null;
+
                 try {
-                    result = await Promise.race([
+                    const promises: Promise<any>[] = [
                         ai.models.generateContent(params).then(res => {
-                            // Clear timeout when request succeeds
                             if (timeoutHandle) clearTimeout(timeoutHandle);
+                            if (abortHandler && signal) signal.removeEventListener('abort', abortHandler);
                             return res;
-                        }),
-                        new Promise((_, reject) => {
-                            timeoutHandle = setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs);
                         })
-                    ]);
+                    ];
+
+                    // Add timeout promise
+                    promises.push(new Promise((_, reject) => {
+                        timeoutHandle = setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs);
+                    }));
+
+                    // Add signal cancellation promise
+                    if (signal) {
+                        promises.push(new Promise((_, reject) => {
+                            if (signal.aborted) {
+                                reject(new Error('Operation cancelled'));
+                            } else {
+                                abortHandler = () => reject(new Error('Operation cancelled'));
+                                signal.addEventListener('abort', abortHandler);
+                            }
+                        }));
+                    }
+
+                    result = await Promise.race(promises);
                 } catch (error) {
-                    // Clear timeout on error as well
                     if (timeoutHandle) clearTimeout(timeoutHandle);
+                    if (abortHandler && signal) signal.removeEventListener('abort', abortHandler);
                     throw error;
                 }
             } else {

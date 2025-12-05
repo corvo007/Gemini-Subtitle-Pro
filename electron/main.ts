@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell, session } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -26,6 +26,11 @@ if (squirrelStartup) {
 }
 
 import { localWhisperService } from './services/localWhisper.ts';
+import { ytDlpService, classifyError } from './services/ytdlp.ts';
+import { VideoCompressorService } from './services/videoCompressor.ts';
+import type { CompressionOptions } from './services/videoCompressor.ts';
+
+const videoCompressorService = new VideoCompressorService();
 
 // IPC Handler: Transcribe Local
 ipcMain.handle('transcribe-local', async (_event, { audioData, modelPath, language, threads, customBinaryPath }: { audioData: ArrayBuffer, modelPath: string, language?: string, threads?: number, customBinaryPath?: string }) => {
@@ -228,15 +233,163 @@ ipcMain.handle('storage-set', async (_event, data: any) => {
     }
 });
 
-// IPC Handler: Open External Link
-ipcMain.handle('open-external', async (_event, url: string) => {
+// IPC Handler: History
+ipcMain.handle('history-get', async () => {
     try {
-        await shell.openExternal(url);
-        return { success: true };
+        return await storageService.readHistory();
     } catch (error: any) {
-        console.error('[Main] Failed to open external link:', error);
+        console.error('[Main] Failed to read history:', error);
+        return [];
+    }
+});
+
+ipcMain.handle('history-save', async (_event, histories: any[]) => {
+    try {
+        return await storageService.saveHistory(histories);
+    } catch (error: any) {
+        console.error('[Main] Failed to save history:', error);
+        return false;
+    }
+});
+
+ipcMain.handle('history-delete', async (_event, id: string) => {
+    try {
+        return await storageService.deleteHistoryItem(id);
+    } catch (error: any) {
+        console.error('[Main] Failed to delete history:', error);
+        return false;
+    }
+});
+
+// IPC Handler: Read Local File (Bypass CSP/Sandbox for local playback)
+ipcMain.handle('read-local-file', async (event, filePath) => {
+    try {
+        const buffer = await fs.promises.readFile(filePath);
+        return buffer;
+    } catch (error) {
+        console.error('Failed to read file:', error);
+        throw error;
+    }
+});
+
+// IPC Handler: Write Temp File (for subtitles)
+ipcMain.handle('util:write-temp', async (_event, content: string, extension: string) => {
+    try {
+        const tempDir = app.getPath('temp');
+        const fileName = `gemini_subtitle_temp_${Date.now()}.${extension.replace(/^\./, '')}`;
+        const filePath = path.join(tempDir, fileName);
+        // Add BOM for Windows compatibility
+        const bom = '\uFEFF';
+        await fs.promises.writeFile(filePath, bom + content, 'utf-8');
+        return { success: true, path: filePath };
+    } catch (error: any) {
+        console.error('[Main] Failed to write temp file:', error);
         return { success: false, error: error.message };
     }
+});
+
+// IPC Handler: Video Compression
+ipcMain.handle('video:compress', async (event, inputPath: string, outputPath: string, options: CompressionOptions) => {
+    try {
+        return await videoCompressorService.compress(
+            inputPath,
+            outputPath,
+            options,
+            (progress) => {
+                event.sender.send('video:compression-progress', progress);
+            },
+            (logMessage) => {
+                addLog(logMessage);
+            }
+        );
+    } catch (error: any) {
+        console.error('[Main] Compression failed:', error);
+        throw error;
+    }
+});
+
+ipcMain.handle('video:get-info', async (_event, filePath: string) => {
+    try {
+        return await videoCompressorService.probe(filePath);
+    } catch (error: any) {
+        console.error('[Main] Failed to get video info:', error);
+        throw error;
+    }
+});
+
+// IPC Handler: Video Compression Cancel
+ipcMain.handle('video:cancel', async () => {
+    console.log('[Main] Cancelling video compression');
+    const cancelled = videoCompressorService.cancel();
+    return { success: cancelled };
+});
+
+// IPC Handler: Show Item In Folder
+ipcMain.handle('shell:show-item-in-folder', async (_event, filePath: string) => {
+    try {
+        shell.showItemInFolder(filePath);
+        return true;
+    } catch (e) {
+        console.error('Failed to show item in folder:', e);
+        return false;
+    }
+});
+
+// IPC Handler: Video Download - Parse URL
+ipcMain.handle('download:parse', async (_event, url: string) => {
+    try {
+        console.log(`[Main] Parsing video URL: ${url}`);
+        const videoInfo = await ytDlpService.parseUrl(url);
+        return { success: true, videoInfo };
+    } catch (error: any) {
+        console.error('[Main] Failed to parse URL:', error);
+        const classifiedError = classifyError(error.message || error.toString());
+        return { success: false, error: classifiedError.message, errorInfo: classifiedError };
+    }
+});
+
+// IPC Handler: Video Download - Start Download
+ipcMain.handle('download:start', async (event, { url, formatId, outputDir }: { url: string, formatId: string, outputDir: string }) => {
+    try {
+        console.log(`[Main] Starting download: ${url}, format: ${formatId}`);
+        const outputPath = await ytDlpService.download(url, formatId, outputDir, (progress) => {
+            event.sender.send('download:progress', progress);
+        });
+        return { success: true, outputPath };
+    } catch (error: any) {
+        console.error('[Main] Download failed:', error);
+        const classifiedError = classifyError(error.message || error.toString());
+        return { success: false, error: classifiedError.message, errorInfo: classifiedError };
+    }
+});
+
+// IPC Handler: Video Download - Cancel
+ipcMain.handle('download:cancel', async () => {
+    console.log('[Main] Cancelling download');
+    ytDlpService.abort();
+    return { success: true };
+});
+
+// IPC Handler: Video Download - Select Output Directory
+ipcMain.handle('download:select-dir', async () => {
+    try {
+        const result = await dialog.showOpenDialog({
+            title: '选择下载目录',
+            properties: ['openDirectory']
+        });
+        if (!result.canceled && result.filePaths.length > 0) {
+            return { success: true, path: result.filePaths[0] };
+        }
+        return { success: false, canceled: true };
+    } catch (error: any) {
+        console.error('[Main] Failed to select directory:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// IPC Handler: Video Download - Get Default Output Dir
+ipcMain.handle('download:default-dir', async () => {
+    return { success: true, path: ytDlpService.getDefaultOutputDir() };
 });
 
 
@@ -407,6 +560,16 @@ const createMenu = () => {
 };
 
 app.on('ready', async () => {
+    // Intercept Bilibili image requests to add Referer header
+    // This bypasses the 403 Forbidden error due to anti-hotlinking
+    session.defaultSession.webRequest.onBeforeSendHeaders(
+        { urls: ['*://*.hdslb.com/*', '*://*.hdslb.net/*'] },
+        (details, callback) => {
+            details.requestHeaders['Referer'] = 'https://www.bilibili.com/';
+            callback({ requestHeaders: details.requestHeaders });
+        }
+    );
+
     createMenu();
     createWindow();
 });

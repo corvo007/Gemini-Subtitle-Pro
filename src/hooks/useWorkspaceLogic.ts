@@ -136,7 +136,7 @@ export const useWorkspaceLogic = ({
             if (activeTab === 'new' && subtitles.length > 0 && status === GenerationStatus.COMPLETED) {
                 showConfirm(
                     "确认替换文件",
-                    "替换文件后将清空当前字幕，需重新生成。是否继续？",
+                    "替换文件后将清空当前字幕。建议先导出字幕（SRT/ASS）再操作。是否继续？",
                     () => {
                         setSubtitles([]); setStatus(GenerationStatus.IDLE); snapshotsValues.setSnapshots([]); setBatchComments({});
                         processFile();
@@ -521,11 +521,148 @@ export const useWorkspaceLogic = ({
         setError(null);
     }, [snapshotsValues]);
 
+    const loadFileFromPath = React.useCallback(async (path: string) => {
+        try {
+            // Use IPC to read file buffer (bypassing CSP/Sandbox)
+            const buffer = await window.electronAPI.readLocalFile(path);
+
+            // Create a File object
+            const filename = path.split(/[\\/]/).pop() || 'video.mp4';
+            // Determine mime type based on extension
+            const ext = filename.split('.').pop()?.toLowerCase();
+            const type = ext === 'mp4' ? 'video/mp4' : (ext === 'mkv' ? 'video/x-matroska' : 'video/webm');
+
+            const file = new File([buffer], filename, { type });
+            // Manually attach path for Electron/FFmpeg usage
+            Object.defineProperty(file, 'path', {
+                value: path,
+                writable: false,
+                enumerable: false, // standard File.path is not enumerable
+                configurable: false
+            });
+
+            logger.info("Loaded file from path", { path, size: file.size, type: file.type });
+
+            setFile(file);
+            audioCacheRef.current = null;
+            setError(null);
+
+            // Get duration
+            try {
+                const d = await getFileDuration(file);
+                setDuration(d);
+            } catch (e) {
+                setDuration(0);
+            }
+
+            // Reset workspace state
+            setSubtitles([]);
+            setStatus(GenerationStatus.IDLE);
+            snapshotsValues.setSnapshots([]);
+            setBatchComments({});
+            setSelectedBatches(new Set());
+
+        } catch (e: any) {
+            logger.error("Failed to load file from path", e);
+            setError("无法加载文件: " + e.message);
+        }
+    }, [snapshotsValues]);
+
     useEffect(() => {
         return () => {
             cleanup();
         };
     }, [cleanup]);
+
+    // History persistence (Desktop only - stored in JSON file)
+    const MAX_HISTORIES = 5;
+    const [histories, setHistories] = useState<WorkspaceHistory[]>([]);
+
+    interface WorkspaceHistory {
+        id: string;
+        filePath: string;
+        fileName: string;
+        subtitles: SubtitleItem[];
+        savedAt: string;
+    }
+
+    // Load histories on mount
+    useEffect(() => {
+        const loadHistories = async () => {
+            if (!window.electronAPI?.history) return;
+            try {
+                const data = await window.electronAPI.history.get();
+                setHistories(data || []);
+            } catch (e) {
+                logger.error('Failed to load histories', e);
+            }
+        };
+        loadHistories();
+    }, []);
+
+    const getHistories = React.useCallback((): WorkspaceHistory[] => {
+        return histories;
+    }, [histories]);
+
+    const saveHistory = React.useCallback(async () => {
+        if (!window.electronAPI?.isElectron || !file || subtitles.length === 0) return;
+
+        const filePath = window.electronAPI.getFilePath(file);
+        if (!filePath) return;
+
+        // Remove existing entry for same file
+        const filtered = histories.filter(h => h.filePath !== filePath);
+
+        const newHistory: WorkspaceHistory = {
+            id: Date.now().toString(),
+            filePath,
+            fileName: file.name,
+            subtitles,
+            savedAt: new Date().toISOString()
+        };
+
+        // Add new entry at the beginning, limit to MAX_HISTORIES
+        const updated = [newHistory, ...filtered].slice(0, MAX_HISTORIES);
+
+        try {
+            await window.electronAPI.history.save(updated);
+            setHistories(updated);
+            logger.info('Saved workspace history', { fileName: file.name, subtitleCount: subtitles.length });
+        } catch (e) {
+            logger.error('Failed to save history', e);
+        }
+    }, [file, subtitles, histories]);
+
+    const deleteHistory = React.useCallback(async (id: string) => {
+        if (!window.electronAPI?.history) return;
+        try {
+            await window.electronAPI.history.delete(id);
+            setHistories(prev => prev.filter(h => h.id !== id));
+        } catch (e) {
+            logger.error('Failed to delete history', e);
+        }
+    }, []);
+
+    const loadHistory = React.useCallback(async (history: WorkspaceHistory) => {
+        try {
+            await loadFileFromPath(history.filePath);
+            setSubtitles(history.subtitles);
+            setStatus(GenerationStatus.COMPLETED);
+            snapshotsValues.createSnapshot('从历史恢复', history.subtitles, {});
+            logger.info('Loaded workspace history', { fileName: history.fileName });
+        } catch (e: any) {
+            logger.error('Failed to load history', e);
+            setError('无法加载历史: ' + e.message);
+        }
+    }, [loadFileFromPath, snapshotsValues]);
+
+    // Auto-save history when subtitles are generated/imported
+    useEffect(() => {
+        if (status === GenerationStatus.COMPLETED && subtitles.length > 0 && file) {
+            saveHistory();
+        }
+    }, [status, subtitles.length, file, saveHistory]);
+
 
     return React.useMemo(() => ({
         // State
@@ -562,7 +699,13 @@ export const useWorkspaceLogic = ({
         updateSubtitleOriginal,
         updateSpeaker,
         resetWorkspace,
-        cancelOperation
+        cancelOperation,
+        loadFileFromPath,
+
+        // History
+        getHistories,
+        loadHistory,
+        deleteHistory
     }), [
         file,
         duration,
@@ -591,6 +734,10 @@ export const useWorkspaceLogic = ({
         updateSubtitleOriginal,
         updateSpeaker,
         resetWorkspace,
-        cancelOperation
+        cancelOperation,
+        loadFileFromPath,
+        getHistories,
+        loadHistory,
+        deleteHistory
     ]);
 };

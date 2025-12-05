@@ -1,9 +1,10 @@
 import React, { useRef, useEffect } from 'react';
-import { FileVideo, Download, Play, AlertCircle, Loader2, X, FileText, RotateCcw, Upload, Plus, Clapperboard, Edit2, Book, GitCommit } from 'lucide-react';
+import { FileVideo, Download, Play, AlertCircle, Loader2, X, FileText, RotateCcw, Upload, Plus, Clapperboard, Edit2, Book, GitCommit, Scissors } from 'lucide-react';
 import { SubtitleItem, SubtitleSnapshot, BatchOperationMode } from '@/types/subtitle';
 import { AppSettings } from '@/types/settings';
 import { GenerationStatus } from '@/types/api';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
+import { HistoryPanel, WorkspaceHistory } from '@/components/layout/HistoryPanel';
 import { FileUploader } from '@/components/upload/FileUploader';
 import { SubtitleEditor } from '@/components/editor/SubtitleEditor';
 import { CustomSelect } from '@/components/settings';
@@ -37,6 +38,12 @@ interface WorkspacePageProps {
     onUpdateSetting: (key: keyof AppSettings, value: any) => void;
     onToggleSnapshots: () => void;
     onRestoreSnapshot: (snapshot: SubtitleSnapshot) => void;
+    onStartCompression?: () => void;
+
+    // History
+    histories: WorkspaceHistory[];
+    onLoadHistory: (history: WorkspaceHistory) => void;
+    onDeleteHistory: (id: string) => void;
 
     // Editor Handlers
     toggleAllBatches: (total: number) => void;
@@ -88,10 +95,31 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
     updateLineComment,
     updateSubtitleText,
     updateSubtitleOriginal,
-    updateSpeaker
+    updateSpeaker,
+    onStartCompression,
+    histories,
+    onLoadHistory,
+    onDeleteHistory
 }) => {
     const subtitleListRef = useRef<HTMLDivElement>(null);
     const isProcessing = status === GenerationStatus.UPLOADING || status === GenerationStatus.PROCESSING || status === GenerationStatus.PROOFREADING;
+    const isElectron = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
+
+    // Check if file is video (not audio)
+    const isVideoFile = (f: File | null): boolean => {
+        if (!f) return false;
+        const ext = f.name.split('.').pop()?.toLowerCase() || '';
+        const audioExtensions = ['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'wma', 'opus'];
+        return f.type.startsWith('video/') || (!audioExtensions.includes(ext) && (f.type.startsWith('video/') || ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', 'ts', 'm2ts', 'mts', 'vob'].includes(ext)));
+    };
+
+    // Determine if compression button should show
+    // For 'new' tab: requires video file
+    // For 'import' tab: requires both video and subtitles
+    const canShowCompression = isElectron && onStartCompression && (
+        (activeTab === 'new' && isVideoFile(file) && subtitles.length > 0) ||
+        (activeTab === 'import' && isVideoFile(file) && subtitles.length > 0)
+    );
 
     // Scroll to bottom on new subtitles
     useEffect(() => {
@@ -225,6 +253,15 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                                 <div className="mt-3 text-[12px] text-center text-slate-500">输出模式: {settings.outputMode === 'bilingual' ? '双语字幕' : '仅译文'}</div>
                             </div>
                         )}
+                        {canShowCompression && (
+                            <button
+                                onClick={onStartCompression}
+                                className="w-full py-3 px-4 rounded-xl font-semibold text-white shadow-lg transition-all flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 shadow-amber-500/25 hover:shadow-amber-500/40 animate-fade-in"
+                            >
+                                <Scissors className="w-5 h-5" />
+                                <span>压制视频</span>
+                            </button>
+                        )}
                     </div>
 
                     <div className="lg:col-span-9 flex flex-col h-[500px] lg:h-full min-h-0">
@@ -236,10 +273,15 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                         </div>
                         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl relative flex-1 min-h-0">
                             {showSnapshots ? (
-                                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar w-full relative">
-                                    <button onClick={onToggleSnapshots} className="absolute top-2 right-4 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
-                                    {snapshots.length === 0 ? (<div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50"><GitCommit className="w-12 h-12 mb-2" /><p>本次会话无可用版本</p></div>) : (snapshots.map((snap) => (<div key={snap.id} className="bg-slate-800/50 border border-slate-700 p-4 rounded-xl flex justify-between items-center"><div><h4 className="font-medium text-slate-200">{snap.description}</h4><p className="text-xs text-slate-500 mt-1">{snap.timestamp}</p></div><button onClick={() => onRestoreSnapshot(snap)} className="px-3 py-1.5 bg-slate-700 hover:bg-indigo-600 rounded text-xs text-white transition-colors flex items-center"><RotateCcw className="w-3 h-3 mr-1" /> 恢复</button></div>)))}
-                                </div>
+                                <HistoryPanel
+                                    isOpen={showSnapshots}
+                                    onClose={onToggleSnapshots}
+                                    snapshots={snapshots}
+                                    onRestoreSnapshot={onRestoreSnapshot}
+                                    histories={histories}
+                                    onLoadHistory={onLoadHistory}
+                                    onDeleteHistory={onDeleteHistory}
+                                />
                             ) : (
                                 <div className="flex-1 overflow-y-auto custom-scrollbar relative w-full h-full max-h-[calc(100vh-220px)]" ref={subtitleListRef}>
                                     <SubtitleEditor

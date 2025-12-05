@@ -25,6 +25,7 @@ export interface ElectronAPI {
     // 现有方法
     getFilePath: (file: File) => string;
     readAudioFile: (filePath: string) => Promise<ArrayBuffer>;
+    readLocalFile: (filePath: string) => Promise<ArrayBuffer>;
     saveSubtitleDialog: (defaultName: string, content: string, format: string) => Promise<{
         success: boolean;
         path?: string;
@@ -67,6 +68,76 @@ export interface ElectronAPI {
 
     // Open external link
     openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
+
+    // Video Download APIs
+    download: {
+        parse: (url: string) => Promise<{
+            success: boolean;
+            videoInfo?: {
+                id: string;
+                title: string;
+                thumbnail: string;
+                duration: number;
+                uploader: string;
+                platform: 'youtube' | 'bilibili';
+                formats: {
+                    formatId: string;
+                    quality: string;
+                    ext: string;
+                    filesize?: number;
+                    hasAudio: boolean;
+                    hasVideo: boolean;
+                }[];
+            };
+            error?: string;
+            errorInfo?: {
+                type: string;
+                message: string;
+                originalError: string;
+                retryable: boolean;
+            };
+        }>;
+        start: (options: { url: string; formatId: string; outputDir: string }) => Promise<{
+            success: boolean;
+            outputPath?: string;
+            error?: string;
+            errorInfo?: {
+                type: string;
+                message: string;
+                originalError: string;
+                retryable: boolean;
+            };
+        }>;
+        cancel: () => Promise<{ success: boolean }>;
+        selectDir: () => Promise<{ success: boolean; path?: string; canceled?: boolean }>;
+        getDefaultDir: () => Promise<{ success: boolean; path: string }>;
+        onProgress: (callback: (progress: {
+            percent: number;
+            speed: string;
+            eta: string;
+            downloaded: number;
+            total: number;
+        }) => void) => () => void;
+    };
+
+    // Utils
+    writeTempFile: (content: string, extension: string) => Promise<{ success: boolean; path?: string; error?: string }>;
+    showItemInFolder: (path: string) => Promise<boolean>;
+
+    // Video Compression APIs
+    compression: {
+        compress: (inputPath: string, outputPath: string, options: any) => Promise<string>;
+        cancel: () => Promise<{ success: boolean }>;
+        getInfo: (filePath: string) => Promise<any>;
+        onProgress: (callback: (progress: any) => void) => () => void;
+    };
+
+    // History APIs
+    history: {
+        get: () => Promise<any[]>;
+        save: (histories: any[]) => Promise<boolean>;
+        delete: (id: string) => Promise<boolean>;
+    };
 }
 
 declare global {

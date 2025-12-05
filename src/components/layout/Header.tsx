@@ -2,9 +2,9 @@ import React from 'react';
 import { Languages, FileText, Book, Settings } from 'lucide-react';
 
 interface HeaderProps {
-    onShowLogs: () => void;
-    onShowGlossary: () => void;
-    onShowSettings: () => void;
+    onShowLogs?: () => void;
+    onShowGlossary?: () => void;
+    onShowSettings?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,29 +26,35 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
             </div>
             <div className="flex space-x-2">
-                <button
-                    onClick={onShowLogs}
-                    className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group"
-                    title="查看日志"
-                >
-                    <FileText className="w-4 h-4 text-slate-400 group-hover:text-blue-400 transition-colors" />
-                    <span className="hidden sm:inline text-slate-300 group-hover:text-white">日志</span>
-                </button>
-                <button
-                    onClick={onShowGlossary}
-                    className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group"
-                    title="术语表管理"
-                >
-                    <Book className="w-4 h-4 text-slate-400 group-hover:text-indigo-400 transition-colors" />
-                    <span className="hidden sm:inline text-slate-300 group-hover:text-white">术语表</span>
-                </button>
-                <button
-                    onClick={onShowSettings}
-                    className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group"
-                >
-                    <Settings className="w-4 h-4 text-slate-400 group-hover:text-emerald-400 transition-colors" />
-                    <span className="hidden sm:inline text-slate-300 group-hover:text-white">设置</span>
-                </button>
+                {onShowLogs && (
+                    <button
+                        onClick={onShowLogs}
+                        className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group"
+                        title="查看日志"
+                    >
+                        <FileText className="w-4 h-4 text-slate-400 group-hover:text-blue-400 transition-colors" />
+                        <span className="hidden sm:inline text-slate-300 group-hover:text-white">日志</span>
+                    </button>
+                )}
+                {onShowGlossary && (
+                    <button
+                        onClick={onShowGlossary}
+                        className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group"
+                        title="术语表管理"
+                    >
+                        <Book className="w-4 h-4 text-slate-400 group-hover:text-indigo-400 transition-colors" />
+                        <span className="hidden sm:inline text-slate-300 group-hover:text-white">术语表</span>
+                    </button>
+                )}
+                {onShowSettings && (
+                    <button
+                        onClick={onShowSettings}
+                        className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors text-sm font-medium group"
+                    >
+                        <Settings className="w-4 h-4 text-slate-400 group-hover:text-emerald-400 transition-colors" />
+                        <span className="hidden sm:inline text-slate-300 group-hover:text-white">设置</span>
+                    </button>
+                )}
             </div>
         </header>
     );
