@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.7.1] - 2025-12-06
+
+### Performance
+
+- **Virtualized Subtitle List**: Optimized large file rendering using `react-virtuoso` for virtualized subtitle lists.
+
+### Fixes
+
+- **UI Improvements**: Minor UI fixes and refinements.
+
 ## [2.7.0] - 2025-12-06
 
 ### Features

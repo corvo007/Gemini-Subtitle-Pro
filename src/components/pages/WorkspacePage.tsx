@@ -141,7 +141,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
     }, [subtitles, status]);
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 flex flex-col">
+        <div className="h-screen bg-slate-950 text-slate-200 p-4 md:p-8 flex flex-col overflow-hidden">
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col space-y-6">
                 <WorkspaceHeader
                     title={activeTab === 'new' ? '新建项目' : '字幕编辑器'}
@@ -302,7 +302,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                                     onDeleteHistory={onDeleteHistory}
                                 />
                             ) : (
-                                <div className="flex-1 overflow-y-auto custom-scrollbar relative w-full h-full max-h-[calc(100vh-220px)]" ref={subtitleListRef}>
+                                <div className="flex-1 relative w-full h-full" ref={subtitleListRef}>
                                     <SubtitleEditor
                                         subtitles={subtitles}
                                         settings={settings}
@@ -328,6 +328,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                                         speakerProfiles={speakerProfiles}
                                         deleteSubtitle={deleteSubtitle}
                                         onManageSpeakers={onManageSpeakers}
+                                        scrollContainerRef={subtitleListRef}
                                     />
                                 </div>
                             )}

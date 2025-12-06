@@ -35,6 +35,7 @@ interface SubtitleEditorProps {
     speakerProfiles?: SpeakerUIProfile[];
 
     onManageSpeakers?: () => void;
+    scrollContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
 export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(({
@@ -62,7 +63,8 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(({
     deleteSubtitle,
     speakerProfiles,
 
-    onManageSpeakers
+    onManageSpeakers,
+    scrollContainerRef
 }) => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [filters, setFilters] = React.useState<SubtitleFilters>(defaultFilters);
@@ -197,7 +199,7 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(({
     };
 
     return (
-        <div className="p-4 space-y-6 pb-20 min-h-full">
+        <div className="p-4 space-y-6">
             {/* Always show BatchHeader when completed */}
             {status === GenerationStatus.COMPLETED && (
                 <BatchHeader
@@ -237,7 +239,7 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(({
                     {filteredSubtitles.length > 0 ? (
                         <div className="border border-slate-700/50 bg-slate-900/40 rounded-xl overflow-hidden">
                             <Virtuoso
-                                style={{ height: 'calc(100vh - 300px)' }}
+                                style={{ height: 'calc(100vh - 280px)' }}
                                 data={filteredSubtitles}
                                 itemContent={(index, sub) => {
                                     const originalIndex = subtitles.findIndex(s => s.id === sub.id);
@@ -275,7 +277,7 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(({
             ) : (
                 // Normal Batch View
                 <Virtuoso
-                    style={{ height: 'calc(100vh - 300px)' }}
+                    style={{ height: 'calc(100vh - 280px)' }}
                     data={chunks}
                     itemContent={(chunkIdx, chunk) => (
                         <div className="mb-6">
