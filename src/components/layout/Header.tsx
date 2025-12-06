@@ -13,7 +13,7 @@ export const Header: React.FC<HeaderProps> = ({
     onShowSettings
 }) => {
     return (
-        <header className="flex justify-between items-center mb-12">
+        <header className="flex justify-between items-center mb-12 window-drag-region" style={{ WebkitAppRegion: 'drag' } as any}>
             <div className="flex items-center space-x-3">
                 <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/20">
                     <Languages className="w-6 h-6 text-white" />

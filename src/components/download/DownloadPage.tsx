@@ -70,7 +70,7 @@ export function DownloadPage({ onDownloadComplete, onGoBack, onShowLogs, onShowS
         <div className="min-h-screen bg-slate-950 flex flex-col p-4 md:p-8">
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
                 {/* Header */}
-                <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800 shrink-0">
+                <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800 shrink-0 window-drag-region" style={{ WebkitAppRegion: 'drag' } as any}>
                     <div className="flex items-center space-x-4">
                         {onGoBack && (
                             <button

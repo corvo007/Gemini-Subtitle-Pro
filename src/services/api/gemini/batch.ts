@@ -22,7 +22,8 @@ import {
 import {
     generateContentWithRetry,
     generateContentWithLongOutput,
-    formatGeminiError
+    formatGeminiError,
+    getActionableErrorMessage
 } from "./client";
 
 export async function processTranslationBatchWithRetry(
@@ -145,7 +146,7 @@ export async function processTranslationBatchWithRetry(
 
             return result;
 
-        } catch (e) {
+        } catch (e: any) {
             if (attempt < maxRetries - 1) {
                 logger.warn(`Translation batch failed (Attempt ${attempt + 1}/${maxRetries}). Retrying entire batch...`, formatGeminiError(e));
                 onStatusUpdate?.({
@@ -158,9 +159,14 @@ export async function processTranslationBatchWithRetry(
                 await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
             } else {
                 logger.error(`批量翻译在 ${maxRetries} 次尝试后失败`, formatGeminiError(e));
+                // Use actionable error message if available
+                const actionableMsg = getActionableErrorMessage(e);
+                const errorMsg = actionableMsg
+                    ? `翻译失败：${actionableMsg}`
+                    : `批量翻译在 ${maxRetries} 次尝试后失败。将使用原文。`;
                 onStatusUpdate?.({
                     toast: {
-                        message: `批量翻译在 ${maxRetries} 次尝试后失败。将使用原文。`,
+                        message: errorMsg,
                         type: 'error'
                     }
                 });

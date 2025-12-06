@@ -1,3 +1,4 @@
+import { mainLogger } from './logger.ts'; // Must be first!
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell, session } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -36,7 +37,7 @@ const videoCompressorService = new VideoCompressorService();
 ipcMain.handle('transcribe-local', async (_event, { audioData, modelPath, language, threads, customBinaryPath }: { audioData: ArrayBuffer, modelPath: string, language?: string, threads?: number, customBinaryPath?: string }) => {
     try {
         console.log(`[Main] Received local transcription request. Model: ${modelPath}, Lang: ${language}, Threads: ${threads}, CustomPath: ${customBinaryPath}`);
-        const result = await localWhisperService.transcribe(audioData, modelPath, language, threads, (msg) => addLog(msg), customBinaryPath);
+        const result = await localWhisperService.transcribe(audioData, modelPath, language, threads, (msg) => console.log(msg), customBinaryPath);
         return { success: true, segments: result };
     } catch (error: any) {
         console.error('[Main] Local transcription failed:', error);
@@ -49,6 +50,51 @@ ipcMain.handle('local-whisper-abort', async () => {
     console.log('[Main] Aborting all local whisper processes');
     localWhisperService.abort();
     return { success: true };
+});
+
+// IPC Handler: Select Media File (for history support)
+ipcMain.handle('select-media-file', async () => {
+    try {
+        const result = await dialog.showOpenDialog({
+            title: '选择媒体文件',
+            filters: [
+                { name: '视频文件', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'wmv'] },
+                { name: '音频文件', extensions: ['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'wma'] },
+                { name: '所有文件', extensions: ['*'] }
+            ],
+            properties: ['openFile']
+        });
+
+        if (!result.canceled && result.filePaths.length > 0) {
+            const filePath = result.filePaths[0];
+            // Get file stats
+            const stats = await fs.promises.stat(filePath);
+            const fileName = path.basename(filePath);
+            const ext = path.extname(filePath).toLowerCase();
+
+            // Determine MIME type
+            const videoExts = ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv', '.wmv'];
+            const audioExts = ['.mp3', '.wav', '.flac', '.aac', '.m4a', '.ogg', '.wma'];
+            let mimeType = 'application/octet-stream';
+            if (videoExts.includes(ext)) {
+                mimeType = ext === '.mp4' ? 'video/mp4' : (ext === '.mkv' ? 'video/x-matroska' : `video/${ext.slice(1)}`);
+            } else if (audioExts.includes(ext)) {
+                mimeType = ext === '.mp3' ? 'audio/mpeg' : `audio/${ext.slice(1)}`;
+            }
+
+            return {
+                success: true,
+                filePath,
+                fileName,
+                size: stats.size,
+                type: mimeType
+            };
+        }
+        return { success: false, canceled: true };
+    } catch (error: any) {
+        console.error('[Main] Media file selection failed:', error);
+        return { success: false, error: error.message };
+    }
 });
 
 // IPC Handler: Select Whisper Model
@@ -69,16 +115,14 @@ ipcMain.handle('select-whisper-model', async () => {
             const validation = localWhisperService.validateModel(filePath);
 
             if (!validation.valid) {
-                dialog.showErrorBox('无效的模型文件', validation.error || '未知错误');
-                return null;
+                return { success: false, error: validation.error || '未知错误' };
             }
-            return filePath;
+            return { success: true, path: filePath };
         }
-        return null;
+        return { success: false, canceled: true };
     } catch (error: any) {
         console.error('[Main] Model selection failed:', error);
-        dialog.showErrorBox('模型选择失败', error.message || '未知错误');
-        return null;
+        return { success: false, error: error.message };
     }
 });
 
@@ -156,9 +200,9 @@ ipcMain.handle(
                 (logMessage: string) => {
                     // Capture FFmpeg logs
                     if (logMessage.startsWith('[DEBUG]')) {
-                        addLog(`[DEBUG] [FFmpeg] ${logMessage.replace('[DEBUG] ', '')}`);
+                        console.log(`[DEBUG] [FFmpeg] ${logMessage.replace('[DEBUG] ', '')}`);
                     } else {
-                        addLog(`[FFmpeg] ${logMessage}`);
+                        console.log(`[FFmpeg] ${logMessage}`);
                     }
                 }
             );
@@ -299,7 +343,7 @@ ipcMain.handle('video:compress', async (event, inputPath: string, outputPath: st
                 event.sender.send('video:compression-progress', progress);
             },
             (logMessage) => {
-                addLog(logMessage);
+                console.log(logMessage);
             }
         );
     } catch (error: any) {
@@ -392,74 +436,11 @@ ipcMain.handle('download:default-dir', async () => {
     return { success: true, path: ytDlpService.getDefaultOutputDir() };
 });
 
+// IPC Handler: Get Main Logs (Recent History)
+ipcMain.handle('log:get-history', async () => {
+    return mainLogger.getLogs();
+});
 
-// Logging
-// Override console methods to capture logs
-const originalConsoleLog = console.log;
-const originalConsoleWarn = console.warn;
-const originalConsoleError = console.error;
-
-function addLog(message: string) {
-    const timestamp = new Date().toLocaleTimeString();
-
-    // Parse log level from message prefix
-    let level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' = 'INFO';
-    let cleanMessage = message;
-
-    if (message.startsWith('[DEBUG]')) {
-        level = 'DEBUG';
-        cleanMessage = message.substring(7).trim(); // Remove '[DEBUG]'
-    } else if (message.startsWith('[INFO]')) {
-        level = 'INFO';
-        cleanMessage = message.substring(6).trim(); // Remove '[INFO]'
-    } else if (message.startsWith('[WARN]')) {
-        level = 'WARN';
-        cleanMessage = message.substring(6).trim(); // Remove '[WARN]'
-    } else if (message.startsWith('[ERROR]')) {
-        level = 'ERROR';
-        cleanMessage = message.substring(7).trim(); // Remove '[ERROR]'
-    }
-
-    // Format with level prefix for UI
-    const logLine = `[${timestamp}] [${level}] ${cleanMessage}`;
-
-    // Use original console to avoid recursion, but use appropriate level
-    if (level === 'DEBUG') {
-        originalConsoleLog(logLine);
-    } else if (level === 'INFO') {
-        originalConsoleLog(logLine);
-    } else if (level === 'WARN') {
-        originalConsoleWarn(logLine);
-    } else if (level === 'ERROR') {
-        originalConsoleError(logLine);
-    }
-
-    BrowserWindow.getAllWindows().forEach((win) => {
-        win.webContents.send('new-log', logLine);
-    });
-}
-
-console.log = (...args) => {
-    const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
-    if (message.startsWith('[DEBUG]')) {
-        addLog(message);
-    } else {
-        addLog(`[INFO] ${message}`);
-    }
-    originalConsoleLog.apply(console, args);
-};
-
-console.warn = (...args) => {
-    const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
-    addLog(`[WARN] ${message}`);
-    originalConsoleWarn.apply(console, args);
-};
-
-console.error = (...args) => {
-    const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
-    addLog(`[ERROR] ${message}`);
-    originalConsoleError.apply(console, args);
-};
 
 const createWindow = () => {
     const mainWindow = new BrowserWindow({
@@ -467,12 +448,6 @@ const createWindow = () => {
         height: 800,
         icon: path.join(__dirname, '../resources/icon.png'),
         backgroundColor: '#1a0f2e', // 深紫色背景，与主界面协调
-        titleBarStyle: 'hidden', // 必须设置为hidden才能使用titleBarOverlay
-        titleBarOverlay: {
-            color: '#1a0f2e', // 深紫色标题栏
-            symbolColor: '#ffffff', // 白色控制按钮
-            height: 33
-        },
         webPreferences: {
             preload: path.join(__dirname, '../dist-electron/preload.cjs'),
             nodeIntegration: false,
@@ -527,11 +502,10 @@ const createMenu = () => {
                 {
                     label: '关于',
                     click: () => {
-                        dialog.showMessageBox({
-                            title: '关于',
-                            message: 'Gemini Subtitle Pro',
-                            detail: `智能字幕生成与翻译工具 v${app.getVersion()}`
-                        });
+                        const win = BrowserWindow.getFocusedWindow();
+                        if (win) {
+                            win.webContents.send('show-about');
+                        }
                     }
                 }
             ]
@@ -560,6 +534,9 @@ const createMenu = () => {
 };
 
 app.on('ready', async () => {
+    // Initialize logger file system (requires app to be ready for getPath)
+    mainLogger.init();
+
     // Intercept Bilibili image requests to add Referer header
     // This bypasses the 403 Forbidden error due to anti-hotlinking
     session.defaultSession.webRequest.onBeforeSendHeaders(

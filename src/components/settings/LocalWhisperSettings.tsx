@@ -22,9 +22,18 @@ export const LocalWhisperSettings: React.FC<LocalWhisperSettingsProps> = ({
         }
         console.log('[LocalWhisperSettings] Requesting model selection...');
         try {
-            const path = await window.electronAPI.selectWhisperModel();
-            console.log('[LocalWhisperSettings] Model selected:', path);
-            if (path) onModelPathChange(path);
+            const result = await window.electronAPI.selectWhisperModel();
+            console.log('[LocalWhisperSettings] Model selection result:', result);
+
+            if (result && result.success && result.path) {
+                onModelPathChange(result.path);
+            } else if (result && result.error) {
+                // Use logger or alert? The user asked to remove native dialogs.
+                // We should probably show a toast or alert, but this component doesn't have access to addToast.
+                // For now, logging error. The main process already returns error object.
+                console.error('[LocalWhisperSettings] Model selection error:', result.error);
+                // If we had toast, we would show it.
+            }
         } catch (error: any) {
             logger.error('[LocalWhisperSettings] Model selection failed', error);
         }

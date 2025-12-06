@@ -22,6 +22,21 @@ body {
     /* slate-200 */
 }
 
+/* Electron 窗口拖动区域 - 用于无边框窗口 */
+.window-drag-region {
+    -webkit-app-region: drag;
+}
+
+/* 拖动区域内的按钮等交互元素需要禁用拖动 */
+.window-drag-region button,
+.window-drag-region a,
+.window-drag-region input,
+.window-drag-region select,
+.window-drag-region [role="button"],
+.window-no-drag {
+    -webkit-app-region: no-drag;
+}
+
 /* 自定义滚动条 */
 .custom-scrollbar::-webkit-scrollbar,
 ::-webkit-scrollbar {
@@ -76,4 +91,16 @@ body {
 
 .animate-shimmer {
     animation: shimmer 2s infinite;
+}
+
+/* Hide native number input spinners */
+.no-spinner::-webkit-inner-spin-button,
+.no-spinner::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.no-spinner {
+    -moz-appearance: textfield;
+    appearance: none;
 }

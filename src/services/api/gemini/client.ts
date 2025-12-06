@@ -51,6 +51,136 @@ export function formatGeminiError(e: any): any {
     return errorInfo;
 }
 
+/**
+ * Extracts a user-actionable error message from an API error.
+ * Leverages the SDK's ApiError structure (name, message, status, rawError).
+ * Returns undefined for transient/retryable errors that don't need user action.
+ * 
+ * Official error codes from Gemini API docs:
+ * - 400 INVALID_ARGUMENT / FAILED_PRECONDITION
+ * - 403 PERMISSION_DENIED
+ * - 404 NOT_FOUND  
+ * - 429 RESOURCE_EXHAUSTED
+ * - 500 INTERNAL
+ * - 503 UNAVAILABLE
+ * - 504 DEADLINE_EXCEEDED
+ */
+export function getActionableErrorMessage(error: any): string | undefined {
+    if (!error) return undefined;
+
+    // SDK ApiError provides: name, message, status (HTTP code), rawError
+    const httpStatus = error.status || error.response?.status;
+    const rawError = error.rawError?.error; // SDK provides parsed error object
+
+    // Extract status string, reason, and message from rawError
+    let errorStatus = ''; // e.g., "INVALID_ARGUMENT", "PERMISSION_DENIED"
+    let reason = '';      // e.g., "API_KEY_INVALID" from details
+    let actualMessage = '';
+
+    if (rawError) {
+        // Use SDK's parsed rawError directly
+        errorStatus = (rawError.status || '').toLowerCase();
+        actualMessage = (rawError.message || '').toLowerCase();
+        if (rawError.details && Array.isArray(rawError.details)) {
+            for (const detail of rawError.details) {
+                if (detail.reason) {
+                    reason = detail.reason.toLowerCase();
+                    break;
+                }
+            }
+        }
+    } else {
+        // Fallback: try to parse JSON from message string
+        const originalMessage = error.message || '';
+        try {
+            const jsonMatch = originalMessage.match(/\{.*\}/s);
+            if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
+                if (parsed.error) {
+                    errorStatus = (parsed.error.status || '').toLowerCase();
+                    actualMessage = (parsed.error.message || '').toLowerCase();
+                    if (parsed.error.details && Array.isArray(parsed.error.details)) {
+                        for (const detail of parsed.error.details) {
+                            if (detail.reason) {
+                                reason = detail.reason.toLowerCase();
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch {
+            // Not JSON, use original message
+        }
+        if (!actualMessage) {
+            actualMessage = originalMessage.toLowerCase();
+        }
+    }
+
+    // Combine for keyword matching
+    const combinedMsg = `${actualMessage} ${reason} ${errorStatus}`;
+
+    // === API Key Invalid (reason: API_KEY_INVALID) ===
+    // Gemini returns HTTP 400 with reason "API_KEY_INVALID" for invalid keys
+    if (reason === 'api_key_invalid' ||
+        combinedMsg.includes('api key not valid') ||
+        combinedMsg.includes('invalid api key') ||
+        httpStatus === 401 ||
+        combinedMsg.includes('unauthorized')) {
+        return 'API 密钥无效！请检查您的 API 密钥是否正确配置。';
+    }
+
+    // === FAILED_PRECONDITION (400) - Need to enable billing ===
+    // "Gemini API 免费层级尚未在您所在的国家/地区推出。请在 Google AI Studio 中为您的项目启用结算功能。"
+    if (errorStatus === 'failed_precondition' ||
+        combinedMsg.includes('enable billing') ||
+        combinedMsg.includes('启用结算') ||
+        combinedMsg.includes('free tier') ||
+        combinedMsg.includes('免费层级')) {
+        return 'Gemini API 免费层级不可用！请在 Google AI Studio 中为您的项目启用结算功能。';
+    }
+
+    // === PERMISSION_DENIED (403) - API key doesn't have permission ===
+    if (httpStatus === 403 ||
+        errorStatus === 'permission_denied' ||
+        combinedMsg.includes('permission denied') ||
+        combinedMsg.includes('forbidden') ||
+        combinedMsg.includes('access denied')) {
+        return 'API 访问被拒绝 (403)！请检查：1) API 密钥权限设置 2) API 是否为当前地区启用 3) 是否需要开启计费';
+    }
+
+    // === RESOURCE_EXHAUSTED (429) - Rate limit / quota exceeded ===
+    if (httpStatus === 429 ||
+        errorStatus === 'resource_exhausted' ||
+        combinedMsg.includes('quota') ||
+        combinedMsg.includes('rate limit') ||
+        combinedMsg.includes('too many requests')) {
+        return 'API 配额已用尽或请求过于频繁 (429)！请稍后重试，或检查您的 API 配额限制。';
+    }
+
+    // === NOT_FOUND (404) - Resource not found ===
+    if (httpStatus === 404 || errorStatus === 'not_found') {
+        if (combinedMsg.includes('model')) {
+            return '请求的模型不存在 (404)！请检查模型名称是否正确。';
+        }
+        return '请求的资源不存在 (404)！请检查请求参数。';
+    }
+
+    // === Region/Location restrictions ===
+    if (combinedMsg.includes('region') ||
+        combinedMsg.includes('location') ||
+        combinedMsg.includes('not available in') ||
+        combinedMsg.includes('国家/地区')) {
+        return 'API 在当前地区不可用！请检查是否需要使用代理或更换 API 端点。';
+    }
+
+    // Return undefined for transient errors (500, 503, 504) - these should be retried
+    return undefined;
+}
+
+
+
+
 export function isRetryableError(error: any): boolean {
     if (!error) return false;
 

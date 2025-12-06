@@ -4,7 +4,7 @@ import { logger, LogEntry } from '@/services/utils/logger';
 
 import { GlossaryManager } from '@/components/glossary/GlossaryManager';
 import { SettingsModal, GenreSettingsDialog } from '@/components/settings';
-import { GlossaryExtractionFailedDialog, GlossaryConfirmationModal, SimpleConfirmationModal } from '@/components/modals';
+import { GlossaryExtractionFailedDialog, GlossaryConfirmationModal, SimpleConfirmationModal, SpeakerManagerModal, AboutModal } from '@/components/modals';
 import { ToastContainer, ProgressOverlay } from '@/components/ui';
 
 // Custom Hooks
@@ -32,6 +32,8 @@ export default function App() {
     const [showSettings, setShowSettings] = useState(false);
     const [showGenreSettings, setShowGenreSettings] = useState(false);
     const [showGlossaryManager, setShowGlossaryManager] = useState(false);
+    const [showSpeakerManager, setShowSpeakerManager] = useState(false);
+    const [showAbout, setShowAbout] = useState(false);
 
     // Downloaded video path - for passing to compression page
     const [downloadedVideoPath, setDownloadedVideoPath] = useState<string | null>(null);
@@ -80,6 +82,19 @@ export default function App() {
     // Note: We need to import this at the top, but for this replace block we'll assume it's available or add import separately if needed.
     // Since I can't easily add import at top with this block, I will add a separate replace for imports.
 
+    // IPC Listeners
+    useEffect(() => {
+        let unsubscribeAbout: (() => void) | undefined;
+        if (window.electronAPI?.onShowAbout) {
+            unsubscribeAbout = window.electronAPI.onShowAbout(() => {
+                setShowAbout(true);
+            });
+        }
+        return () => {
+            if (unsubscribeAbout) unsubscribeAbout();
+        };
+    }, []);
+
     useEffect(() => {
         // Initial load of frontend logs
         setLogs(logger.getLogs());
@@ -103,7 +118,47 @@ export default function App() {
     useEffect(() => {
         let unsubscribeBackend: (() => void) | undefined;
 
+        const initBackendLogs = async () => {
+            if (window.electronAPI && window.electronAPI.getMainLogs) {
+                try {
+                    const historyLogs = await window.electronAPI.getMainLogs();
+                    console.log(`[App] Loaded ${historyLogs.length} historical logs from backend`);
+
+                    const { parseBackendLog } = await import('@/services/utils/logParser');
+
+                    const parsedHistory = historyLogs.map(logLine => {
+                        try {
+                            return parseBackendLog(logLine);
+                        } catch (e) {
+                            return null;
+                        }
+                    }).filter(l => l !== null) as LogEntry[];
+
+                    setLogs(prev => {
+                        // Merge avoiding duplicates
+                        const newLogs = [...prev];
+                        parsedHistory.forEach(pl => {
+                            if (!newLogs.some(existing => existing.data?.raw === pl.data?.raw)) {
+                                newLogs.push(pl);
+                            }
+                        });
+                        return newLogs.sort((a, b) => {
+                            // Simple sort if timestamp string comparison works (it usually does for ISO-like), 
+                            // but our timestamp is HH:MM:SS which might wrap days. 
+                            // Ideally backend sends ISO. But for now preserving order is enough.
+                            return 0;
+                        });
+                    });
+                } catch (err) {
+                    console.error("Failed to load backend log history:", err);
+                }
+            }
+        };
+
         if (window.electronAPI && window.electronAPI.onNewLog) {
+            // Initialize history first
+            initBackendLogs();
+
             unsubscribeBackend = window.electronAPI.onNewLog(async (logLine) => {
                 // Print to DevTools console for visibility
                 console.log(`[Main] ${logLine}`);
@@ -245,6 +300,7 @@ export default function App() {
                     showSourceText={workspace.showSourceText}
                     editingCommentId={workspace.editingCommentId}
                     onFileChange={(e) => workspace.handleFileChange(e, activeTab)}
+                    onFileChangeNative={workspace.handleFileSelectNative}
                     onSubtitleImport={workspace.handleSubtitleImport}
                     onGenerate={workspace.handleGenerate}
                     onDownload={workspace.handleDownload}
@@ -278,6 +334,10 @@ export default function App() {
                     updateSubtitleText={workspace.updateSubtitleText}
                     updateSubtitleOriginal={workspace.updateSubtitleOriginal}
                     updateSpeaker={workspace.updateSpeaker}
+                    updateSubtitleTime={workspace.updateSubtitleTime}
+                    speakerProfiles={workspace.speakerProfiles}
+                    deleteSubtitle={workspace.deleteSubtitle}
+                    onManageSpeakers={() => setShowSpeakerManager(true)}
                     onStartCompression={() => setView('compression')}
                     histories={workspace.getHistories()}
                     onLoadHistory={workspace.loadHistory}
@@ -299,6 +359,15 @@ export default function App() {
                 onCancel={workspace.cancelOperation}
             />
             <ToastContainer toasts={toasts} removeToast={removeToast} />
+            <SpeakerManagerModal
+                isOpen={showSpeakerManager}
+                onClose={() => setShowSpeakerManager(false)}
+                speakerProfiles={workspace.speakerProfiles}
+                onRename={workspace.renameSpeaker}
+                onDelete={workspace.deleteSpeaker}
+                onMerge={workspace.mergeSpeakers}
+                onCreate={workspace.addSpeaker}
+            />
             <SimpleConfirmationModal
                 isOpen={confirmation.isOpen}
                 onClose={() => setConfirmation(prev => ({ ...prev, isOpen: false }))}
@@ -306,6 +375,10 @@ export default function App() {
                 title={confirmation.title}
                 message={confirmation.message}
                 type={confirmation.type}
+            />
+            <AboutModal
+                isOpen={showAbout}
+                onClose={() => setShowAbout(false)}
             />
         </>
     );

@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckSquare, Square, Wand2 } from 'lucide-react';
 import { SubtitleItem } from '@/types';
+import { SpeakerUIProfile } from '@/types/speaker';
 import { SubtitleRow } from './SubtitleRow';
 import { GenerationStatus } from '@/types/api';
 
@@ -20,6 +21,13 @@ interface SubtitleBatchProps {
     updateSubtitleText: (id: number, translated: string) => void;
     updateSubtitleOriginal: (id: number, original: string) => void;
     updateSpeaker?: (id: number, speaker: string, applyToAll?: boolean) => void;
+    updateSubtitleTime?: (id: number, startTime: string, endTime: string) => void;
+    deleteSubtitle?: (id: number) => void;
+    subtitles?: SubtitleItem[]; // Full subtitles array for overlap detection
+    batchSize?: number;
+    speakerProfiles?: SpeakerUIProfile[];
+    onManageSpeakers?: () => void;
+
 }
 
 export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(({
@@ -37,10 +45,20 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(({
     updateLineComment,
     updateSubtitleText,
     updateSubtitleOriginal,
-    updateSpeaker
+    updateSpeaker,
+    updateSubtitleTime,
+    deleteSubtitle,
+    subtitles,
+    batchSize = 20,
+    speakerProfiles,
+    onManageSpeakers,
+
 }) => {
     const startTime = chunk[0].startTime.split(',')[0];
     const endTime = chunk[chunk.length - 1].endTime.split(',')[0];
+
+    // Calculate the starting index of this chunk in the full subtitles array
+    const chunkStartIndex = chunkIdx * batchSize;
 
     return (
         <div className={`border rounded-xl overflow-hidden transition-all ${isSelected ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-slate-700/50 bg-slate-900/40'}`}>
@@ -74,19 +92,33 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(({
                 )}
             </div>
             <div className="divide-y divide-slate-800/50">
-                {chunk.map((sub) => (
-                    <SubtitleRow
-                        key={sub.id}
-                        sub={sub}
-                        showSourceText={showSourceText}
-                        editingCommentId={editingCommentId}
-                        setEditingCommentId={setEditingCommentId}
-                        updateLineComment={updateLineComment}
-                        updateSubtitleText={updateSubtitleText}
-                        updateSubtitleOriginal={updateSubtitleOriginal}
-                        updateSpeaker={updateSpeaker}
-                    />
-                ))}
+                {chunk.map((sub, indexInChunk) => {
+                    // Calculate global index and find previous subtitle's end time
+                    const globalIndex = chunkStartIndex + indexInChunk;
+                    const prevEndTime = globalIndex > 0 && subtitles
+                        ? subtitles[globalIndex - 1]?.endTime
+                        : undefined;
+
+                    return (
+                        <SubtitleRow
+                            key={sub.id}
+                            sub={sub}
+                            showSourceText={showSourceText}
+                            editingCommentId={editingCommentId}
+                            setEditingCommentId={setEditingCommentId}
+                            updateLineComment={updateLineComment}
+                            updateSubtitleText={updateSubtitleText}
+                            updateSubtitleOriginal={updateSubtitleOriginal}
+                            updateSpeaker={updateSpeaker}
+                            updateSubtitleTime={updateSubtitleTime}
+                            deleteSubtitle={deleteSubtitle}
+                            prevEndTime={prevEndTime}
+                            speakerProfiles={speakerProfiles}
+                            onManageSpeakers={onManageSpeakers}
+
+                        />
+                    );
+                })}
             </div>
         </div>
     );
@@ -97,6 +129,10 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(({
         prev.status === next.status &&
         prev.batchComment === next.batchComment &&
         prev.showSourceText === next.showSourceText &&
-        prev.editingCommentId === next.editingCommentId
+        prev.editingCommentId === next.editingCommentId &&
+        prev.subtitles === next.subtitles &&
+        prev.speakerProfiles === next.speakerProfiles &&
+        prev.deleteSubtitle === next.deleteSubtitle
     );
 });
+

@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     isElectron: true,
     isDebug: process.env.DEBUG_BUILD === 'true' || process.env.NODE_ENV === 'development',
     getFilePath: (file: File) => webUtils.getPathForFile(file),
+    selectMediaFile: () => ipcRenderer.invoke('select-media-file'),
     readAudioFile: (filePath: string) => ipcRenderer.invoke('read-audio-file', filePath),
     readLocalFile: (filePath: string) => ipcRenderer.invoke('read-local-file', filePath),
     saveSubtitleDialog: (defaultName: string, content: string, format: 'srt' | 'ass') =>
@@ -91,5 +92,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
         get: () => ipcRenderer.invoke('history-get'),
         save: (histories: any[]) => ipcRenderer.invoke('history-save', histories),
         delete: (id: string) => ipcRenderer.invoke('history-delete', id)
+    },
+
+    // Logs APIs
+    getMainLogs: () => ipcRenderer.invoke('log:get-history'),
+    onShowAbout: (callback: () => void) => {
+        const subscription = () => callback();
+        ipcRenderer.on('show-about', subscription);
+        return () => {
+            ipcRenderer.removeListener('show-about', subscription);
+        };
     }
 });

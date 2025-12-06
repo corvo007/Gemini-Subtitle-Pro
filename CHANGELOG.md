@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.7.0] - 2025-12-06
+
+### Features
+
+- **Speaker Management**: New speaker manager modal with rename, delete, and merge functionality. Added `SpeakerSelect` component for easy speaker assignment in subtitle editor.
+- **About Modal**: New about dialog displaying version info and project credits.
+- **Enhanced Logging**: Added `MainLogger` for Electron main process with file persistence and IPC broadcasting.
+- **Editor Improvements**: Enhanced `SubtitleEditor`, `SubtitleRow`, and `BatchHeader` with better speaker handling and UI.
+- **File Upload**: Improved `FileUploader` with better drag-and-drop and file validation.
+
+### Fixes
+
+- **Whisper Service**: Enhanced error handling and response parsing.
+- **Subtitle Parser/Generator**: Improved speaker tag handling in SRT/ASS formats.
+- **Gemini Client**: Better retry logic and error recovery.
+
+### Performance
+
+- **Batch Processing**: Optimized batch translation with improved concurrency.
+- **Workspace Logic**: Streamlined state management in `useWorkspaceLogic`.
+
 ## [2.6.0] - 2025-12-05
 
 ### Features

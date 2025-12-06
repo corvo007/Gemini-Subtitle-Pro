@@ -1,7 +1,113 @@
 import React from 'react';
-import { MessageCircle, Pencil } from 'lucide-react';
+import { MessageCircle, Pencil, Clock, Type, AlertTriangle, Trash2 } from 'lucide-react';
 import { SubtitleItem } from '@/types';
+import { SpeakerUIProfile } from '@/types/speaker';
 import { getSpeakerColor } from '@/utils/colors';
+import { SpeakerSelect } from './SpeakerSelect';
+
+// Validation thresholds (from prompts.ts rules)
+const MAX_DURATION_SECONDS = 4;
+const MAX_CHINESE_CHARACTERS = 25;
+
+// Parse time string (HH:MM:SS,mmm or HH:MM:SS.mmm) to seconds
+export const parseTimeToSeconds = (timeStr: string): number => {
+    if (!timeStr) return 0;
+    const parts = timeStr.replace(',', '.').split(':');
+    if (parts.length !== 3) return 0;
+    const hours = parseFloat(parts[0]) || 0;
+    const minutes = parseFloat(parts[1]) || 0;
+    const seconds = parseFloat(parts[2]) || 0;
+    return hours * 3600 + minutes * 60 + seconds;
+};
+
+// Format seconds to time string (HH:MM:SS,mmm)
+const formatSecondsToTime = (totalSeconds: number): string => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const secs = Math.floor(seconds);
+    const ms = Math.round((seconds - secs) * 1000);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
+};
+
+// Validate time format and return normalized string or null
+const validateAndNormalizeTime = (input: string): string | null => {
+    // Try to parse various formats: HH:MM:SS, HH:MM:SS,mmm, HH:MM:SS.mmm, MM:SS
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+
+    // Handle MM:SS format
+    const shortMatch = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+    if (shortMatch) {
+        const mins = parseInt(shortMatch[1]);
+        const secs = parseInt(shortMatch[2]);
+        return formatSecondsToTime(mins * 60 + secs);
+    }
+
+    // Handle HH:MM:SS or HH:MM:SS,mmm or HH:MM:SS.mmm
+    const fullMatch = trimmed.match(/^(\d{1,2}):(\d{2}):(\d{2})([,.](\d{1,3}))?$/);
+    if (fullMatch) {
+        const hours = parseInt(fullMatch[1]);
+        const mins = parseInt(fullMatch[2]);
+        const secs = parseInt(fullMatch[3]);
+        const ms = fullMatch[5] ? parseInt(fullMatch[5].padEnd(3, '0')) : 0;
+        return formatSecondsToTime(hours * 3600 + mins * 60 + secs + ms / 1000);
+    }
+
+    return null;
+};
+
+// Calculate subtitle duration in seconds
+const calculateDuration = (startTime: string, endTime: string): number => {
+    return parseTimeToSeconds(endTime) - parseTimeToSeconds(startTime);
+};
+
+// Count Chinese characters (CJK range)
+const countChineseCharacters = (text: string): number => {
+    if (!text) return 0;
+    const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\u{20000}-\u{2a6df}\u{2a700}-\u{2b73f}\u{2b740}-\u{2b81f}\u{2b820}-\u{2ceaf}\u{2ceb0}-\u{2ebef}]/gu;
+    const matches = text.match(cjkRegex);
+    return matches ? matches.length : 0;
+};
+
+// Overlap threshold in seconds (only show warning if overlap > this value)
+const OVERLAP_THRESHOLD_SECONDS = 2;
+
+// Validation result type
+export interface ValidationResult {
+    hasDurationIssue: boolean;
+    hasLengthIssue: boolean;
+    hasOverlapIssue: boolean;
+    duration: number;
+    charCount: number;
+    overlapAmount: number; // How many seconds of overlap (negative means gap)
+}
+
+// Validate a subtitle item
+export const validateSubtitle = (sub: SubtitleItem, prevEndTime?: string): ValidationResult => {
+    const duration = calculateDuration(sub.startTime, sub.endTime);
+    const charCount = countChineseCharacters(sub.translated);
+
+    // Check overlap: current start time < previous end time
+    let overlapAmount = 0;
+    if (prevEndTime) {
+        const prevEnd = parseTimeToSeconds(prevEndTime);
+        const currentStart = parseTimeToSeconds(sub.startTime);
+        overlapAmount = prevEnd - currentStart; // Positive means overlap
+    }
+
+    // Only flag as issue if overlap exceeds threshold
+    const hasOverlapIssue = overlapAmount > OVERLAP_THRESHOLD_SECONDS;
+
+    return {
+        hasDurationIssue: duration > MAX_DURATION_SECONDS,
+        hasLengthIssue: charCount > MAX_CHINESE_CHARACTERS,
+        hasOverlapIssue,
+        duration,
+        charCount,
+        overlapAmount
+    };
+};
 
 interface SubtitleRowProps {
     sub: SubtitleItem;
@@ -12,6 +118,12 @@ interface SubtitleRowProps {
     updateSubtitleText: (id: number, translated: string) => void;
     updateSubtitleOriginal: (id: number, original: string) => void;
     updateSpeaker?: (id: number, speaker: string, applyToAll?: boolean) => void;
+    updateSubtitleTime?: (id: number, startTime: string, endTime: string) => void;
+    prevEndTime?: string; // For overlap detection
+    speakerProfiles?: SpeakerUIProfile[];
+    onManageSpeakers?: () => void;
+    deleteSubtitle?: (id: number) => void;
+
 }
 
 export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(({
@@ -22,17 +134,51 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(({
     updateLineComment,
     updateSubtitleText,
     updateSubtitleOriginal,
-    updateSpeaker
+    updateSpeaker,
+    updateSubtitleTime,
+    prevEndTime,
+    speakerProfiles,
+    onManageSpeakers,
+    deleteSubtitle,
+
 }) => {
     const [editing, setEditing] = React.useState(false);
     const [tempText, setTempText] = React.useState('');
     const [tempOriginal, setTempOriginal] = React.useState('');
+    const [tempStartTime, setTempStartTime] = React.useState('');
+    const [tempEndTime, setTempEndTime] = React.useState('');
     const [editingSpeaker, setEditingSpeaker] = React.useState(false);
     const [tempSpeaker, setTempSpeaker] = React.useState('');
+
+    // Validate this subtitle
+    const validation = React.useMemo(() => validateSubtitle(sub, prevEndTime), [sub, prevEndTime]);
+
+    // Count total issues for background color
+    const issueCount = [validation.hasDurationIssue, validation.hasLengthIssue, validation.hasOverlapIssue].filter(Boolean).length;
+
+    // Determine background color based on validation issues
+    const getRowBackgroundClass = (): string => {
+        if (issueCount >= 2) {
+            // Multiple issues: purple/violet background
+            return 'bg-violet-900/30 border-l-2 border-violet-500';
+        } else if (validation.hasOverlapIssue) {
+            // Overlap issue: orange background
+            return 'bg-orange-900/30 border-l-2 border-orange-500';
+        } else if (validation.hasDurationIssue) {
+            // Duration issue only: yellow background
+            return 'bg-yellow-900/30 border-l-2 border-yellow-500';
+        } else if (validation.hasLengthIssue) {
+            // Length issue only: rose/red background
+            return 'bg-rose-900/30 border-l-2 border-rose-500';
+        }
+        return '';
+    };
 
     const handleStartEdit = () => {
         setTempText(sub.translated);
         setTempOriginal(sub.original);
+        setTempStartTime((sub.startTime || '').split(',')[0]); // Show without ms for easier editing
+        setTempEndTime((sub.endTime || '').split(',')[0]);
         setEditing(true);
     };
 
@@ -43,6 +189,18 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(({
         if (showSourceText && tempOriginal.trim() !== sub.original) {
             updateSubtitleOriginal(sub.id, tempOriginal.trim());
         }
+        // Save time if changed and valid
+        if (updateSubtitleTime) {
+            const normalizedStart = validateAndNormalizeTime(tempStartTime);
+            const normalizedEnd = validateAndNormalizeTime(tempEndTime);
+            if (normalizedStart && normalizedEnd) {
+                const startChanged = normalizedStart !== sub.startTime;
+                const endChanged = normalizedEnd !== sub.endTime;
+                if (startChanged || endChanged) {
+                    updateSubtitleTime(sub.id, normalizedStart, normalizedEnd);
+                }
+            }
+        }
         setEditing(false);
     };
 
@@ -50,6 +208,8 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(({
         setEditing(false);
         setTempText('');
         setTempOriginal('');
+        setTempStartTime('');
+        setTempEndTime('');
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -79,76 +239,100 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(({
         setEditingSpeaker(false);
     };
 
+    // Handle blur for the entire editing row
+    const handleRowBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+        if (!editing) return;
+        // Check if the new focus target is still within this row
+        const rowElement = e.currentTarget;
+        const relatedTarget = e.relatedTarget as Node | null;
+        if (relatedTarget && rowElement.contains(relatedTarget)) {
+            // Focus is still within the row, don't save
+            return;
+        }
+        // Focus left the row, save changes
+        handleSave();
+    };
+
     return (
-        <div className="p-3 hover:bg-slate-800/30 transition-colors flex items-start space-x-4 group/row">
+        <div
+            className={`p-3 hover:bg-slate-800/30 transition-colors flex items-start space-x-4 group/row ${getRowBackgroundClass()}`}
+            onBlur={editing ? handleRowBlur : undefined}
+        >
             <div className="flex flex-col text-sm font-mono text-slate-400 min-w-[85px] pt-1">
-                <span className="leading-tight">{(sub.startTime || '').split(',')[0]}</span>
-                <span className="leading-tight opacity-70">{(sub.endTime || '').split(',')[0]}</span>
-            </div>
-            <div className="flex-1 space-y-1">
-                {/* Speaker Badge */}
-                {sub.speaker && updateSpeaker && (
-                    <div className="mb-2 flex items-center gap-2">
-                        {editingSpeaker ? (
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="text"
-                                    value={tempSpeaker}
-                                    onChange={(e) => setTempSpeaker(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleSpeakerSave();
-                                        if (e.key === 'Escape') handleSpeakerCancel();
-                                    }}
-                                    onBlur={(e) => {
-                                        // Only save if focus is leaving the entire editing area (including the button)
-                                        if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) {
-                                            handleSpeakerSave();
-                                        }
-                                    }}
-                                    autoFocus
-                                    placeholder="Speaker name..."
-                                    className="px-2 py-1 rounded text-xs font-medium bg-slate-800 border border-slate-600 text-slate-200 focus:outline-none focus:border-indigo-500"
-                                />
-                                <button
-                                    onMouseDown={(e) => {
-                                        e.preventDefault(); // Prevent blur
-                                        if (updateSpeaker && tempSpeaker.trim() !== (sub.speaker || '')) {
-                                            updateSpeaker(sub.id, tempSpeaker.trim(), true);
-                                        }
-                                        setEditingSpeaker(false);
-                                    }}
-                                    className="px-2 py-1 rounded text-[10px] bg-indigo-600 hover:bg-indigo-500 text-white transition-colors whitespace-nowrap"
-                                    title="Apply to all occurrences of this speaker"
-                                >
-                                    全部应用
-                                </button>
-                            </div>
-                        ) : (
+                {editing ? (
+                    // Editable time inputs - compact style matching display
+                    <>
+                        <input
+                            type="text"
+                            value={tempStartTime}
+                            onChange={(e) => setTempStartTime(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="00:00:00"
+                            className="bg-transparent border-b border-slate-600 focus:border-indigo-500 px-0 py-0 text-sm text-white placeholder-slate-600 focus:outline-none leading-tight w-[75px]"
+                        />
+                        <input
+                            type="text"
+                            value={tempEndTime}
+                            onChange={(e) => setTempEndTime(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="00:00:00"
+                            className="bg-transparent border-b border-slate-600 focus:border-indigo-500 px-0 py-0 text-sm text-white/70 placeholder-slate-600 focus:outline-none leading-tight w-[75px]"
+                        />
+                    </>
+                ) : (
+                    <>
+                        <span className="leading-tight">{(sub.startTime || '').split(',')[0]}</span>
+                        <span className="leading-tight opacity-70">{(sub.endTime || '').split(',')[0]}</span>
+                    </>
+                )}
+                {/* Validation indicators */}
+                {!editing && (validation.hasDurationIssue || validation.hasLengthIssue || validation.hasOverlapIssue) && (
+                    <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                        {validation.hasOverlapIssue && (
                             <span
-                                onClick={handleSpeakerEdit}
-                                className="px-2 py-1 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity"
-                                style={{
-                                    backgroundColor: getSpeakerColor(sub.speaker) + '20',
-                                    color: getSpeakerColor(sub.speaker),
-                                    border: `1px solid ${getSpeakerColor(sub.speaker)}`
-                                }}
-                                title="Click to edit speaker name"
+                                className="flex items-center gap-0.5 text-[10px] text-orange-400"
+                                title={`与上一行重叠 ${validation.overlapAmount.toFixed(1)}s`}
                             >
-                                {sub.speaker}
+                                <AlertTriangle className="w-3 h-3" />
+                                <span>{validation.overlapAmount.toFixed(1)}s</span>
+                            </span>
+                        )}
+                        {validation.hasDurationIssue && (
+                            <span
+                                className="flex items-center gap-0.5 text-[10px] text-yellow-400"
+                                title={`持续时间 ${validation.duration.toFixed(1)}s 超过 ${MAX_DURATION_SECONDS}s`}
+                            >
+                                <Clock className="w-3 h-3" />
+                                <span>{validation.duration.toFixed(1)}s</span>
+                            </span>
+                        )}
+                        {validation.hasLengthIssue && (
+                            <span
+                                className="flex items-center gap-0.5 text-[10px] text-rose-400"
+                                title={`字符数 ${validation.charCount} 超过 ${MAX_CHINESE_CHARACTERS} 字符`}
+                            >
+                                <Type className="w-3 h-3" />
+                                <span>{validation.charCount}字</span>
                             </span>
                         )}
                     </div>
                 )}
+            </div>
+            <div className="flex-1 space-y-1">
+                {/* Speaker Select */}
+                {sub.speaker && updateSpeaker && speakerProfiles && (
+                    <div className="mb-2">
+                        <SpeakerSelect
+                            currentSpeaker={sub.speaker}
+                            speakerProfiles={speakerProfiles}
+                            onSelect={(speaker) => updateSpeaker(sub.id, speaker)}
+                            onManageSpeakers={onManageSpeakers}
+
+                        />
+                    </div>
+                )}
                 {editing ? (
-                    <div
-                        className="space-y-1"
-                        onBlur={(e) => {
-                            // Only save if focus is leaving the entire editing area
-                            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                                handleSave();
-                            }
-                        }}
-                    >
+                    <div className="space-y-1">
                         {showSourceText && (
                             <input
                                 type="text"
@@ -213,14 +397,27 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(({
                 >
                     <MessageCircle className="w-4 h-4" />
                 </button>
+                {deleteSubtitle && (
+                    <button
+                        onClick={() => {
+                            deleteSubtitle(sub.id);
+                        }}
+                        className="p-1.5 rounded hover:bg-slate-700 hover:text-red-400 transition-colors text-slate-600 opacity-0 group-hover/row:opacity-100"
+                        title="删除字幕"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                )}
             </div>
-        </div>
+        </div >
     );
 }, (prev, next) => {
     return (
         prev.sub === next.sub &&
         prev.showSourceText === next.showSourceText &&
         prev.editingCommentId === next.editingCommentId &&
+        prev.speakerProfiles === next.speakerProfiles &&
+        prev.deleteSubtitle === next.deleteSubtitle &&
         // Functions are usually stable if from useWorkspaceLogic, but if not, this might cause issues.
         // However, since we plan to memoize handlers in useWorkspaceLogic, strict equality check is fine.
         // But for editingCommentId, we only care if it matches THIS row's ID.

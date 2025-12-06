@@ -20,7 +20,7 @@ import { mapInParallel, Semaphore } from "@/services/utils/concurrency";
 import { logger } from "@/services/utils/logger";
 import { calculateDetailedCost } from "@/services/api/gemini/pricing";
 import { REFINEMENT_SCHEMA, REFINEMENT_WITH_DIARIZATION_SCHEMA, SAFETY_SETTINGS } from "./schemas";
-import { generateContentWithRetry, formatGeminiError } from "./client";
+import { generateContentWithRetry, formatGeminiError, getActionableErrorMessage } from "./client";
 import { translateBatch } from "./batch";
 
 import { getEnvVariable } from "@/services/utils/env";
@@ -246,7 +246,10 @@ export const generateSubtitles = async (
                     onProgress?.({ id: 'glossary', total: 1, status: 'completed', message: '已取消' });
                 } else {
                     logger.warn("Glossary extraction failed or timed out", e);
-                    onProgress?.({ id: 'glossary', total: 1, status: 'error', message: '术语提取失败' });
+                    // Use actionable error message if available, otherwise generic message
+                    const actionableMsg = getActionableErrorMessage(e);
+                    const errorMsg = actionableMsg || '术语提取失败';
+                    onProgress?.({ id: 'glossary', total: 1, status: 'error', message: errorMsg });
                 }
             }
 
@@ -297,9 +300,12 @@ export const generateSubtitles = async (
                     ...p,
                     id: p.characteristics.name || p.id
                 }));
-            } catch (e) {
+            } catch (e: any) {
                 logger.error("Speaker profile extraction failed", e);
-                onProgress?.({ id: 'diarization', total: 1, status: 'error', message: '说话人分析失败' });
+                // Use actionable error message if available
+                const actionableMsg = getActionableErrorMessage(e);
+                const errorMsg = actionableMsg || '说话人分析失败';
+                onProgress?.({ id: 'diarization', total: 1, status: 'error', message: errorMsg });
                 return [];
             }
         })();
@@ -559,9 +565,12 @@ export const generateSubtitles = async (
                 refinementSemaphore.release();
             }
 
-        } catch (e) {
+        } catch (e: any) {
             logger.error(`Chunk ${index} failed`, e);
-            onProgress?.({ id: index, total: totalChunks, status: 'error', message: '失败' });
+            // Use actionable error message if available for user feedback
+            const actionableMsg = getActionableErrorMessage(e);
+            const errorMsg = actionableMsg || '失败';
+            onProgress?.({ id: index, total: totalChunks, status: 'error', message: errorMsg });
         }
     });
 

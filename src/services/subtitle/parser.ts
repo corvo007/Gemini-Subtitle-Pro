@@ -110,14 +110,14 @@ export const parseSrt = (content: string): SubtitleItem[] => {
         let speaker: string | undefined = undefined;
 
         const extractSpeaker = (text: string): { speaker?: string, content: string } => {
-            const match = text.match(/^(.+?):\s+(.*)$/s); // Use 's' flag for dotAll if needed, but here we process line by line usually. 
+            // Match "Speaker: Content" or "Speaker：Content" (Chinese colon)
+            // Support optional space after colon
+            const match = text.match(/^(.+?)[:：]\s*(.*)$/s);
             // Actually text might be multiline.
             // The export format puts "Speaker: " at the beginning of the block if it's there.
-            // But wait, if it's multiline, does every line have speaker? No, usually just the first line of the block.
             // Let's check the very start of the string.
-            const matchFirst = text.match(/^(.+?):\s+(.*)$/s);
-            if (matchFirst) {
-                return { speaker: matchFirst[1], content: matchFirst[2] };
+            if (match) {
+                return { speaker: match[1], content: match[2] };
             }
             return { content: text };
         };
@@ -183,10 +183,31 @@ export const parseAss = (content: string): SubtitleItem[] => {
             const startIdx = format.indexOf('start');
             const endIdx = format.indexOf('end');
             const textIdx = format.indexOf('text');
+            const styleIdx = format.indexOf('style');
+            const nameIdx = format.indexOf('name');
 
             if (startIdx === -1 || endIdx === -1 || textIdx === -1) return;
 
             let rawText = parts[textIdx] || "";
+
+            // Extract speaker: Priority is Name field > Style field > text content
+            let speaker: string | undefined = undefined;
+
+            // 1. Try Name field first (our preferred storage location)
+            if (nameIdx !== -1) {
+                const name = parts[nameIdx]?.trim() || '';
+                if (name) {
+                    speaker = name;
+                }
+            }
+
+            // 2. Fallback to Style field (e.g., "Speaker_吉岡茉祐" -> "吉岡茉祐")
+            if (!speaker && styleIdx !== -1) {
+                const style = parts[styleIdx]?.trim() || '';
+                if (style.startsWith('Speaker_')) {
+                    speaker = style.substring(8); // Remove "Speaker_" prefix
+                }
+            }
 
             // Parse specific generator tags:
             // Format: {\rSecondary}ORIGINAL\N{\r}TRANSLATED
@@ -209,9 +230,7 @@ export const parseAss = (content: string): SubtitleItem[] => {
                     translated = mainMatch[1];
                 }
             } else {
-                // Fallback: Treat as Original (or maybe Translated? The user wants to see the "New Project" style)
-                // If it's a plain ASS, usually it's just the subtitle text.
-                // Let's put it in Original so it shows up at least.
+                // Fallback: Treat as Original
                 original = rawText;
             }
 
@@ -221,27 +240,41 @@ export const parseAss = (content: string): SubtitleItem[] => {
             original = clean(original);
             translated = clean(translated);
 
-            // --- Speaker Extraction Logic ---
-            let speaker: string | undefined = undefined;
 
-            const extractSpeaker = (text: string): { speaker?: string, content: string } => {
-                const match = text.match(/^(.+?):\s+(.*)$/s);
+
+            // 3. Always try to extract/clean speaker from text content
+            // This ensures that if the file was exported with "Include Speaker", we strip it back out
+            // to avoid duplication (e.g., "Bob: Hello" -> Speaker="Bob", Text="Hello")
+            const extractSpeakerLegacy = (text: string): { speaker?: string, content: string } => {
+                const match = text.match(/^(.+?)[:：]\s*(.*)$/s);
                 if (match) {
                     return { speaker: match[1], content: match[2] };
                 }
                 return { content: text };
             };
 
-            const origRes = extractSpeaker(original);
-            const transRes = extractSpeaker(translated);
+            const origRes = extractSpeakerLegacy(original);
+            const transRes = extractSpeakerLegacy(translated);
 
-            if (origRes.speaker) {
-                speaker = origRes.speaker;
-                original = origRes.content;
-            }
-            if (transRes.speaker) {
-                if (!speaker) speaker = transRes.speaker;
+            // Update text content with stripped versions
+            original = origRes.content;
+            if (transRes.speaker) { // Only update translated if we cleaned something? 
+                // Actually extractSpeaker always returns content (cleaned or valid).
                 translated = transRes.content;
+            }
+
+            // Logic for resolving speaker conflicts or missing speaker
+            if (!speaker) {
+                if (origRes.speaker) {
+                    speaker = origRes.speaker;
+                } else if (transRes.speaker) {
+                    speaker = transRes.speaker;
+                }
+            } else {
+                // If speaker was already found (Name/Style), we trust it.
+                // But we successfully stripped the prefix from text above, so we are good.
+                // Optional: warn if mismatch? content says "Bob:", metadata says "Alice"? 
+                // For now, trust metadata for the 'speaker' property, but keep text clean.
             }
 
             items.push({

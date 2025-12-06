@@ -140,7 +140,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
         <div className="min-h-screen bg-slate-950 flex flex-col p-4 md:p-8">
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
                 {/* Header */}
-                <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800 shrink-0">
+                <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800 shrink-0 window-drag-region" style={{ WebkitAppRegion: 'drag' } as any}>
                     <div className="flex items-center space-x-4">
                         {onGoBack && (
                             <button
@@ -411,6 +411,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                                                 )
                                             }
                                         ]}
+                                        direction="up"
                                     />
 
                                     {resolutionPreset === 'custom' && (
@@ -421,7 +422,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                                                     value={options.width}
                                                     onChange={e => setOptions({ ...options, width: parseInt(e.target.value) })}
                                                     placeholder="宽"
-                                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all no-spinner"
                                                 />
                                                 <span className="absolute right-3 top-2.5 text-xs text-slate-500">W</span>
                                             </div>
@@ -431,7 +432,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                                                     value={options.height}
                                                     onChange={e => setOptions({ ...options, height: parseInt(e.target.value) })}
                                                     placeholder="高"
-                                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all no-spinner"
                                                 />
                                                 <span className="absolute right-3 top-2.5 text-xs text-slate-500">H</span>
                                             </div>

@@ -3,6 +3,7 @@ import { SubtitleItem, SubtitleSnapshot, BatchOperationMode } from '@/types/subt
 import { AppSettings, GENRE_PRESETS } from '@/types/settings';
 import { GlossaryItem, GlossaryExtractionResult, GlossaryExtractionMetadata } from '@/types/glossary';
 import { GenerationStatus, ChunkStatus } from '@/types/api';
+import { SpeakerUIProfile } from '@/types/speaker';
 import { generateSrtContent, generateAssContent } from '@/services/subtitle/generator';
 import { downloadFile } from '@/services/subtitle/downloader';
 import { parseSrt, parseAss } from '@/services/subtitle/parser';
@@ -13,7 +14,7 @@ import { runBatchOperation } from '@/services/api/gemini/batch';
 import { retryGlossaryExtraction } from '@/services/api/gemini/glossary';
 import { useFileParserWorker } from '@/hooks/useFileParserWorker';
 import { decodeAudioWithRetry } from "@/services/audio/decoder";
-
+import { getSpeakerColor } from '@/utils/colors';
 import { getEnvVariable } from "@/services/utils/env";
 
 const ENV_GEMINI_KEY = getEnvVariable('GEMINI_API_KEY') || '';
@@ -66,6 +67,9 @@ export const useWorkspaceLogic = ({
     const [batchComments, setBatchComments] = useState<Record<number, string>>({});
     const [showSourceText, setShowSourceText] = useState(true);
     const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+
+    // Speaker Profiles State
+    const [speakerProfiles, setSpeakerProfiles] = useState<SpeakerUIProfile[]>([]);
 
     // Refs
     const audioCacheRef = useRef<{ file: File, buffer: AudioBuffer } | null>(null);
@@ -121,33 +125,55 @@ export const useWorkspaceLogic = ({
     };
 
     // Handlers
-    const handleFileChange = React.useCallback(async (e: React.ChangeEvent<HTMLInputElement>, activeTab: 'new' | 'import') => {
-        if (e.target.files && e.target.files[0]) {
-            const selectedFile = e.target.files[0];
+    // Common file processing logic
+    const processFileInternal = React.useCallback(async (selectedFile: File) => {
+        const process = async () => {
+            logger.info("File selected", { name: selectedFile.name, size: selectedFile.size, type: selectedFile.type });
+            setFile(selectedFile);
+            audioCacheRef.current = null;
+            setError(null);
+            try { const d = await getFileDuration(selectedFile); setDuration(d); } catch (e) { setDuration(0); }
+        };
 
-            const processFile = async () => {
-                logger.info("File selected", { name: selectedFile.name, size: selectedFile.size, type: selectedFile.type });
-                setFile(selectedFile);
-                audioCacheRef.current = null;
-                setError(null);
-                try { const d = await getFileDuration(selectedFile); setDuration(d); } catch (e) { setDuration(0); }
-            };
-
-            if (activeTab === 'new' && subtitles.length > 0 && status === GenerationStatus.COMPLETED) {
-                showConfirm(
-                    "确认替换文件",
-                    "替换文件后将清空当前字幕。建议先导出字幕（SRT/ASS）再操作。是否继续？",
-                    () => {
-                        setSubtitles([]); setStatus(GenerationStatus.IDLE); snapshotsValues.setSnapshots([]); setBatchComments({});
-                        processFile();
-                    },
-                    'warning'
-                );
-            } else {
-                processFile();
-            }
+        // Only warn if we are REPLACING an existing file (and have subtitles)
+        // If we just have subtitles but no file (e.g. imported SRT first), just load the file
+        if (file && subtitles.length > 0 && status === GenerationStatus.COMPLETED) {
+            showConfirm(
+                "确认替换文件",
+                "替换文件后将清空当前字幕。建议先导出字幕（SRT/ASS）再操作。是否继续？",
+                () => {
+                    setSubtitles([]); setStatus(GenerationStatus.IDLE); snapshotsValues.setSnapshots([]); setBatchComments({});
+                    process();
+                },
+                'warning'
+            );
+        } else {
+            await process();
         }
     }, [subtitles.length, status, snapshotsValues, showConfirm]);
+
+    // Handlers
+    const handleFileChange = React.useCallback(async (e: React.ChangeEvent<HTMLInputElement>, activeTab: 'new' | 'import') => {
+        if (e.target.files && e.target.files[0]) {
+            // Only use confirmation logic for 'new' tab if needed, but logic is now inside processFileInternal which checks subtitles/status
+            // However, the original code only checked activeTab === 'new' before prompting.
+            // Let's preserve that logic slightly differently:
+            // Actually, simply calling processFileInternal is fine, as it checks subtitles/status.
+            // The original code only prompted if activeTab === 'new'. If activeTab === 'import' (which doesn't exist anymore for file selection, only for subtitle import?), 
+            // wait, useWorkspaceLogic doesn't know about UI tabs. 
+            // Looking at usage in WorkspacePage, handleFileChange is called with 'new' or 'import'.
+
+            // If we are in 'import' tab (importing subtitle), we use handleSubtitleImport. 
+            // So handleFileChange is only for media file.
+            // The activeTab arg seems to differentiate where the file input is.
+
+            await processFileInternal(e.target.files[0]);
+        }
+    }, [processFileInternal]);
+
+    const handleFileSelectNative = React.useCallback(async (file: File) => {
+        await processFileInternal(file);
+    }, [processFileInternal]);
 
     const handleSubtitleImport = React.useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -163,6 +189,18 @@ export const useWorkspaceLogic = ({
                 const parsed = await parseSubtitle(content, fileType);
 
                 setSubtitles(parsed);
+
+                // Extract and set speaker profiles
+                const uniqueSpeakers = Array.from(new Set(parsed.map(s => s.speaker).filter(Boolean))) as string[];
+                const profiles: SpeakerUIProfile[] = uniqueSpeakers.map(name => ({
+                    id: name,
+                    name: name,
+                    color: getSpeakerColor(name)
+                }));
+                // Only set if we found speakers, to avoid clearing existing if any (though usually import replaces everything)
+                // Actually, import replaces subtitles, so we should replace profiles too.
+                setSpeakerProfiles(profiles);
+
                 setStatus(GenerationStatus.COMPLETED);
                 snapshotsValues.setSnapshots([]);
                 setBatchComments({});
@@ -510,6 +548,77 @@ export const useWorkspaceLogic = ({
         });
     }, []);
 
+    const updateSubtitleTime = React.useCallback((id: number, startTime: string, endTime: string) => {
+        setSubtitles(prev => prev.map(s => s.id === id ? { ...s, startTime, endTime } : s));
+    }, []);
+
+    const deleteSubtitle = React.useCallback((id: number) => {
+        setSubtitles(prev => prev.filter(s => s.id !== id));
+    }, []);
+
+    // Speaker Profile CRUD
+    const addSpeaker = React.useCallback((name: string) => {
+        const id = `speaker_${Date.now()}`;
+        setSpeakerProfiles(prev => [...prev, { id, name }]);
+        return id;
+    }, []);
+
+    const renameSpeaker = React.useCallback((profileId: string, newName: string) => {
+        setSpeakerProfiles(prev => {
+            const profile = prev.find(p => p.id === profileId);
+            if (!profile) return prev;
+            const oldName = profile.name;
+            // Update subtitles with old name
+            setSubtitles(subs => subs.map(s => s.speaker === oldName ? { ...s, speaker: newName } : s));
+            return prev.map(p => p.id === profileId ? { ...p, name: newName } : p);
+        });
+    }, []);
+
+    const deleteSpeaker = React.useCallback((profileId: string) => {
+        setSpeakerProfiles(prev => {
+            const profile = prev.find(p => p.id === profileId);
+            if (!profile) return prev;
+            // Clear speaker field from subtitles
+            setSubtitles(subs => subs.map(s => s.speaker === profile.name ? { ...s, speaker: undefined } : s));
+            return prev.filter(p => p.id !== profileId);
+        });
+    }, []);
+
+    const mergeSpeakers = React.useCallback((sourceIds: string[], targetId: string) => {
+        const target = speakerProfiles.find(p => p.id === targetId);
+        if (!target) return;
+
+        const sourcesDetails = speakerProfiles.filter(p => sourceIds.includes(p.id));
+        const sourceNames = sourcesDetails.map(p => p.name);
+
+        if (sourceNames.length === 0) return;
+
+        // 1. Update Subtitles (using current source names)
+        setSubtitles(subs => subs.map(s => s.speaker && sourceNames.includes(s.speaker) ? { ...s, speaker: target.name } : s));
+
+        // 2. Remove Merged Profiles
+        setSpeakerProfiles(prev => prev.filter(p => !sourceIds.includes(p.id)));
+    }, [speakerProfiles]);
+
+
+
+    // Sync speaker profiles from subtitles (when subtitles change)
+    useEffect(() => {
+        const uniqueSpeakers = new Set<string>();
+        subtitles.forEach(sub => {
+            if (sub.speaker) uniqueSpeakers.add(sub.speaker);
+        });
+        // Add any new speakers not in profiles
+        setSpeakerProfiles(prev => {
+            const existingNames = new Set(prev.map(p => p.name));
+            const newProfiles = [...uniqueSpeakers]
+                .filter(name => !existingNames.has(name))
+                .map(name => ({ id: `speaker_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name }));
+            if (newProfiles.length === 0) return prev;
+            return [...prev, ...newProfiles];
+        });
+    }, [subtitles]);
+
     const resetWorkspace = React.useCallback(() => {
         setSubtitles([]);
         setFile(null);
@@ -608,7 +717,12 @@ export const useWorkspaceLogic = ({
         if (!window.electronAPI?.isElectron || !file || subtitles.length === 0) return;
 
         const filePath = window.electronAPI.getFilePath(file);
-        if (!filePath) return;
+        if (!filePath) {
+            // File was selected via HTML input, not Electron dialog - cannot save history
+            // This is expected behavior, not an error
+            logger.debug('Cannot save history: file path not available (file selected via HTML input, use drag-drop or Electron dialog for history support)');
+            return;
+        }
 
         // Remove existing entry for same file
         const filtered = histories.filter(h => h.filePath !== filePath);
@@ -685,6 +799,7 @@ export const useWorkspaceLogic = ({
 
         // Handlers
         handleFileChange,
+        handleFileSelectNative,
         handleSubtitleImport,
         handleGenerate,
         handleBatchAction,
@@ -698,6 +813,8 @@ export const useWorkspaceLogic = ({
         updateSubtitleText,
         updateSubtitleOriginal,
         updateSpeaker,
+        updateSubtitleTime,
+        deleteSubtitle,
         resetWorkspace,
         cancelOperation,
         loadFileFromPath,
@@ -705,7 +822,14 @@ export const useWorkspaceLogic = ({
         // History
         getHistories,
         loadHistory,
-        deleteHistory
+        deleteHistory,
+
+        // Speaker Profiles
+        speakerProfiles,
+        addSpeaker,
+        renameSpeaker,
+        deleteSpeaker,
+        mergeSpeakers,
     }), [
         file,
         duration,
@@ -720,6 +844,7 @@ export const useWorkspaceLogic = ({
         showSourceText,
         editingCommentId,
         handleFileChange,
+        handleFileSelectNative,
         handleSubtitleImport,
         handleGenerate,
         handleBatchAction,
@@ -733,11 +858,19 @@ export const useWorkspaceLogic = ({
         updateSubtitleText,
         updateSubtitleOriginal,
         updateSpeaker,
+        updateSubtitleTime,
+        deleteSubtitle,
         resetWorkspace,
         cancelOperation,
         loadFileFromPath,
         getHistories,
         loadHistory,
-        deleteHistory
+        deleteHistory,
+        speakerProfiles,
+        addSpeaker,
+        renameSpeaker,
+        deleteSpeaker,
+        mergeSpeakers,
+
     ]);
 };

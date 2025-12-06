@@ -100,7 +100,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 text = cleanTranslated;
             }
 
-            return `Dialogue: 0,${start},${end},${style},,0,0,0,,${text}`;
+            // Always write speaker to Name field for metadata (re-import support)
+            const nameField = sub.speaker || '';
+
+            return `Dialogue: 0,${start},${end},${style},${nameField},0,0,0,,${text}`;
         })
         .join('\n');
 

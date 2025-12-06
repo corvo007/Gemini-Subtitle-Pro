@@ -6,9 +6,10 @@ import { sliceAudioBuffer } from "@/services/audio/processor";
 import { mapInParallel } from "@/services/utils/concurrency";
 import { logger } from "@/services/utils/logger";
 import { GLOSSARY_SCHEMA, SAFETY_SETTINGS } from "./schemas";
-import { generateContentWithRetry, isRetryableError } from "./client";
+import { generateContentWithRetry, isRetryableError, getActionableErrorMessage } from "./client";
 import { GLOSSARY_EXTRACTION_PROMPT } from "@/services/api/gemini/prompts";
 import { extractJsonArray } from "@/services/subtitle/parser";
+
 
 export const extractGlossaryFromAudio = async (
     ai: GoogleGenAI,
@@ -86,8 +87,18 @@ export const extractGlossaryFromAudio = async (
                 return extractSingleChunk(chunk, attemptNumber + 1);
             } else {
                 // All retries exhausted or non-retryable error
+                // Check for actionable error message to provide user-friendly feedback
+                const actionableMsg = getActionableErrorMessage(e);
                 const reason = isRetryable ? `在 ${attemptNumber} 次尝试后` : '(不可重试的错误)';
                 logger.error(`[分段 ${index}] 提取失败 ${reason}`, { error: e.message, status: e.status });
+
+                // Throw with actionable message if available
+                if (actionableMsg) {
+                    const enhancedError = new Error(actionableMsg);
+                    (enhancedError as any).status = e.status;
+                    (enhancedError as any).originalError = e;
+                    throw enhancedError;
+                }
                 throw e;
             }
         }

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { FileVideo, Download, Play, AlertCircle, Loader2, X, FileText, RotateCcw, Upload, Plus, Clapperboard, Edit2, Book, GitCommit, Scissors } from 'lucide-react';
 import { SubtitleItem, SubtitleSnapshot, BatchOperationMode } from '@/types/subtitle';
+import { SpeakerUIProfile } from '@/types/speaker';
 import { AppSettings } from '@/types/settings';
 import { GenerationStatus } from '@/types/api';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
@@ -27,6 +28,7 @@ interface WorkspacePageProps {
 
     // Handlers
     onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onFileChangeNative?: (file: File) => void;
     onSubtitleImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onGenerate: () => void;
     onDownload: (format: 'srt' | 'ass') => void;
@@ -57,6 +59,10 @@ interface WorkspacePageProps {
     updateSubtitleText: (id: number, translated: string) => void;
     updateSubtitleOriginal: (id: number, original: string) => void;
     updateSpeaker: (id: number, speaker: string, applyToAll?: boolean) => void;
+    updateSubtitleTime: (id: number, startTime: string, endTime: string) => void;
+    speakerProfiles?: SpeakerUIProfile[];
+    onManageSpeakers?: () => void;
+    deleteSubtitle?: (id: number) => void;
 }
 
 export const WorkspacePage: React.FC<WorkspacePageProps> = ({
@@ -74,6 +80,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
     showSourceText,
     editingCommentId,
     onFileChange,
+    onFileChangeNative,
     onSubtitleImport,
     onGenerate,
     onDownload,
@@ -96,6 +103,11 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
     updateSubtitleText,
     updateSubtitleOriginal,
     updateSpeaker,
+    updateSubtitleTime,
+    speakerProfiles,
+
+    onManageSpeakers,
+    deleteSubtitle,
     onStartCompression,
     histories,
     onLoadHistory,
@@ -145,6 +157,9 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                 />
                 <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-6 min-h-0">
                     <div className="lg:col-span-3 lg:h-full overflow-y-auto custom-scrollbar space-y-4">
+                        {/* Desktop Spacer for Alignment */}
+                        <div className="hidden lg:block h-8 mb-2 shrink-0"></div>
+
                         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 shadow-sm space-y-4">
                             <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-slate-300">项目文件</h3></div>
                             {file ? (
@@ -153,6 +168,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                                     fileName={file.name}
                                     fileInfo={`${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')} · ${(file.size / (1024 * 1024)).toFixed(1)}MB`}
                                     onFileSelect={onFileChange}
+                                    onFileSelectNative={onFileChangeNative}
+                                    useNativeDialog={isElectron}
                                     disabled={isProcessing}
                                     accept="video/*,audio/*"
                                     icon={<FileVideo className="text-indigo-400" />}
@@ -162,6 +179,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                                 <FileUploader
                                     hasFile={false}
                                     onFileSelect={onFileChange}
+                                    onFileSelectNative={onFileChangeNative}
+                                    useNativeDialog={isElectron}
                                     accept="video/*,audio/*"
                                     icon={activeTab === 'new' ? <Upload className="text-indigo-400" /> : <Plus className="text-slate-500 group-hover:text-indigo-400" />}
                                     uploadTitle={activeTab === 'new' ? "上传视频 / 音频" : "附加媒体 (可选)"}
@@ -305,6 +324,10 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                                         updateSubtitleText={updateSubtitleText}
                                         updateSubtitleOriginal={updateSubtitleOriginal}
                                         updateSpeaker={updateSpeaker}
+                                        updateSubtitleTime={updateSubtitleTime}
+                                        speakerProfiles={speakerProfiles}
+                                        deleteSubtitle={deleteSubtitle}
+                                        onManageSpeakers={onManageSpeakers}
                                     />
                                 </div>
                             )}

@@ -24,6 +24,15 @@ export interface ElectronAPI {
     isDebug: boolean;
     // 现有方法
     getFilePath: (file: File) => string;
+    selectMediaFile: () => Promise<{
+        success: boolean;
+        filePath?: string;
+        fileName?: string;
+        size?: number;
+        type?: string;
+        canceled?: boolean;
+        error?: string;
+    }>;
     readAudioFile: (filePath: string) => Promise<ArrayBuffer>;
     readLocalFile: (filePath: string) => Promise<ArrayBuffer>;
     saveSubtitleDialog: (defaultName: string, content: string, format: string) => Promise<{
@@ -36,7 +45,7 @@ export interface ElectronAPI {
         error?: string;
         canceled?: boolean;
     }>;
-    selectWhisperModel: () => Promise<string | null>;
+    selectWhisperModel: () => Promise<{ success: boolean; path?: string; error?: string; canceled?: boolean }>;
     transcribeLocal: (data: { audioData: ArrayBuffer, modelPath: string, language?: string, threads?: number, customBinaryPath?: string }) => Promise<{
         success: boolean;
         segments?: { start: string; end: string; text: string }[];
@@ -138,6 +147,11 @@ export interface ElectronAPI {
         save: (histories: any[]) => Promise<boolean>;
         delete: (id: string) => Promise<boolean>;
     };
+
+    getMainLogs: () => Promise<string[]>;
+
+    // Events
+    onShowAbout: (callback: () => void) => () => void;
 }
 
 declare global {

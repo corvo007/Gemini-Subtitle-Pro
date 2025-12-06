@@ -27,7 +27,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
     onShowSettings
 }) => {
     return (
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800 shrink-0">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800 shrink-0 window-drag-region" style={{ WebkitAppRegion: 'drag' } as any}>
             <div className="flex items-center space-x-4">
                 <button
                     onClick={onBack}
