@@ -7,6 +7,7 @@ import { SubtitleBatch } from './SubtitleBatch';
 import { SubtitleRow, validateSubtitle, parseTimeToSeconds } from './SubtitleRow';
 import { BatchHeader, SubtitleFilters, defaultFilters } from './BatchHeader';
 import { SimpleConfirmationModal } from '@/components/modals/SimpleConfirmationModal';
+import { Virtuoso } from 'react-virtuoso';
 
 interface SubtitleEditorProps {
     subtitles: SubtitleItem[];
@@ -234,32 +235,35 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(({
                     </div>
 
                     {filteredSubtitles.length > 0 ? (
-                        <div className="border border-slate-700/50 bg-slate-900/40 rounded-xl overflow-hidden divide-y divide-slate-800/50">
-                            {filteredSubtitles.map((sub, index) => {
-                                // Find previous subtitle's end time (from original subtitles array for correct overlap detection)
-                                const originalIndex = subtitles.findIndex(s => s.id === sub.id);
-                                const prevEndTime = originalIndex > 0 ? subtitles[originalIndex - 1].endTime : undefined;
-
-                                return (
-                                    <SubtitleRow
-                                        key={sub.id}
-                                        sub={sub}
-                                        showSourceText={showSourceText}
-                                        editingCommentId={editingCommentId}
-                                        setEditingCommentId={setEditingCommentId}
-                                        updateLineComment={updateLineComment}
-                                        updateSubtitleText={updateSubtitleText}
-                                        updateSubtitleOriginal={updateSubtitleOriginal}
-                                        updateSpeaker={updateSpeaker}
-                                        updateSubtitleTime={updateSubtitleTime}
-                                        deleteSubtitle={checkDelete}
-                                        prevEndTime={prevEndTime}
-                                        speakerProfiles={speakerProfiles}
-                                        onManageSpeakers={onManageSpeakers}
-
-                                    />
-                                );
-                            })}
+                        <div className="border border-slate-700/50 bg-slate-900/40 rounded-xl overflow-hidden">
+                            <Virtuoso
+                                style={{ height: 'calc(100vh - 300px)' }}
+                                data={filteredSubtitles}
+                                itemContent={(index, sub) => {
+                                    const originalIndex = subtitles.findIndex(s => s.id === sub.id);
+                                    const prevEndTime = originalIndex > 0 ? subtitles[originalIndex - 1].endTime : undefined;
+                                    return (
+                                        <div className="border-b border-slate-800/50 last:border-b-0">
+                                            <SubtitleRow
+                                                key={sub.id}
+                                                sub={sub}
+                                                showSourceText={showSourceText}
+                                                editingCommentId={editingCommentId}
+                                                setEditingCommentId={setEditingCommentId}
+                                                updateLineComment={updateLineComment}
+                                                updateSubtitleText={updateSubtitleText}
+                                                updateSubtitleOriginal={updateSubtitleOriginal}
+                                                updateSpeaker={updateSpeaker}
+                                                updateSubtitleTime={updateSubtitleTime}
+                                                deleteSubtitle={checkDelete}
+                                                prevEndTime={prevEndTime}
+                                                speakerProfiles={speakerProfiles}
+                                                onManageSpeakers={onManageSpeakers}
+                                            />
+                                        </div>
+                                    );
+                                }}
+                            />
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center py-12 text-slate-500 bg-slate-900/30 rounded-xl border border-slate-800/50">
@@ -270,34 +274,38 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(({
                 </>
             ) : (
                 // Normal Batch View
-                <>
-                    {chunks.map((chunk, chunkIdx) => (
-                        <SubtitleBatch
-                            key={chunkIdx}
-                            chunk={chunk}
-                            chunkIdx={chunkIdx}
-                            isSelected={selectedBatches.has(chunkIdx)}
-                            status={status}
-                            batchComment={batchComments[chunkIdx] || ''}
-                            toggleBatch={toggleBatch}
-                            updateBatchComment={updateBatchComment}
-                            handleBatchAction={handleBatchAction}
-                            showSourceText={showSourceText}
-                            editingCommentId={editingCommentId}
-                            setEditingCommentId={setEditingCommentId}
-                            updateLineComment={updateLineComment}
-                            updateSubtitleText={updateSubtitleText}
-                            updateSubtitleOriginal={updateSubtitleOriginal}
-                            updateSpeaker={updateSpeaker}
-                            updateSubtitleTime={updateSubtitleTime}
-                            deleteSubtitle={checkDelete}
-                            subtitles={subtitles}
-                            batchSize={batchSize}
-                            speakerProfiles={speakerProfiles}
-                            onManageSpeakers={onManageSpeakers}
-                        />
-                    ))}
-                </>
+                <Virtuoso
+                    style={{ height: 'calc(100vh - 300px)' }}
+                    data={chunks}
+                    itemContent={(chunkIdx, chunk) => (
+                        <div className="mb-6">
+                            <SubtitleBatch
+                                key={chunkIdx}
+                                chunk={chunk}
+                                chunkIdx={chunkIdx}
+                                isSelected={selectedBatches.has(chunkIdx)}
+                                status={status}
+                                batchComment={batchComments[chunkIdx] || ''}
+                                toggleBatch={toggleBatch}
+                                updateBatchComment={updateBatchComment}
+                                handleBatchAction={handleBatchAction}
+                                showSourceText={showSourceText}
+                                editingCommentId={editingCommentId}
+                                setEditingCommentId={setEditingCommentId}
+                                updateLineComment={updateLineComment}
+                                updateSubtitleText={updateSubtitleText}
+                                updateSubtitleOriginal={updateSubtitleOriginal}
+                                updateSpeaker={updateSpeaker}
+                                updateSubtitleTime={updateSubtitleTime}
+                                deleteSubtitle={checkDelete}
+                                subtitles={subtitles}
+                                batchSize={batchSize}
+                                speakerProfiles={speakerProfiles}
+                                onManageSpeakers={onManageSpeakers}
+                            />
+                        </div>
+                    )}
+                />
             )}
 
             <SimpleConfirmationModal
