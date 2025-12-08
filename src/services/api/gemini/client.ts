@@ -241,7 +241,7 @@ export async function generateContentWithRetry(
   for (let i = 0; i < retries; i++) {
     // Check cancellation before request
     if (signal?.aborted) {
-      throw new Error('Operation cancelled');
+      throw new Error('操作已取消');
     }
 
     try {
@@ -264,7 +264,7 @@ export async function generateContentWithRetry(
           promises.push(
             new Promise((_, reject) => {
               timeoutHandle = setTimeout(
-                () => reject(new Error(`Request timeout after ${timeoutMs}ms`)),
+                () => reject(new Error(`请求超时 (${Math.round(timeoutMs / 1000)}秒)`)),
                 timeoutMs
               );
             })

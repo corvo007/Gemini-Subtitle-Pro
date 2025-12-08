@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SubtitleItem, SubtitleSnapshot, BatchOperationMode } from '@/types/subtitle';
+import { WorkspaceHistory } from '@/types/history';
 import { AppSettings, GENRE_PRESETS } from '@/types/settings';
 import {
   GlossaryItem,
@@ -19,10 +20,7 @@ import { retryGlossaryExtraction } from '@/services/api/gemini/glossary';
 import { useFileParserWorker } from '@/hooks/useFileParserWorker';
 import { decodeAudioWithRetry } from '@/services/audio/decoder';
 import { getSpeakerColor } from '@/utils/colors';
-import { getEnvVariable } from '@/services/utils/env';
-
-const ENV_GEMINI_KEY = getEnvVariable('GEMINI_API_KEY') || '';
-const ENV_OPENAI_KEY = getEnvVariable('OPENAI_API_KEY') || '';
+import { ENV } from '@/config/env';
 
 interface UseWorkspaceLogicProps {
   settings: AppSettings;
@@ -76,6 +74,10 @@ export const useWorkspaceLogic = ({
   const [progressMsg, setProgressMsg] = useState('');
   const [chunkProgress, setChunkProgress] = useState<Record<string, ChunkStatus>>({});
   const [subtitles, setSubtitles] = useState<SubtitleItem[]>([]);
+  const subtitlesRef = useRef(subtitles);
+  useEffect(() => {
+    subtitlesRef.current = subtitles;
+  }, [subtitles]);
   const [error, setError] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
 
@@ -166,6 +168,7 @@ export const useWorkspaceLogic = ({
           const d = await getFileDuration(selectedFile);
           setDuration(d);
         } catch (e) {
+          logger.warn('Failed to get file duration, defaulting to 0', e);
           setDuration(0);
         }
       };
@@ -189,7 +192,7 @@ export const useWorkspaceLogic = ({
         await process();
       }
     },
-    [subtitles.length, status, snapshotsValues, showConfirm]
+    [file, subtitles.length, status, snapshotsValues, showConfirm]
   );
 
   // Handlers
@@ -269,8 +272,8 @@ export const useWorkspaceLogic = ({
       setError('请先上传媒体文件。');
       return;
     }
-    const hasGemini = !!(settings.geminiKey || ENV_GEMINI_KEY);
-    const hasOpenAI = !!(settings.openaiKey || ENV_OPENAI_KEY);
+    const hasGemini = !!(settings.geminiKey || ENV.GEMINI_API_KEY);
+    const hasOpenAI = !!(settings.openaiKey || ENV.OPENAI_API_KEY);
     const hasLocalWhisper = !!settings.useLocalWhisper;
 
     if (!hasGemini || (!hasOpenAI && !hasLocalWhisper)) {
@@ -452,8 +455,8 @@ export const useWorkspaceLogic = ({
         logger.info('Generation cancelled by user');
 
         // Keep partial results (subtitles state already updated via onIntermediateResult)
-        if (subtitles.length > 0) {
-          snapshotsValues.createSnapshot('部分生成 (已终止)', subtitles, batchComments);
+        if (subtitlesRef.current.length > 0) {
+          snapshotsValues.createSnapshot('部分生成 (已终止)', subtitlesRef.current, batchComments);
           addToast('生成已终止，保留部分结果', 'warning');
         } else {
           addToast('生成已终止', 'info');
@@ -485,7 +488,7 @@ export const useWorkspaceLogic = ({
       const indices: number[] =
         singleIndex !== undefined ? [singleIndex] : (Array.from(selectedBatches) as number[]);
       if (indices.length === 0) return;
-      if (!settings.geminiKey && !ENV_GEMINI_KEY) {
+      if (!settings.geminiKey && !ENV.GEMINI_API_KEY) {
         setError('缺少 API 密钥。');
         return;
       }
@@ -592,7 +595,7 @@ export const useWorkspaceLogic = ({
 
     glossaryFlow.setIsGeneratingGlossary(true);
     try {
-      const apiKey = settings.geminiKey || ENV_GEMINI_KEY;
+      const apiKey = settings.geminiKey || ENV.GEMINI_API_KEY;
       const newMetadata = await retryGlossaryExtraction(
         apiKey,
         audioCacheRef.current.buffer,
@@ -844,20 +847,13 @@ export const useWorkspaceLogic = ({
   useEffect(() => {
     return () => {
       cleanup();
+      audioCacheRef.current = null;
     };
   }, [cleanup]);
 
   // History persistence (Desktop only - stored in JSON file)
   const MAX_HISTORIES = 5;
   const [histories, setHistories] = useState<WorkspaceHistory[]>([]);
-
-  interface WorkspaceHistory {
-    id: string;
-    filePath: string;
-    fileName: string;
-    subtitles: SubtitleItem[];
-    savedAt: string;
-  }
 
   // Load histories on mount
   useEffect(() => {

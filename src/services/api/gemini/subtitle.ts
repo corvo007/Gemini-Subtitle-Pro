@@ -31,7 +31,7 @@ import { REFINEMENT_SCHEMA, REFINEMENT_WITH_DIARIZATION_SCHEMA, SAFETY_SETTINGS 
 import { generateContentWithRetry, formatGeminiError, getActionableErrorMessage } from './client';
 import { translateBatch } from './batch';
 
-import { getEnvVariable } from '@/services/utils/env';
+import { ENV } from '@/config/env';
 
 export const generateSubtitles = async (
   audioSource: File | AudioBuffer,
@@ -42,8 +42,8 @@ export const generateSubtitles = async (
   onGlossaryReady?: (metadata: GlossaryExtractionMetadata) => Promise<GlossaryItem[]>,
   signal?: AbortSignal
 ): Promise<{ subtitles: SubtitleItem[]; glossaryResults?: GlossaryExtractionResult[] }> => {
-  const geminiKey = getEnvVariable('GEMINI_API_KEY') || settings.geminiKey?.trim();
-  const openaiKey = getEnvVariable('OPENAI_API_KEY') || settings.openaiKey?.trim();
+  const geminiKey = ENV.GEMINI_API_KEY || settings.geminiKey?.trim();
+  const openaiKey = ENV.OPENAI_API_KEY || settings.openaiKey?.trim();
 
   if (!geminiKey) throw new Error('缺少 Gemini API 密钥。');
   if (!openaiKey && !settings.useLocalWhisper) throw new Error('缺少 OpenAI API 密钥。');

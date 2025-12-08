@@ -31,7 +31,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cleanupTempAudio: (audioPath: string) => ipcRenderer.invoke('cleanup-temp-audio', audioPath),
   getAudioInfo: (videoPath: string) => ipcRenderer.invoke('get-audio-info', videoPath),
   onAudioExtractionProgress: (callback: (progress: any) => void) => {
-    ipcRenderer.on('audio-extraction-progress', (_event, progress) => callback(progress));
+    const subscription = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('audio-extraction-progress', subscription);
+    return () => {
+      ipcRenderer.removeListener('audio-extraction-progress', subscription);
+    };
   },
   onNewLog: (callback: (log: string) => void) => {
     const subscription = (_event: any, log: string) => callback(log);

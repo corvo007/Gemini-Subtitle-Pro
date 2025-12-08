@@ -438,7 +438,7 @@ async function processBatch(
   return batch;
 }
 
-import { getEnvVariable } from '@/services/utils/env';
+import { ENV } from '@/config/env';
 
 export const runBatchOperation = async (
   file: File | null,
@@ -451,7 +451,7 @@ export const runBatchOperation = async (
   signal?: AbortSignal,
   speakerProfiles?: SpeakerProfile[]
 ): Promise<SubtitleItem[]> => {
-  const geminiKey = getEnvVariable('GEMINI_API_KEY') || settings.geminiKey?.trim();
+  const geminiKey = ENV.GEMINI_API_KEY || settings.geminiKey?.trim();
   if (!geminiKey) throw new Error('缺少 API 密钥。');
   const ai = new GoogleGenAI({
     apiKey: geminiKey,

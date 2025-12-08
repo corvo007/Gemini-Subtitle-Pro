@@ -1,3 +1,6 @@
+import { AppSettings } from './settings';
+import { WorkspaceHistory } from './history';
+
 export interface AudioExtractionOptions {
   format?: 'wav' | 'mp3' | 'flac';
   sampleRate?: number;
@@ -84,13 +87,13 @@ export interface ElectronAPI {
     info?: AudioInfo;
     error?: string;
   }>;
-  onAudioExtractionProgress: (callback: (progress: AudioExtractionProgress) => void) => void;
+  onAudioExtractionProgress: (callback: (progress: AudioExtractionProgress) => void) => () => void;
   onNewLog: (callback: (log: string) => void) => () => void;
 
   // Storage
   storage: {
-    getSettings: () => Promise<any>;
-    setSettings: (settings: any) => Promise<void>;
+    getSettings: () => Promise<Partial<AppSettings>>;
+    setSettings: (settings: Partial<AppSettings>) => Promise<void>;
   };
 
   // Open external link
@@ -166,8 +169,8 @@ export interface ElectronAPI {
 
   // History APIs
   history: {
-    get: () => Promise<any[]>;
-    save: (histories: any[]) => Promise<boolean>;
+    get: () => Promise<WorkspaceHistory[]>;
+    save: (histories: WorkspaceHistory[]) => Promise<boolean>;
     delete: (id: string) => Promise<boolean>;
   };
 

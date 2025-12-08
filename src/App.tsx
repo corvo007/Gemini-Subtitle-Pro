@@ -23,10 +23,7 @@ import { WorkspacePage } from '@/components/pages/WorkspacePage';
 import { DownloadPage } from '@/components/download';
 import { CompressionPage } from '@/components/compression/CompressionPage';
 
-import { getEnvVariable } from '@/services/utils/env';
-
-const ENV_GEMINI_KEY = getEnvVariable('GEMINI_API_KEY') || '';
-const ENV_OPENAI_KEY = getEnvVariable('OPENAI_API_KEY') || '';
+import { ENV } from '@/config/env';
 
 export default function App() {
   // View State
@@ -155,12 +152,8 @@ export default function App() {
                 newLogs.push(pl);
               }
             });
-            return newLogs.sort((a, b) => {
-              // Simple sort if timestamp string comparison works (it usually does for ISO-like),
-              // but our timestamp is HH:MM:SS which might wrap days.
-              // Ideally backend sends ISO. But for now preserving order is enough.
-              return 0;
-            });
+            // Preserve insertion order - logs are already chronological
+            return newLogs;
           });
         } catch (err) {
           console.error('Failed to load backend log history:', err);
@@ -170,7 +163,7 @@ export default function App() {
 
     if (window.electronAPI && window.electronAPI.onNewLog) {
       // Initialize history first
-      initBackendLogs();
+      initBackendLogs().catch((err) => console.error('[App] Failed to init backend logs:', err));
 
       unsubscribeBackend = window.electronAPI.onNewLog(async (logLine) => {
         // Print to DevTools console for visibility
@@ -230,8 +223,8 @@ export default function App() {
         setActiveTab={setSettingsTab}
         settings={settings}
         updateSetting={updateSetting}
-        envGeminiKey={ENV_GEMINI_KEY}
-        envOpenaiKey={ENV_OPENAI_KEY}
+        envGeminiKey={ENV.GEMINI_API_KEY}
+        envOpenaiKey={ENV.OPENAI_API_KEY}
         onOpenGlossaryManager={() => {
           setShowSettings(false);
           setShowGlossaryManager(true);
