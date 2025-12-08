@@ -2,7 +2,6 @@
 // import { NonRealTimeVAD, utils } from "@ricky0123/vad-web";
 // import * as ort from "onnxruntime-web";
 
-import { SubtitleItem } from '@/types/subtitle';
 import { logger } from '@/services/utils/logger';
 
 export interface SegmentationOptions {

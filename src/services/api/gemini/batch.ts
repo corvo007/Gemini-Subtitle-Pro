@@ -30,6 +30,7 @@ import {
   formatGeminiError,
   getActionableErrorMessage,
 } from './client';
+import { MODELS } from '@/constants/models';
 
 export async function processTranslationBatchWithRetry(
   ai: GoogleGenAI,
@@ -57,7 +58,7 @@ export async function processTranslationBatchWithRetry(
       const response = await generateContentWithRetry(
         ai,
         {
-          model: 'gemini-2.5-flash',
+          model: MODELS.FLASH,
           contents: { parts: [{ text: prompt }] },
           config: {
             responseMimeType: 'application/json',
@@ -383,7 +384,7 @@ async function processBatch(
     // Model Selection:
     // Proofread -> Gemini 3 Pro (Best quality) + Search Grounding
     // Fix Timestamps / Retranslate -> Gemini 2.5 Flash (Fast/Efficient)
-    const model = mode === 'proofread' ? 'gemini-3-pro-preview' : 'gemini-2.5-flash';
+    const model = mode === 'proofread' ? MODELS.PRO : MODELS.FLASH;
     const tools = mode === 'proofread' ? [{ googleSearch: {} }] : undefined;
 
     // Use the new Long Output handler

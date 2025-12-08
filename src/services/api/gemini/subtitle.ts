@@ -30,6 +30,7 @@ import { calculateDetailedCost } from '@/services/api/gemini/pricing';
 import { REFINEMENT_SCHEMA, REFINEMENT_WITH_DIARIZATION_SCHEMA, SAFETY_SETTINGS } from './schemas';
 import { generateContentWithRetry, formatGeminiError, getActionableErrorMessage } from './client';
 import { translateBatch } from './batch';
+import { MODELS } from '@/constants/models';
 
 import { ENV } from '@/config/env';
 
@@ -610,7 +611,7 @@ export const generateSubtitles = async (
             const refineResponse = await generateContentWithRetry(
               ai,
               {
-                model: 'gemini-2.5-flash',
+                model: MODELS.FLASH,
                 contents: {
                   parts: [
                     { inlineData: { mimeType: 'audio/wav', data: base64Audio } },

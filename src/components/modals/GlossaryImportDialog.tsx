@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Plus, Merge, AlertCircle, X, CheckCircle } from 'lucide-react';
+import { FileText, Plus, Merge, X, CheckCircle } from 'lucide-react';
 import { Glossary } from '@/types/glossary';
 import { CustomSelect } from '@/components/settings';
 

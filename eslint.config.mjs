@@ -3,6 +3,7 @@ import tseslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
+import unusedImports from 'eslint-plugin-unused-imports';
 
 export default [
   js.configs.recommended,
@@ -80,6 +81,7 @@ export default [
       '@typescript-eslint': tseslint,
       react: reactPlugin,
       'react-hooks': reactHooksPlugin,
+      'unused-imports': unusedImports,
     },
     rules: {
       // TypeScript rules
@@ -99,6 +101,9 @@ export default [
       'no-console': 'off',
       'no-unused-vars': 'off', // Use @typescript-eslint/no-unused-vars instead
       'no-undef': 'off', // TypeScript handles this better
+
+      // Unused imports
+      'unused-imports/no-unused-imports': 'error',
     },
     settings: {
       react: {

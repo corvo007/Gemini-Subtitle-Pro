@@ -1,5 +1,3 @@
-import { TokenUsage } from '@/types/api';
-
 /**
  * Official Gemini API Pricing (as of Nov 2024)
  * All prices in USD per 1 Million Tokens

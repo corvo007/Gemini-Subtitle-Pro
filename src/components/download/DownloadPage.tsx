@@ -8,7 +8,6 @@ import {
   Settings,
   Download,
   Play,
-  AlertCircle,
   CheckCircle,
   FolderOpen,
   RefreshCw,

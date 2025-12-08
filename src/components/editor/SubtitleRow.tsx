@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { SubtitleItem } from '@/types';
 import { SpeakerUIProfile } from '@/types/speaker';
-import { getSpeakerColor } from '@/utils/colors';
 import { SpeakerSelect } from './SpeakerSelect';
 
 // Validation thresholds (from prompts.ts rules)

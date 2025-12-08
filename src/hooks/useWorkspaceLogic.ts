@@ -4,7 +4,7 @@ import { useWorkspaceHistory } from './useWorkspaceLogic/useWorkspaceHistory';
 import { useSpeakerProfiles } from './useWorkspaceLogic/useSpeakerProfiles';
 import { useBatchSelection } from './useWorkspaceLogic/useBatchSelection';
 import { useSubtitleCRUD } from './useWorkspaceLogic/useSubtitleCRUD';
-import { AppSettings, GENRE_PRESETS } from '@/types/settings';
+import { AppSettings } from '@/types/settings';
 import {
   GlossaryItem,
   GlossaryExtractionResult,
@@ -14,7 +14,6 @@ import { GenerationStatus, ChunkStatus } from '@/types/api';
 import { SpeakerUIProfile } from '@/types/speaker';
 import { generateSrtContent, generateAssContent } from '@/services/subtitle/generator';
 import { downloadFile } from '@/services/subtitle/downloader';
-import { parseSrt, parseAss } from '@/services/subtitle/parser';
 import { logger } from '@/services/utils/logger';
 import { mergeGlossaryResults } from '@/services/glossary/merger';
 import { generateSubtitles } from '@/services/api/gemini/subtitle';

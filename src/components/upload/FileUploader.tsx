@@ -1,5 +1,5 @@
 import React from 'react';
-import { Upload, RefreshCcw, Plus } from 'lucide-react';
+import { RefreshCcw } from 'lucide-react';
 
 interface FileUploaderProps {
   hasFile: boolean;

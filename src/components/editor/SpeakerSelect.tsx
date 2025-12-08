@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, User, Users } from 'lucide-react';
+import { ChevronDown, Users } from 'lucide-react';
 import { SpeakerUIProfile } from '@/types/speaker';
 import { getSpeakerColor } from '@/utils/colors';
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Book,
   Plus,
@@ -9,7 +9,6 @@ import {
   CheckCircle,
   X,
   Search,
-  ChevronRight,
   AlertCircle,
 } from 'lucide-react';
 import { Glossary, GlossaryItem } from '@/types/glossary';
@@ -19,7 +18,6 @@ import {
   exportGlossary,
   importGlossary,
 } from '@/services/glossary/manager';
-import { validateGlossaryItem } from '@/services/glossary/validator';
 import {
   GlossaryImportDialog,
   ImportMode,

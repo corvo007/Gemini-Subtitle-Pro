@@ -1,4 +1,3 @@
-import { BatchOperationMode } from '@/types/subtitle';
 import { GlossaryItem } from '@/types/glossary';
 import { SpeakerProfile } from './speakerProfile';
 import { formatTime } from '@/services/subtitle/time';

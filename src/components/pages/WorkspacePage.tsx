@@ -5,15 +5,12 @@ import {
   Play,
   AlertCircle,
   Loader2,
-  X,
   FileText,
-  RotateCcw,
   Upload,
   Plus,
   Clapperboard,
   Edit2,
   Book,
-  GitCommit,
   Scissors,
 } from 'lucide-react';
 import { SubtitleItem, SubtitleSnapshot, BatchOperationMode } from '@/types/subtitle';

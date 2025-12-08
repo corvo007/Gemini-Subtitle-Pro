@@ -1,9 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import {
-  GlossaryItem,
-  GlossaryExtractionResult,
-  GlossaryExtractionMetadata,
-} from '@/types/glossary';
+import { GlossaryExtractionResult, GlossaryExtractionMetadata } from '@/types/glossary';
 import { TokenUsage } from '@/types/api';
 import { blobToBase64 } from '@/services/audio/converter';
 import { sliceAudioBuffer } from '@/services/audio/processor';
@@ -13,6 +9,7 @@ import { GLOSSARY_SCHEMA, SAFETY_SETTINGS } from './schemas';
 import { generateContentWithRetry, isRetryableError, getActionableErrorMessage } from './client';
 import { GLOSSARY_EXTRACTION_PROMPT } from '@/services/api/gemini/prompts';
 import { extractJsonArray } from '@/services/subtitle/parser';
+import { MODELS } from '@/constants/models';
 
 export const extractGlossaryFromAudio = async (
   ai: GoogleGenAI,
@@ -46,7 +43,7 @@ export const extractGlossaryFromAudio = async (
       const response = await generateContentWithRetry(
         ai,
         {
-          model: 'gemini-3-pro-preview',
+          model: MODELS.PRO,
           contents: {
             parts: [{ inlineData: { mimeType: 'audio/wav', data: base64Audio } }, { text: prompt }],
           },

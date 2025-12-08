@@ -1,6 +1,5 @@
 import React from 'react';
 import { AlertCircle, Loader2, RefreshCcw } from 'lucide-react';
-import { GlossaryExtractionMetadata } from '@/types/glossary';
 
 interface GlossaryExtractionFailedDialogProps {
   isOpen: boolean;

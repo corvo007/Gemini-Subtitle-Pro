@@ -14,7 +14,6 @@ import {
   Type,
   ChevronDown,
   User,
-  Eraser,
   Users,
   Trash2,
 } from 'lucide-react';

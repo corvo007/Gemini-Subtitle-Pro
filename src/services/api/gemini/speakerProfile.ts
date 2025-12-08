@@ -5,6 +5,7 @@ import { TokenUsage } from '@/types/api';
 import { SPEAKER_PROFILE_SCHEMA } from './schemas';
 import { getSpeakerProfileExtractionPrompt } from './prompts';
 import { generateContentWithRetry, formatGeminiError } from './client';
+import { MODELS } from '@/constants/models';
 
 export interface SpeakerProfile {
   id: string;
@@ -68,7 +69,7 @@ export async function extractSpeakerProfiles(
     const response = await generateContentWithRetry(
       ai,
       {
-        model: 'gemini-3-pro-preview',
+        model: MODELS.PRO,
         contents: {
           parts: [
             { text: prompt },
@@ -111,7 +112,7 @@ export async function extractSpeakerProfiles(
       profiles: data.profiles || [],
       extractedAt: new Date(),
       audioDuration: audioDuration,
-      modelVersion: 'gemini-3-pro-preview',
+      modelVersion: MODELS.PRO,
     };
   } catch (error) {
     logger.error('Speaker profile extraction failed', formatGeminiError(error));

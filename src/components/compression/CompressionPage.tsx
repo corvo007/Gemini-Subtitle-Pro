@@ -7,8 +7,6 @@ import {
   FolderOpen,
   ArrowLeft,
   FileText,
-  Check,
-  ChevronDown,
   AlertCircle,
   X,
 } from 'lucide-react';
