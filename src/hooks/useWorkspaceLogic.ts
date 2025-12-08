@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SubtitleItem, SubtitleSnapshot, BatchOperationMode } from '@/types/subtitle';
-import { WorkspaceHistory } from '@/types/history';
+import { useWorkspaceHistory } from './useWorkspaceLogic/useWorkspaceHistory';
+import { useSpeakerProfiles } from './useWorkspaceLogic/useSpeakerProfiles';
+import { useBatchSelection } from './useWorkspaceLogic/useBatchSelection';
+import { useSubtitleCRUD } from './useWorkspaceLogic/useSubtitleCRUD';
 import { AppSettings, GENRE_PRESETS } from '@/types/settings';
 import {
   GlossaryItem,
@@ -81,14 +84,43 @@ export const useWorkspaceLogic = ({
   const [error, setError] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
 
-  // Batch & View State
-  const [selectedBatches, setSelectedBatches] = useState<Set<number>>(new Set());
-  const [batchComments, setBatchComments] = useState<Record<number, string>>({});
-  const [showSourceText, setShowSourceText] = useState(true);
-  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  // Batch & View State (extracted to useBatchSelection)
+  const {
+    selectedBatches,
+    setSelectedBatches,
+    batchComments,
+    setBatchComments,
+    showSourceText,
+    setShowSourceText,
+    editingCommentId,
+    setEditingCommentId,
+    toggleBatch,
+    toggleAllBatches,
+    selectBatchesWithComments,
+    updateBatchComment,
+    resetBatchState,
+  } = useBatchSelection();
 
-  // Speaker Profiles State
-  const [speakerProfiles, setSpeakerProfiles] = useState<SpeakerUIProfile[]>([]);
+  // Subtitle CRUD (extracted to useSubtitleCRUD)
+  const {
+    updateSubtitleText,
+    updateSubtitleOriginal,
+    updateSpeaker,
+    updateSubtitleTime,
+    updateLineComment,
+    deleteSubtitle,
+    deleteMultipleSubtitles,
+  } = useSubtitleCRUD({ setSubtitles });
+
+  // Speaker Profiles (extracted to useSpeakerProfiles)
+  const {
+    speakerProfiles,
+    setSpeakerProfiles,
+    addSpeaker,
+    renameSpeaker,
+    deleteSpeaker,
+    mergeSpeakers,
+  } = useSpeakerProfiles({ subtitles, setSubtitles });
 
   // Refs
   const audioCacheRef = useRef<{ file: File; buffer: AudioBuffer } | null>(null);
@@ -632,157 +664,6 @@ export const useWorkspaceLogic = ({
     }
   }, [glossaryFlow, settings]);
 
-  const toggleBatch = React.useCallback(
-    (index: number) => {
-      const newSet = new Set(selectedBatches);
-      if (newSet.has(index)) newSet.delete(index);
-      else newSet.add(index);
-      setSelectedBatches(newSet);
-    },
-    [selectedBatches]
-  );
-
-  const toggleAllBatches = React.useCallback(
-    (totalBatches: number) => {
-      if (selectedBatches.size === totalBatches) setSelectedBatches(new Set());
-      else setSelectedBatches(new Set(Array.from({ length: totalBatches }, (_, i) => i)));
-    },
-    [selectedBatches]
-  );
-
-  const selectBatchesWithComments = React.useCallback(
-    (chunks: SubtitleItem[][]) => {
-      const newSet = new Set<number>();
-      chunks.forEach((chunk, idx) => {
-        const hasBatchComment = batchComments[idx] && batchComments[idx].trim().length > 0;
-        const hasLineComments = chunk.some((s) => s.comment && s.comment.trim().length > 0);
-        if (hasBatchComment || hasLineComments) newSet.add(idx);
-      });
-      setSelectedBatches(newSet);
-    },
-    [batchComments]
-  );
-
-  const updateBatchComment = React.useCallback((index: number, comment: string) => {
-    setBatchComments((prev) => ({ ...prev, [index]: comment }));
-  }, []);
-
-  const updateLineComment = React.useCallback((id: number, comment: string) => {
-    setSubtitles((prev) => prev.map((s) => (s.id === id ? { ...s, comment } : s)));
-  }, []);
-
-  const updateSubtitleText = React.useCallback((id: number, translated: string) => {
-    setSubtitles((prev) => prev.map((s) => (s.id === id ? { ...s, translated } : s)));
-  }, []);
-
-  const updateSubtitleOriginal = React.useCallback((id: number, original: string) => {
-    setSubtitles((prev) => prev.map((s) => (s.id === id ? { ...s, original } : s)));
-  }, []);
-
-  const updateSpeaker = React.useCallback(
-    (id: number, speaker: string, applyToAll: boolean = false) => {
-      setSubtitles((prev) => {
-        if (applyToAll) {
-          const targetSub = prev.find((s) => s.id === id);
-          const oldSpeaker = targetSub?.speaker;
-          if (oldSpeaker) {
-            return prev.map((s) => (s.speaker === oldSpeaker ? { ...s, speaker } : s));
-          }
-        }
-        return prev.map((s) => (s.id === id ? { ...s, speaker } : s));
-      });
-    },
-    []
-  );
-
-  const updateSubtitleTime = React.useCallback((id: number, startTime: string, endTime: string) => {
-    setSubtitles((prev) => prev.map((s) => (s.id === id ? { ...s, startTime, endTime } : s)));
-  }, []);
-
-  const deleteSubtitle = React.useCallback((id: number) => {
-    setSubtitles((prev) => prev.filter((s) => s.id !== id));
-  }, []);
-
-  const deleteMultipleSubtitles = React.useCallback((ids: number[]) => {
-    const idSet = new Set(ids);
-    setSubtitles((prev) => prev.filter((s) => !idSet.has(s.id)));
-  }, []);
-
-  // Speaker Profile CRUD
-  const addSpeaker = React.useCallback((name: string) => {
-    const id = `speaker_${Date.now()}`;
-    setSpeakerProfiles((prev) => [...prev, { id, name }]);
-    return id;
-  }, []);
-
-  const renameSpeaker = React.useCallback((profileId: string, newName: string) => {
-    setSpeakerProfiles((prev) => {
-      const profile = prev.find((p) => p.id === profileId);
-      if (!profile) return prev;
-      const oldName = profile.name;
-      // Update subtitles with old name
-      setSubtitles((subs) =>
-        subs.map((s) => (s.speaker === oldName ? { ...s, speaker: newName } : s))
-      );
-      return prev.map((p) => (p.id === profileId ? { ...p, name: newName } : p));
-    });
-  }, []);
-
-  const deleteSpeaker = React.useCallback((profileId: string) => {
-    setSpeakerProfiles((prev) => {
-      const profile = prev.find((p) => p.id === profileId);
-      if (!profile) return prev;
-      // Clear speaker field from subtitles
-      setSubtitles((subs) =>
-        subs.map((s) => (s.speaker === profile.name ? { ...s, speaker: undefined } : s))
-      );
-      return prev.filter((p) => p.id !== profileId);
-    });
-  }, []);
-
-  const mergeSpeakers = React.useCallback(
-    (sourceIds: string[], targetId: string) => {
-      const target = speakerProfiles.find((p) => p.id === targetId);
-      if (!target) return;
-
-      const sourcesDetails = speakerProfiles.filter((p) => sourceIds.includes(p.id));
-      const sourceNames = sourcesDetails.map((p) => p.name);
-
-      if (sourceNames.length === 0) return;
-
-      // 1. Update Subtitles (using current source names)
-      setSubtitles((subs) =>
-        subs.map((s) =>
-          s.speaker && sourceNames.includes(s.speaker) ? { ...s, speaker: target.name } : s
-        )
-      );
-
-      // 2. Remove Merged Profiles
-      setSpeakerProfiles((prev) => prev.filter((p) => !sourceIds.includes(p.id)));
-    },
-    [speakerProfiles]
-  );
-
-  // Sync speaker profiles from subtitles (when subtitles change)
-  useEffect(() => {
-    const uniqueSpeakers = new Set<string>();
-    subtitles.forEach((sub) => {
-      if (sub.speaker) uniqueSpeakers.add(sub.speaker);
-    });
-    // Add any new speakers not in profiles
-    setSpeakerProfiles((prev) => {
-      const existingNames = new Set(prev.map((p) => p.name));
-      const newProfiles = [...uniqueSpeakers]
-        .filter((name) => !existingNames.has(name))
-        .map((name) => ({
-          id: `speaker_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          name,
-        }));
-      if (newProfiles.length === 0) return prev;
-      return [...prev, ...newProfiles];
-    });
-  }, [subtitles]);
-
   const resetWorkspace = React.useCallback(() => {
     setSubtitles([]);
     setFile(null);
@@ -851,99 +732,17 @@ export const useWorkspaceLogic = ({
     };
   }, [cleanup]);
 
-  // History persistence (Desktop only - stored in JSON file)
-  const MAX_HISTORIES = 5;
-  const [histories, setHistories] = useState<WorkspaceHistory[]>([]);
-
-  // Load histories on mount
-  useEffect(() => {
-    const loadHistories = async () => {
-      if (!window.electronAPI?.history) return;
-      try {
-        const data = await window.electronAPI.history.get();
-        setHistories(data || []);
-      } catch (e) {
-        logger.error('Failed to load histories', e);
-      }
-    };
-    loadHistories();
-  }, []);
-
-  const getHistories = React.useCallback((): WorkspaceHistory[] => {
-    return histories;
-  }, [histories]);
-
-  const saveHistory = React.useCallback(async () => {
-    if (!window.electronAPI?.isElectron || !file || subtitles.length === 0) return;
-
-    const filePath = window.electronAPI.getFilePath(file);
-    if (!filePath) {
-      // File was selected via HTML input, not Electron dialog - cannot save history
-      // This is expected behavior, not an error
-      logger.debug(
-        'Cannot save history: file path not available (file selected via HTML input, use drag-drop or Electron dialog for history support)'
-      );
-      return;
-    }
-
-    // Remove existing entry for same file
-    const filtered = histories.filter((h) => h.filePath !== filePath);
-
-    const newHistory: WorkspaceHistory = {
-      id: Date.now().toString(),
-      filePath,
-      fileName: file.name,
-      subtitles,
-      savedAt: new Date().toISOString(),
-    };
-
-    // Add new entry at the beginning, limit to MAX_HISTORIES
-    const updated = [newHistory, ...filtered].slice(0, MAX_HISTORIES);
-
-    try {
-      await window.electronAPI.history.save(updated);
-      setHistories(updated);
-      logger.info('Saved workspace history', {
-        fileName: file.name,
-        subtitleCount: subtitles.length,
-      });
-    } catch (e) {
-      logger.error('Failed to save history', e);
-    }
-  }, [file, subtitles, histories]);
-
-  const deleteHistory = React.useCallback(async (id: string) => {
-    if (!window.electronAPI?.history) return;
-    try {
-      await window.electronAPI.history.delete(id);
-      setHistories((prev) => prev.filter((h) => h.id !== id));
-    } catch (e) {
-      logger.error('Failed to delete history', e);
-    }
-  }, []);
-
-  const loadHistory = React.useCallback(
-    async (history: WorkspaceHistory) => {
-      try {
-        await loadFileFromPath(history.filePath);
-        setSubtitles(history.subtitles);
-        setStatus(GenerationStatus.COMPLETED);
-        snapshotsValues.createSnapshot('从历史恢复', history.subtitles, {});
-        logger.info('Loaded workspace history', { fileName: history.fileName });
-      } catch (e: any) {
-        logger.error('Failed to load history', e);
-        setError('无法加载历史: ' + e.message);
-      }
-    },
-    [loadFileFromPath, snapshotsValues]
-  );
-
-  // Auto-save history when subtitles are generated/imported
-  useEffect(() => {
-    if (status === GenerationStatus.COMPLETED && subtitles.length > 0 && file) {
-      saveHistory();
-    }
-  }, [status, subtitles.length, file, saveHistory]);
+  // History management (extracted to useWorkspaceHistory)
+  const { histories, getHistories, saveHistory, loadHistory, deleteHistory } = useWorkspaceHistory({
+    file,
+    subtitles,
+    status,
+    setSubtitles,
+    setStatus,
+    setError,
+    loadFileFromPath,
+    createSnapshot: snapshotsValues.createSnapshot,
+  });
 
   return React.useMemo(
     () => ({
