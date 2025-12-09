@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.8.1] - 2025-12-09
+
+### Refactor
+
+- **Subtitle IDs**: Migrated from numeric to string-based IDs to fix AI re-indexing bugs.
+
+### Performance
+
+- **Token Efficiency**: Optimized subtitle ID length to 4 characters for better LLM token usage.
+
 ## [2.8.0] - 2025-12-09
 
 ### Features
