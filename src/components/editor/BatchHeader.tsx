@@ -87,7 +87,6 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
   onConfirmDelete,
   totalVisibleCount,
 }) => {
-  const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
   const [isIssueFilterOpen, setIsIssueFilterOpen] = React.useState(false);
   const [isSpeakerFilterOpen, setIsSpeakerFilterOpen] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -99,13 +98,6 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
     Boolean
   ).length;
   const activeSpeakerFilterCount = filters.speakers.size;
-
-  // Auto-focus when search expands
-  React.useEffect(() => {
-    if (isSearchExpanded && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [isSearchExpanded]);
 
   // Close filter dropdowns when clicking outside
   React.useEffect(() => {
@@ -121,10 +113,9 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Collapse search when query is cleared
+  // Clear search
   const handleClearSearch = () => {
     setSearchQuery('');
-    setIsSearchExpanded(false);
   };
 
   const toggleFilter = (key: keyof SubtitleFilters) => {
@@ -150,16 +141,288 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-4 bg-slate-800/90 p-3 rounded-lg border border-slate-700 sticky top-0 z-20 backdrop-blur-md shadow-md">
-      {/* Left Side Group (Selectors + Search + Filters) */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div className="flex flex-wrap items-center gap-y-2 gap-x-4">
+    <div className="flex flex-col gap-3 bg-slate-800/90 p-3 rounded-lg border border-slate-700 sticky top-0 z-20 backdrop-blur-md shadow-md">
+      {/* Row 1: Search, Filters & Action Buttons */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Left: Search & Filter Tools */}
+        <div className="flex items-center gap-3">
+          {/* Search Input */}
+          <div className="relative group">
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="搜索..."
+              className="w-32 sm:w-48 bg-slate-900 border border-slate-700 rounded-md pl-9 pr-8 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-1.5 top-1/2 transform -translate-y-1/2 p-0.5 hover:bg-slate-700 rounded text-slate-500 hover:text-slate-300 transition-colors"
+                title="清除搜索"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          <div className="h-4 w-px bg-slate-700/50"></div>
+
+          {/* Issue Filter */}
+          <div className="relative" ref={issueFilterRef}>
+            <button
+              onClick={() => {
+                setIsIssueFilterOpen(!isIssueFilterOpen);
+                setIsSpeakerFilterOpen(false);
+              }}
+              className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs transition-all border ${
+                activeIssueFilterCount > 0
+                  ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
+                  : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
+              }`}
+              title="过滤问题"
+            >
+              <Filter className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">问题</span>
+              {activeIssueFilterCount > 0 && (
+                <span className="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium ml-0.5">
+                  {activeIssueFilterCount}
+                </span>
+              )}
+              <ChevronDown
+                className={`w-3 h-3 transition-transform ${isIssueFilterOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {isIssueFilterOpen && (
+              <div className="absolute left-0 top-full mt-1.5 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 min-w-[180px] py-1 animate-fade-in-down origin-top-left">
+                {/* Duration Filter */}
+                <button
+                  onClick={() => toggleFilter('duration')}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-800 transition-colors"
+                >
+                  <div className="flex items-center space-x-2">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span className={filters.duration ? 'text-amber-300' : 'text-slate-300'}>
+                      时间过长
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {issueCounts && (
+                      <span className="text-slate-500 text-[10px]">({issueCounts.duration})</span>
+                    )}
+                    {filters.duration ? (
+                      <CheckSquare className="w-4 h-4 text-indigo-400" />
+                    ) : (
+                      <Square className="w-4 h-4 text-slate-600" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Length Filter */}
+                <button
+                  onClick={() => toggleFilter('length')}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-800 transition-colors"
+                >
+                  <div className="flex items-center space-x-2">
+                    <Type className="w-3.5 h-3.5 text-rose-400" />
+                    <span className={filters.length ? 'text-rose-300' : 'text-slate-300'}>
+                      字符过多
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {issueCounts && (
+                      <span className="text-slate-500 text-[10px]">({issueCounts.length})</span>
+                    )}
+                    {filters.length ? (
+                      <CheckSquare className="w-4 h-4 text-indigo-400" />
+                    ) : (
+                      <Square className="w-4 h-4 text-slate-600" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Overlap Filter */}
+                <button
+                  onClick={() => toggleFilter('overlap')}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-800 transition-colors"
+                >
+                  <div className="flex items-center space-x-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
+                    <span className={filters.overlap ? 'text-orange-300' : 'text-slate-300'}>
+                      时间重叠
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {issueCounts && (
+                      <span className="text-slate-500 text-[10px]">({issueCounts.overlap})</span>
+                    )}
+                    {filters.overlap ? (
+                      <CheckSquare className="w-4 h-4 text-indigo-400" />
+                    ) : (
+                      <Square className="w-4 h-4 text-slate-600" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Clear Issues */}
+                {activeIssueFilterCount > 0 && (
+                  <>
+                    <div className="border-t border-slate-700 my-1" />
+                    <button
+                      onClick={clearIssueFilters}
+                      className="w-full flex items-center justify-center px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      清除问题筛选
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Speaker Filter */}
+          {speakerProfiles && speakerProfiles.length > 0 && (
+            <div className="relative" ref={speakerFilterRef}>
+              <button
+                onClick={() => {
+                  setIsSpeakerFilterOpen(!isSpeakerFilterOpen);
+                  setIsIssueFilterOpen(false);
+                }}
+                className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs transition-all border ${
+                  activeSpeakerFilterCount > 0
+                    ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
+                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
+                }`}
+                title="筛选说话人"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">说话人</span>
+                {activeSpeakerFilterCount > 0 && (
+                  <span className="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium ml-0.5">
+                    {activeSpeakerFilterCount}
+                  </span>
+                )}
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform ${isSpeakerFilterOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {isSpeakerFilterOpen && (
+                <div className="absolute left-0 top-full mt-1.5 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 min-w-[200px] max-h-[60vh] overflow-y-auto py-1 animate-fade-in-down origin-top-left">
+                  {speakerProfiles.map((profile) => (
+                    <button
+                      key={profile.id}
+                      onClick={() => toggleSpeaker(profile.name)}
+                      className="w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-slate-800 transition-colors"
+                    >
+                      <div className="flex items-center space-x-2 overflow-hidden">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: getSpeakerColor(profile.name) }}
+                        />
+                        <span
+                          className={`truncate ${
+                            filters.speakers.has(profile.name)
+                              ? 'text-indigo-300'
+                              : 'text-slate-300'
+                          }`}
+                        >
+                          {profile.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2 pl-2 flex-shrink-0">
+                        {speakerCounts && speakerCounts[profile.name] !== undefined && (
+                          <span className="text-slate-500 text-[10px]">
+                            ({speakerCounts[profile.name]})
+                          </span>
+                        )}
+                        {filters.speakers.has(profile.name) ? (
+                          <CheckSquare className="w-4 h-4 text-indigo-400" />
+                        ) : (
+                          <Square className="w-4 h-4 text-slate-600" />
+                        )}
+                      </div>
+                    </button>
+                  ))}
+
+                  {/* Clear Speakers */}
+                  {activeSpeakerFilterCount > 0 && (
+                    <>
+                      <div className="border-t border-slate-700 my-1" />
+                      <button
+                        onClick={clearSpeakerFilters}
+                        className="w-full flex items-center justify-center px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        清除说话人筛选
+                      </button>
+                    </>
+                  )}
+
+                  {/* Manage Speakers */}
+                  {onManageSpeakers && (
+                    <>
+                      <div className="border-t border-slate-700 my-1" />
+                      <button
+                        onClick={() => {
+                          onManageSpeakers();
+                          setIsSpeakerFilterOpen(false);
+                        }}
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-indigo-400 hover:text-indigo-300 hover:bg-slate-800 transition-colors"
+                      >
+                        <Users className="w-3 h-3" />
+                        管理说话人
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Right: Primary Actions */}
+        {!isDeleteMode && (
+          <div className="flex items-center gap-2">
+            {file && (
+              <button
+                onClick={() => handleBatchAction('fix_timestamps')}
+                disabled={selectedBatches.size === 0}
+                title="校对时间轴 (保留翻译)"
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border ${selectedBatches.size > 0 ? 'bg-slate-700 border-slate-600 text-emerald-400 hover:bg-slate-600 hover:border-emerald-400/50' : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'}`}
+              >
+                <Clock className="w-3 h-3" />
+                <span className="hidden sm:inline">校对时间轴</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => handleBatchAction('proofread')}
+              disabled={selectedBatches.size === 0}
+              title="润色翻译 (保留时间轴)"
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border ${selectedBatches.size > 0 ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500' : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'}`}
+            >
+              <Sparkles className="w-3 h-3" />
+              <span className="hidden sm:inline">润色翻译</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Row 2: Batch Selection & Status */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-700/50">
+        {/* Selection Tools */}
+        <div className="flex items-center gap-3">
           {isDeleteMode ? (
-            /* Delete Mode Toolbar */
-            <div className="flex items-center space-x-3">
+            /* Delete Mode Selection */
+            <>
               <button
                 onClick={onSelectAllForDelete}
-                className="flex items-center space-x-2 text-sm text-red-300 hover:text-red-200 transition-colors"
+                className="flex items-center space-x-2 text-xs text-red-300 hover:text-red-200 transition-colors"
               >
                 {selectedForDeleteCount === totalVisibleCount && totalVisibleCount! > 0 ? (
                   <CheckSquare className="w-4 h-4 text-red-400" />
@@ -168,29 +431,33 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                 )}
                 <span>全选</span>
               </button>
+
+              <div className="h-4 w-px bg-slate-700/50"></div>
+
               <button
                 onClick={onConfirmDelete}
                 disabled={!selectedForDeleteCount || selectedForDeleteCount === 0}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border ${
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all shadow-sm border ${
                   selectedForDeleteCount && selectedForDeleteCount > 0
                     ? 'bg-red-600 border-red-500 text-white hover:bg-red-500'
                     : 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
                 }`}
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>删除 ({selectedForDeleteCount || 0})</span>
+                <span>确认删除 ({selectedForDeleteCount || 0})</span>
               </button>
+
               <button
                 onClick={onToggleDeleteMode}
-                className="flex items-center space-x-1 text-sm text-slate-400 hover:text-white transition-colors"
+                className="flex items-center space-x-1 text-xs text-slate-400 hover:text-white transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
                 <span>取消</span>
               </button>
-            </div>
+            </>
           ) : (
-            /* Normal Mode Toolbar */
-            <div className="flex items-center space-x-4">
+            /* Normal Selection */
+            <>
               <button
                 onClick={() => toggleAllBatches(chunks.length)}
                 className="flex items-center space-x-2 text-sm text-slate-300 hover:text-white transition-colors"
@@ -202,6 +469,7 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                 )}
                 <span>{selectedBatches.size === chunks.length ? '取消全选' : '全选'}</span>
               </button>
+
               <button
                 onClick={() => selectBatchesWithComments(chunks)}
                 className="flex items-center space-x-2 text-sm text-slate-300 hover:text-white transition-colors"
@@ -210,6 +478,9 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                 <MessageCircle className="w-4 h-4 text-amber-400" />
                 <span className="hidden sm:inline">选择带评论项</span>
               </button>
+
+              <div className="h-4 w-px bg-slate-700/50"></div>
+
               <button
                 onClick={() => setShowSourceText(!showSourceText)}
                 className="flex items-center space-x-2 text-sm text-slate-400 hover:text-white transition-colors"
@@ -217,307 +488,34 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                 {showSourceText ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 <span className="hidden sm:inline">{showSourceText ? '隐藏原文' : '显示原文'}</span>
               </button>
+            </>
+          )}
+        </div>
+
+        {/* Right: Status / Delete Toggle */}
+        <div className="flex items-center gap-3">
+          {!isDeleteMode && (
+            <>
               {onToggleDeleteMode && (
                 <button
                   onClick={onToggleDeleteMode}
-                  className="flex items-center space-x-1.5 text-sm text-red-400 hover:text-red-300 transition-colors"
+                  className="flex items-center space-x-1.5 text-sm text-red-400 hover:text-red-300 transition-colors opacity-80 hover:opacity-100"
                   title="批量删除"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">批量删除</span>
                 </button>
               )}
-            </div>
+
+              {onToggleDeleteMode && <div className="h-4 w-px bg-slate-700/50"></div>}
+
+              <span className="text-sm text-slate-500 font-mono">
+                已选 {selectedBatches.size} 项
+              </span>
+            </>
           )}
-        </div>
-
-        {/* Search & Filters Group */}
-        <div className="flex items-center space-x-4 pl-4 border-l border-slate-700/50">
-          {/* Collapsible Search */}
-          <div className="flex items-center">
-            {isSearchExpanded ? (
-              <div className="flex items-center space-x-1 animate-fade-in">
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="搜索..."
-                    className="w-40 sm:w-48 bg-slate-900 border border-slate-700 rounded-md pl-7 pr-7 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') {
-                        handleClearSearch();
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={handleClearSearch}
-                    className="absolute right-1.5 top-1/2 transform -translate-y-1/2 p-0.5 hover:bg-slate-700 rounded text-slate-500 hover:text-slate-300 transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsSearchExpanded(true)}
-                className="flex items-center space-x-2 text-sm text-slate-400 hover:text-white transition-colors"
-                title="搜索字幕"
-              >
-                <Search className="w-4 h-4" />
-                <span className="hidden sm:inline">搜索</span>
-              </button>
-            )}
-          </div>
-
-          {/* Filters Container */}
-          <div className="flex items-center gap-2">
-            {/* Issue Filter Dropdown */}
-            <div className="relative" ref={issueFilterRef}>
-              <button
-                onClick={() => {
-                  setIsIssueFilterOpen(!isIssueFilterOpen);
-                  setIsSpeakerFilterOpen(false);
-                }}
-                className={`flex items-center space-x-1.5 px-2 py-1.5 rounded-md text-xs transition-all border ${
-                  activeIssueFilterCount > 0
-                    ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
-                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
-                }`}
-              >
-                <Filter className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">问题</span>
-                {activeIssueFilterCount > 0 && (
-                  <span className="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
-                    {activeIssueFilterCount}
-                  </span>
-                )}
-                <ChevronDown
-                  className={`w-3 h-3 transition-transform ${isIssueFilterOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
-
-              {isIssueFilterOpen && (
-                <div className="absolute left-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 min-w-[180px] py-1 animate-fade-in">
-                  {/* Duration Filter */}
-                  <button
-                    onClick={() => toggleFilter('duration')}
-                    className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-800 transition-colors"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-3.5 h-3.5 text-amber-400" />
-                      <span className={filters.duration ? 'text-amber-300' : 'text-slate-300'}>
-                        时间过长
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {issueCounts && (
-                        <span className="text-slate-500 text-[10px]">({issueCounts.duration})</span>
-                      )}
-                      {filters.duration ? (
-                        <CheckSquare className="w-4 h-4 text-indigo-400" />
-                      ) : (
-                        <Square className="w-4 h-4 text-slate-600" />
-                      )}
-                    </div>
-                  </button>
-
-                  {/* Length Filter */}
-                  <button
-                    onClick={() => toggleFilter('length')}
-                    className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-800 transition-colors"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <Type className="w-3.5 h-3.5 text-rose-400" />
-                      <span className={filters.length ? 'text-rose-300' : 'text-slate-300'}>
-                        字符过多
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {issueCounts && (
-                        <span className="text-slate-500 text-[10px]">({issueCounts.length})</span>
-                      )}
-                      {filters.length ? (
-                        <CheckSquare className="w-4 h-4 text-indigo-400" />
-                      ) : (
-                        <Square className="w-4 h-4 text-slate-600" />
-                      )}
-                    </div>
-                  </button>
-
-                  {/* Overlap Filter */}
-                  <button
-                    onClick={() => toggleFilter('overlap')}
-                    className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-800 transition-colors"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
-                      <span className={filters.overlap ? 'text-orange-300' : 'text-slate-300'}>
-                        时间重叠
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {issueCounts && (
-                        <span className="text-slate-500 text-[10px]">({issueCounts.overlap})</span>
-                      )}
-                      {filters.overlap ? (
-                        <CheckSquare className="w-4 h-4 text-indigo-400" />
-                      ) : (
-                        <Square className="w-4 h-4 text-slate-600" />
-                      )}
-                    </div>
-                  </button>
-
-                  {/* Clear Issues */}
-                  {activeIssueFilterCount > 0 && (
-                    <>
-                      <div className="border-t border-slate-700 my-1" />
-                      <button
-                        onClick={clearIssueFilters}
-                        className="w-full flex items-center justify-center px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                      >
-                        <X className="w-3 h-3 mr-1" />
-                        清除问题筛选
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Speaker Filter Dropdown */}
-            {speakerProfiles && speakerProfiles.length > 0 && (
-              <div className="relative" ref={speakerFilterRef}>
-                <button
-                  onClick={() => {
-                    setIsSpeakerFilterOpen(!isSpeakerFilterOpen);
-                    setIsIssueFilterOpen(false);
-                  }}
-                  className={`flex items-center space-x-1.5 px-2 py-1.5 rounded-md text-xs transition-all border ${
-                    activeSpeakerFilterCount > 0
-                      ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
-                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
-                  }`}
-                >
-                  <User className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">说话人</span>
-                  {activeSpeakerFilterCount > 0 && (
-                    <span className="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
-                      {activeSpeakerFilterCount}
-                    </span>
-                  )}
-                  <ChevronDown
-                    className={`w-3 h-3 transition-transform ${isSpeakerFilterOpen ? 'rotate-180' : ''}`}
-                  />
-                </button>
-
-                {isSpeakerFilterOpen && (
-                  <div className="absolute right-0 sm:left-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 min-w-[180px] max-h-[60vh] overflow-y-auto py-1 animate-fade-in">
-                    {speakerProfiles.map((profile) => (
-                      <button
-                        key={profile.id}
-                        onClick={() => toggleSpeaker(profile.name)}
-                        className="w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-slate-800 transition-colors"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full"
-                            style={{ backgroundColor: getSpeakerColor(profile.name) }}
-                          />
-                          <span
-                            className={
-                              filters.speakers.has(profile.name)
-                                ? 'text-indigo-300'
-                                : 'text-slate-300'
-                            }
-                          >
-                            {profile.name}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {speakerCounts && speakerCounts[profile.name] !== undefined && (
-                            <span className="text-slate-500 text-[10px]">
-                              ({speakerCounts[profile.name]})
-                            </span>
-                          )}
-                          {filters.speakers.has(profile.name) ? (
-                            <CheckSquare className="w-4 h-4 text-indigo-400" />
-                          ) : (
-                            <Square className="w-4 h-4 text-slate-600" />
-                          )}
-                        </div>
-                      </button>
-                    ))}
-
-                    {/* Clear Speakers */}
-                    {activeSpeakerFilterCount > 0 && (
-                      <>
-                        <div className="border-t border-slate-700 my-1" />
-                        <button
-                          onClick={clearSpeakerFilters}
-                          className="w-full flex items-center justify-center px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                        >
-                          <X className="w-3 h-3 mr-1" />
-                          清除说话人筛选
-                        </button>
-                      </>
-                    )}
-
-                    {/* Manage Speakers */}
-                    {onManageSpeakers && (
-                      <>
-                        <div className="border-t border-slate-700 my-1" />
-                        <button
-                          onClick={() => {
-                            onManageSpeakers();
-                            setIsSpeakerFilterOpen(false);
-                          }}
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-indigo-400 hover:text-indigo-300 hover:bg-slate-800 transition-colors"
-                        >
-                          <Users className="w-3 h-3" />
-                          管理说话人
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
         </div>
       </div>
-
-      {/* Right Side: Stats & Actions - Hide in delete mode */}
-      {!isDeleteMode && (
-        <div className="flex items-center gap-2 ml-auto">
-          <div className="text-xs text-slate-500 font-mono mr-2 hidden sm:block">
-            已选 {selectedBatches.size} 项
-          </div>
-          {file && (
-            <button
-              onClick={() => handleBatchAction('fix_timestamps')}
-              disabled={selectedBatches.size === 0}
-              title="校对时间轴 (保留翻译)"
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border ${selectedBatches.size > 0 ? 'bg-slate-700 border-slate-600 text-emerald-400 hover:bg-slate-600 hover:border-emerald-400/50' : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'}`}
-            >
-              <Clock className="w-3 h-3" />
-              <span className="hidden sm:inline">校对时间轴</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => handleBatchAction('proofread')}
-            disabled={selectedBatches.size === 0}
-            title="润色翻译 (保留时间轴)"
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border ${selectedBatches.size > 0 ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500' : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'}`}
-          >
-            <Sparkles className="w-3 h-3" />
-            <span className="hidden sm:inline">润色翻译</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 };

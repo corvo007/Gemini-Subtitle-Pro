@@ -163,7 +163,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
   }, [subtitles, status]);
 
   return (
-    <div className="h-screen bg-slate-950 text-slate-200 p-4 md:p-6 flex flex-col overflow-hidden">
+    <div className="h-screen bg-slate-950 text-slate-200 p-4 md:p-6 flex flex-col overflow-y-auto md:overflow-hidden">
       <div className="max-w-screen-2xl mx-auto w-full flex-1 flex flex-col space-y-6">
         <WorkspaceHeader
           title={activeTab === 'new' ? '新建项目' : '字幕编辑器'}
@@ -179,10 +179,10 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
           onShowGlossary={onShowGlossary}
           onShowSettings={onShowSettings}
         />
-        <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-6 min-h-0">
-          <div className="lg:col-span-3 lg:h-full overflow-y-auto custom-scrollbar space-y-4">
+        <div className="flex-1 flex flex-col md:grid md:grid-cols-12 gap-6 md:min-h-0">
+          <div className="md:col-span-4 lg:col-span-3 h-auto md:h-full md:overflow-y-auto custom-scrollbar space-y-4">
             {/* Desktop Spacer for Alignment */}
-            <div className="hidden lg:block h-8 mb-2 shrink-0"></div>
+            <div className="hidden md:block h-8 mb-2 shrink-0"></div>
 
             <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
@@ -376,7 +376,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
             )}
           </div>
 
-          <div className="lg:col-span-9 flex flex-col h-[500px] lg:h-full min-h-0">
+          <div className="md:col-span-8 lg:col-span-9 flex flex-col h-[80vh] md:h-full min-h-0">
             <div className="flex items-center justify-between mb-2 h-8 shrink-0">
               <div className="flex items-center space-x-2"></div>
               <StatusBadge status={status} />

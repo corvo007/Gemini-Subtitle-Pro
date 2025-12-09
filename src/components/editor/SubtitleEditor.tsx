@@ -261,7 +261,7 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
     };
 
     return (
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-6 h-full flex flex-col">
         {/* Always show BatchHeader when completed */}
         {status === GenerationStatus.COMPLETED && (
           <BatchHeader
@@ -305,9 +305,9 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
             </div>
 
             {filteredSubtitles.length > 0 ? (
-              <div className="border border-slate-700/50 bg-slate-900/40 rounded-xl overflow-hidden">
+              <div className="border border-slate-700/50 bg-slate-900/40 rounded-xl overflow-hidden flex-1 min-h-0">
                 <Virtuoso
-                  style={{ height: 'calc(100vh - 280px)' }}
+                  style={{ height: '100%' }}
                   data={filteredSubtitles}
                   itemContent={(index, sub) => {
                     const originalIndex = subtitles.findIndex((s) => s.id === sub.id);
@@ -349,42 +349,44 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
           </>
         ) : (
           // Normal Batch View
-          <Virtuoso
-            style={{ height: 'calc(100vh - 280px)' }}
-            data={chunks}
-            itemContent={(chunkIdx, chunk) => (
-              <div className="mb-6">
-                <SubtitleBatch
-                  key={chunkIdx}
-                  chunk={chunk}
-                  chunkIdx={chunkIdx}
-                  isSelected={selectedBatches.has(chunkIdx)}
-                  status={status}
-                  batchComment={batchComments[chunkIdx] || ''}
-                  toggleBatch={toggleBatch}
-                  updateBatchComment={updateBatchComment}
-                  handleBatchAction={handleBatchAction}
-                  showSourceText={showSourceText}
-                  editingCommentId={editingCommentId}
-                  setEditingCommentId={setEditingCommentId}
-                  updateLineComment={updateLineComment}
-                  updateSubtitleText={updateSubtitleText}
-                  updateSubtitleOriginal={updateSubtitleOriginal}
-                  updateSpeaker={updateSpeaker}
-                  updateSubtitleTime={updateSubtitleTime}
-                  deleteSubtitle={checkDelete}
-                  subtitles={subtitles}
-                  batchSize={batchSize}
-                  speakerProfiles={speakerProfiles}
-                  onManageSpeakers={onManageSpeakers}
-                  isDeleteMode={isDeleteMode}
-                  selectedForDelete={selectedForDelete}
-                  onToggleDeleteSelection={toggleDeleteSelection}
-                  addSubtitle={addSubtitle}
-                />
-              </div>
-            )}
-          />
+          <div className="flex-1 min-h-0">
+            <Virtuoso
+              style={{ height: '100%' }}
+              data={chunks}
+              itemContent={(chunkIdx, chunk) => (
+                <div className="mb-6">
+                  <SubtitleBatch
+                    key={chunkIdx}
+                    chunk={chunk}
+                    chunkIdx={chunkIdx}
+                    isSelected={selectedBatches.has(chunkIdx)}
+                    status={status}
+                    batchComment={batchComments[chunkIdx] || ''}
+                    toggleBatch={toggleBatch}
+                    updateBatchComment={updateBatchComment}
+                    handleBatchAction={handleBatchAction}
+                    showSourceText={showSourceText}
+                    editingCommentId={editingCommentId}
+                    setEditingCommentId={setEditingCommentId}
+                    updateLineComment={updateLineComment}
+                    updateSubtitleText={updateSubtitleText}
+                    updateSubtitleOriginal={updateSubtitleOriginal}
+                    updateSpeaker={updateSpeaker}
+                    updateSubtitleTime={updateSubtitleTime}
+                    deleteSubtitle={checkDelete}
+                    subtitles={subtitles}
+                    batchSize={batchSize}
+                    speakerProfiles={speakerProfiles}
+                    onManageSpeakers={onManageSpeakers}
+                    isDeleteMode={isDeleteMode}
+                    selectedForDelete={selectedForDelete}
+                    onToggleDeleteSelection={toggleDeleteSelection}
+                    addSubtitle={addSubtitle}
+                  />
+                </div>
+              )}
+            />
+          </div>
         )}
 
         <SimpleConfirmationModal
