@@ -432,7 +432,6 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                         ),
                       },
                     ]}
-                    direction="up"
                   />
 
                   {resolutionPreset === 'custom' && (
@@ -509,7 +508,6 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                         ),
                       },
                     ]}
-                    direction="up"
                   />
 
                   {subtitleMode === 'file' && (

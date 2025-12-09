@@ -174,6 +174,8 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
     const [tempSpeaker, setTempSpeaker] = React.useState('');
     const [showAddMenu, setShowAddMenu] = React.useState(false);
     const [showAddSubmenu, setShowAddSubmenu] = React.useState(false);
+    const [menuDropUp, setMenuDropUp] = React.useState(false);
+    const [submenuDropLeft, setSubmenuDropLeft] = React.useState(false);
     const addMenuRef = React.useRef<HTMLDivElement>(null);
 
     // Close add menu when clicking outside
@@ -188,10 +190,32 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showAddMenu]);
 
-    // Close submenu when main menu closes
     React.useEffect(() => {
       if (!showAddMenu) setShowAddSubmenu(false);
     }, [showAddMenu]);
+
+    // Toggle menu with smart direction detection
+    const toggleMenu = () => {
+      if (!showAddMenu) {
+        if (addMenuRef.current) {
+          const rect = addMenuRef.current.getBoundingClientRect();
+          const spaceBelow = window.innerHeight - rect.bottom;
+          // If less than 220px below, open upwards
+          setMenuDropUp(spaceBelow < 220);
+        }
+      }
+      setShowAddMenu(!showAddMenu);
+    };
+
+    // Calculate submenu direction on hover
+    const handleSubmenuEnter = () => {
+      if (addMenuRef.current) {
+        const rect = addMenuRef.current.getBoundingClientRect();
+        // If less than 130px to the left, open to the right
+        setSubmenuDropLeft(rect.left > 130);
+      }
+      setShowAddSubmenu(true);
+    };
 
     // Validate this subtitle
     const validation = React.useMemo(() => validateSubtitle(sub, prevEndTime), [sub, prevEndTime]);
@@ -442,7 +466,7 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
         <div className="flex items-center">
           <div className="relative" ref={addMenuRef}>
             <button
-              onClick={() => setShowAddMenu(!showAddMenu)}
+              onClick={toggleMenu}
               className={`p-1.5 rounded hover:bg-slate-700 transition-colors ${
                 showAddMenu
                   ? 'text-slate-300'
@@ -453,7 +477,11 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
               <MoreVertical className="w-6 h-6" />
             </button>
             {showAddMenu && (
-              <div className="absolute right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 min-w-[130px]">
+              <div
+                className={`absolute right-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 min-w-[130px] ${
+                  menuDropUp ? 'bottom-full mb-1' : 'top-full mt-1'
+                }`}
+              >
                 {/* 1. 编辑行 */}
                 <button
                   onClick={() => {
@@ -469,7 +497,7 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
                 {addSubtitle && (
                   <div
                     className="relative"
-                    onMouseEnter={() => setShowAddSubmenu(true)}
+                    onMouseEnter={handleSubmenuEnter}
                     onMouseLeave={() => setShowAddSubmenu(false)}
                   >
                     <button className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-emerald-400 transition-colors flex items-center justify-between">
@@ -480,7 +508,11 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                     {showAddSubmenu && (
-                      <div className="absolute right-full top-0 mr-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 min-w-[110px]">
+                      <div
+                        className={`absolute top-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 min-w-[110px] ${
+                          submenuDropLeft ? 'right-full mr-1' : 'left-full ml-1'
+                        }`}
+                      >
                         <button
                           onClick={() => {
                             addSubtitle(sub.id, 'before', sub.startTime);

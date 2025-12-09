@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, CheckCircle } from 'lucide-react';
 
+// Minimum space required below to open downward (in pixels)
+const MIN_SPACE_BELOW = 200;
+
 interface CustomSelectProps {
   value: string;
   onChange: (value: string) => void;
@@ -8,7 +11,6 @@ interface CustomSelectProps {
   className?: string;
   icon?: React.ReactNode;
   placeholder?: string;
-  direction?: 'up' | 'down';
 }
 
 export const CustomSelect: React.FC<CustomSelectProps> = ({
@@ -18,10 +20,24 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   className = '',
   icon,
   placeholder,
-  direction = 'down',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Toggle open with smart direction detection
+  const toggleOpen = () => {
+    if (!isOpen) {
+      // Check position before opening
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        // If less than MIN_SPACE_BELOW below, open upwards
+        setDropUp(spaceBelow < MIN_SPACE_BELOW);
+      }
+    }
+    setIsOpen(!isOpen);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -39,7 +55,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     <div className={`relative ${className}`} ref={containerRef}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleOpen}
         className="w-full flex items-center justify-between bg-slate-800 border border-slate-700 rounded-lg py-2 pl-3 pr-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm transition-colors hover:bg-slate-750"
       >
         <div className="flex items-center text-left overflow-hidden">
@@ -54,7 +70,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       {isOpen && (
         <div
           className={`absolute z-50 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar animate-fade-in ${
-            direction === 'up' ? 'bottom-full mb-1' : 'mt-1'
+            dropUp ? 'bottom-full mb-1' : 'mt-1'
           }`}
         >
           <div className="p-1">

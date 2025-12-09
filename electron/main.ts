@@ -507,6 +507,8 @@ const createWindow = () => {
   const mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    minWidth: 900,
+    minHeight: 900,
     icon: path.join(__dirname, '../resources/icon.png'),
     backgroundColor: '#1a0f2e', // 深紫色背景，与主界面协调
     webPreferences: {

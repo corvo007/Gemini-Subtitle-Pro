@@ -62,6 +62,9 @@ interface BatchHeaderProps {
   totalVisibleCount?: number;
 }
 
+// Minimum space required below to open downward (in pixels)
+const MIN_SPACE_BELOW = 200;
+
 export const BatchHeader: React.FC<BatchHeaderProps> = ({
   chunks,
   selectedBatches,
@@ -89,9 +92,37 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
 }) => {
   const [isIssueFilterOpen, setIsIssueFilterOpen] = React.useState(false);
   const [isSpeakerFilterOpen, setIsSpeakerFilterOpen] = React.useState(false);
+  const [issueDropUp, setIssueDropUp] = React.useState(false);
+  const [speakerDropUp, setSpeakerDropUp] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const issueFilterRef = React.useRef<HTMLDivElement>(null);
   const speakerFilterRef = React.useRef<HTMLDivElement>(null);
+
+  // Toggle issue filter with smart direction detection
+  const toggleIssueFilter = () => {
+    if (!isIssueFilterOpen) {
+      if (issueFilterRef.current) {
+        const rect = issueFilterRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        setIssueDropUp(spaceBelow < MIN_SPACE_BELOW);
+      }
+    }
+    setIsIssueFilterOpen(!isIssueFilterOpen);
+    setIsSpeakerFilterOpen(false);
+  };
+
+  // Toggle speaker filter with smart direction detection
+  const toggleSpeakerFilter = () => {
+    if (!isSpeakerFilterOpen) {
+      if (speakerFilterRef.current) {
+        const rect = speakerFilterRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        setSpeakerDropUp(spaceBelow < MIN_SPACE_BELOW);
+      }
+    }
+    setIsSpeakerFilterOpen(!isSpeakerFilterOpen);
+    setIsIssueFilterOpen(false);
+  };
 
   // Count active filters
   const activeIssueFilterCount = [filters.duration, filters.length, filters.overlap].filter(
@@ -173,10 +204,7 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
           {/* Issue Filter */}
           <div className="relative" ref={issueFilterRef}>
             <button
-              onClick={() => {
-                setIsIssueFilterOpen(!isIssueFilterOpen);
-                setIsSpeakerFilterOpen(false);
-              }}
+              onClick={toggleIssueFilter}
               className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs transition-all border ${
                 activeIssueFilterCount > 0
                   ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
@@ -197,7 +225,13 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
             </button>
 
             {isIssueFilterOpen && (
-              <div className="absolute left-0 top-full mt-1.5 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 min-w-[180px] py-1 animate-fade-in-down origin-top-left">
+              <div
+                className={`absolute left-0 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 min-w-[180px] py-1 animate-fade-in ${
+                  issueDropUp
+                    ? 'bottom-full mb-1.5 origin-bottom-left'
+                    : 'top-full mt-1.5 origin-top-left'
+                }`}
+              >
                 {/* Duration Filter */}
                 <button
                   onClick={() => toggleFilter('duration')}
@@ -288,10 +322,7 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
           {speakerProfiles && speakerProfiles.length > 0 && (
             <div className="relative" ref={speakerFilterRef}>
               <button
-                onClick={() => {
-                  setIsSpeakerFilterOpen(!isSpeakerFilterOpen);
-                  setIsIssueFilterOpen(false);
-                }}
+                onClick={toggleSpeakerFilter}
                 className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs transition-all border ${
                   activeSpeakerFilterCount > 0
                     ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
@@ -312,7 +343,13 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
               </button>
 
               {isSpeakerFilterOpen && (
-                <div className="absolute left-0 top-full mt-1.5 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 min-w-[200px] max-h-[60vh] overflow-y-auto py-1 animate-fade-in-down origin-top-left">
+                <div
+                  className={`absolute left-0 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 min-w-[200px] max-h-[60vh] overflow-y-auto py-1 animate-fade-in ${
+                    speakerDropUp
+                      ? 'bottom-full mb-1.5 origin-bottom-left'
+                      : 'top-full mt-1.5 origin-top-left'
+                  }`}
+                >
                   {speakerProfiles.map((profile) => (
                     <button
                       key={profile.id}
