@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.8.2] - 2025-12-10
+
+### Features
+
+- **Responsive Layout**: Optimized responsive layout and window size limits for better UX.
+
 ## [2.8.1] - 2025-12-09
 
 ### Refactor
