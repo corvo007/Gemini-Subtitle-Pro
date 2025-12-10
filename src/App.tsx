@@ -243,9 +243,22 @@ export default function App() {
       {view === 'home' && (
         <HomePage
           onStartNew={() => {
-            setActiveTab('new');
-            setView('workspace');
-            // Preserve existing workspace state
+            // If there are existing subtitles, ask user before clearing
+            if (workspace.subtitles.length > 0) {
+              showConfirm(
+                '切换到新建项目',
+                '当前有已加载的字幕数据，切换到新建项目将会清空这些数据。建议先导出字幕（SRT/ASS）再操作。是否继续？',
+                () => {
+                  workspace.resetWorkspace();
+                  setActiveTab('new');
+                  setView('workspace');
+                },
+                'warning'
+              );
+            } else {
+              setActiveTab('new');
+              setView('workspace');
+            }
           }}
           onStartImport={() => {
             setActiveTab('import');
