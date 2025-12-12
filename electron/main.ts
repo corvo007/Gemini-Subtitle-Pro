@@ -620,6 +620,54 @@ ipcMain.handle('log:get-history', async () => {
   return mainLogger.getLogs();
 });
 
+// ============================================================================
+// SECURITY: open-external IPC handler with URL validation
+// ============================================================================
+// Whitelist of allowed domains for shell.openExternal
+const ALLOWED_EXTERNAL_HOSTS = [
+  'huggingface.co',
+  'github.com',
+  'www.bilibili.com',
+  'bilibili.com',
+  'youtube.com',
+  'www.youtube.com',
+  'electronjs.org',
+  'www.electronjs.org',
+];
+
+ipcMain.handle('open-external', async (_event, url: string) => {
+  try {
+    const parsedUrl = new URL(url);
+
+    // Only allow https and http protocols
+    if (!['https:', 'http:'].includes(parsedUrl.protocol)) {
+      console.warn(
+        `[Security] Blocked shell.openExternal - invalid protocol: ${parsedUrl.protocol}`
+      );
+      return { success: false, error: `Blocked protocol: ${parsedUrl.protocol}` };
+    }
+
+    // Check if host is in whitelist
+    const isAllowed = ALLOWED_EXTERNAL_HOSTS.some(
+      (host) => parsedUrl.host === host || parsedUrl.host.endsWith(`.${host}`)
+    );
+
+    if (!isAllowed) {
+      console.warn(
+        `[Security] Blocked shell.openExternal - host not whitelisted: ${parsedUrl.host}`
+      );
+      return { success: false, error: `Host not allowed: ${parsedUrl.host}` };
+    }
+
+    await shell.openExternal(url);
+    console.log(`[Security] Allowed shell.openExternal: ${url}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error('[Security] shell.openExternal failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
     width: 1400,
@@ -632,6 +680,7 @@ const createWindow = () => {
       preload: path.join(__dirname, '../dist-electron/preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true, // Explicitly enable sandbox for renderer process isolation
     },
   });
 
@@ -729,6 +778,52 @@ app.on('ready', async () => {
 
   createMenu();
   createWindow();
+});
+
+// ============================================================================
+// SECURITY: Restrict navigation and new window creation
+// ============================================================================
+app.on('web-contents-created', (_event, contents) => {
+  // Restrict navigation to prevent XSS-based redirects
+  contents.on('will-navigate', (event, navigationUrl) => {
+    try {
+      const parsedUrl = new URL(navigationUrl);
+
+      // In development, allow localhost
+      if (!app.isPackaged && parsedUrl.origin === 'http://localhost:3000') {
+        return; // Allow navigation
+      }
+
+      // In production, block all navigation (app loads from file://)
+      console.warn(`[Security] Blocked navigation to: ${navigationUrl}`);
+      event.preventDefault();
+    } catch (error) {
+      console.error('[Security] Navigation URL parse error:', error);
+      event.preventDefault();
+    }
+  });
+
+  // Block all new window creation - external links should use shell.openExternal
+  contents.setWindowOpenHandler(({ url }) => {
+    console.warn(`[Security] Blocked window.open to: ${url}`);
+
+    // Optionally open safe URLs in external browser
+    try {
+      const parsedUrl = new URL(url);
+      if (['https:', 'http:'].includes(parsedUrl.protocol)) {
+        const isAllowed = ALLOWED_EXTERNAL_HOSTS.some(
+          (host) => parsedUrl.host === host || parsedUrl.host.endsWith(`.${host}`)
+        );
+        if (isAllowed) {
+          setImmediate(() => shell.openExternal(url));
+        }
+      }
+    } catch (error) {
+      console.error('[Security] window.open URL parse error:', error);
+    }
+
+    return { action: 'deny' };
+  });
 });
 
 app.on('window-all-closed', () => {
