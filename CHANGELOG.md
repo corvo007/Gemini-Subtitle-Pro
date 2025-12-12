@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.8.5] - 2025-12-12
+
+### Features
+
+- **Translation Prompts**: Added context-aware translation instructions and tuned Conservative Mode for better timing adherence (0.5s threshold).
+
+### Refactor
+
+- **UI**: Removed redundant StatusBadge and improved toolbar responsiveness.
+- **Validation**: Adjusted subtitle validation duration thresholds.
+
 ## [2.8.4] - 2025-12-11
 
 ### Features
