@@ -33,14 +33,6 @@ const FILLER_WORDS = [
 /** Filler words formatted for prompt inclusion */
 const FILLER_WORDS_PROMPT = FILLER_WORDS.join(', ');
 
-/** Temporal proximity thresholds for translation distribution (seconds) */
-const TEMPORAL_THRESHOLDS = {
-  /** Lines closer than this can share content */
-  CLOSE_SECONDS: 3,
-  /** Lines farther than this must be isolated */
-  FAR_SECONDS: 5,
-};
-
 /** Model name for display in prompts */
 const SENIOR_MODEL_NAME = 'Gemini 3 Pro Thinking';
 
@@ -61,16 +53,6 @@ function getSegmentSplittingRule(
  */
 function getFillerWordsRule(): string {
   return `Remove filler words (${FILLER_WORDS_PROMPT})`;
-}
-
-/**
- * Get temporal proximity rule text for translation distribution
- */
-function getTemporalProximityRule(): string {
-  return `→ **TEMPORAL PROXIMITY RULE**: 
-       - If adjacent lines are **< ${TEMPORAL_THRESHOLDS.CLOSE_SECONDS} seconds apart**: You may freely distribute the translation content across these lines to achieve **visually balanced line lengths**.
-       - If adjacent lines are **${TEMPORAL_THRESHOLDS.CLOSE_SECONDS}-${TEMPORAL_THRESHOLDS.FAR_SECONDS} seconds apart**: Use your judgment. Prefer distribution if they form a single sentence, otherwise keep content isolated.
-       - If adjacent lines are **> ${TEMPORAL_THRESHOLDS.FAR_SECONDS} seconds apart**: Keep the translation content **strictly within each line's own segment**.`;
 }
 
 /**
@@ -399,17 +381,12 @@ export const getSystemInstruction = (
     → **COMPLETENESS**: Ensure every meaningful part of the original text is represented.
     → **NO HALLUCINATIONS**: Do not invent information not present in the source.
 
-    [P1.5 - CONTEXT-AWARE DISTRIBUTION]
+    [P1.5 - CONTEXT-AWARE TRANSLATION]
     → **MULTI-LINE CONTEXT**: Before translating each line, READ the previous and next 1-2 lines to understand the full context. This helps with:
        - Resolving ambiguous words or pronouns (e.g., "it", "that", "this")
        - Understanding incomplete sentences that span multiple lines
        - Maintaining consistent tone and terminology across related lines
-    → **SENTENCE CONTINUITY**: When consecutive subtitles are part of the SAME SENTENCE (check for incomplete phrases, missing punctuation), consider them together for translation.
-    → **TEMPORAL PROXIMITY RULE**: 
-       - If adjacent lines are **< 3 seconds apart**: You may freely distribute the translation content across these lines to achieve **visually balanced line lengths** (avoid one very long line followed by a very short line).
-       - If adjacent lines are **> 5 seconds apart**: Keep the translation content **strictly within each line's own segment**. Do NOT move content between them even if they're part of the same sentence. This prevents reader confusion due to temporal discontinuity.
-    → **VISUAL BALANCE**: When distributing, aim for similar character counts per line for better subtitle aesthetics.
-    → **NATURAL BREAKS**: Split the translation at natural phrase boundaries (e.g., after clauses, before conjunctions).
+    → **SENTENCE CONTINUITY**: When consecutive subtitles are part of the SAME SENTENCE, consider them together for translation understanding to ensure the flow is natural across segments.
 
     [P2 - CLEANUP & REFINEMENT]
     → **REMOVE FILLERS**: Ignore stuttering, hesitation, and meaningless fillers (e.g., "uh", "um", "ah", "eto", "ano", "呃", "那个").
@@ -430,7 +407,8 @@ export const getSystemInstruction = (
     ✓ Are all IDs preserved?
     ✓ Is the Chinese fluent and natural?
     ✓ Did I remove all filler words?
-    ✓ Are translations visually balanced across temporally-close lines?
+    ✓ Is the Chinese fluent and natural?
+    ✓ Did I remove all filler words?
 
     ${genreContext}${glossaryText}${
       speakerProfiles && speakerProfiles.length > 0
@@ -752,11 +730,9 @@ export const getTranslationBatchPrompt = (batchLength: number, payload: any[]): 
     → ID matching is critical - do not skip any ID
     → Output exactly ${batchLength} items in the response
     
-    [P1.5 - CONTEXT-AWARE DISTRIBUTION]
+    [P1.5 - CONTEXT-AWARE TRANSLATION]
     → **MULTI-LINE CONTEXT**: Before translating each line, READ the previous and next 1-2 lines to understand the full context. This helps resolve ambiguous words, pronouns, and incomplete sentences.
-    → **SENTENCE CONTINUITY**: Look at "start" and "end" timestamps. If consecutive items are part of the SAME SENTENCE and are **< ${TEMPORAL_THRESHOLDS.CLOSE_SECONDS} seconds apart**, you may distribute translation content across them for **visual balance** (similar character counts per line).
-    → **TEMPORAL ISOLATION**: If items are **> ${TEMPORAL_THRESHOLDS.FAR_SECONDS} seconds apart**, keep translation content **strictly within each item**. Do NOT shift content between them.
-    → **NATURAL BREAKS**: When distributing, split at natural phrase boundaries (after clauses, before conjunctions).
+    → **SENTENCE CONTINUITY**: Use context from adjacent lines to ensure smooth flow, but keep the translation for each segment focused on what is actually spoken in that specific time range.
     
     [P2 - QUALITY] Translation Excellence
     → ${getFillerWordsRule()} and stuttering
@@ -774,7 +750,8 @@ export const getTranslationBatchPrompt = (batchLength: number, payload: any[]): 
     ✓ All translations are Simplified Chinese
     ✓ No meaning lost from original text
     ✓ Filler words removed
-    ✓ Translations visually balanced across temporally-close lines
+    ✓ No meaning lost from original text
+    ✓ Filler words removed
     
     Input JSON:
     ${JSON.stringify(payload)}
@@ -896,11 +873,9 @@ export const getProofreadPrompt = (params: ProofreadPromptParams): string => `
     → If you hear speech NOT in subtitles → ADD new subtitle entries
     → Verify 'text_original' matches what was actually said
 
-    [P2.5 - CONTEXT-AWARE DISTRIBUTION]
+    [P2.5 - CONTEXT-AWARE TRANSLATION]
     → **MULTI-LINE CONTEXT**: Before refining each line, READ the previous and next 1-2 lines to understand the full context.
-    → **SENTENCE CONTINUITY**: Check for sentences spanning multiple subtitles.
-    ${getTemporalProximityRule()}
-    → **NATURAL BREAKS**: Split at natural phrase boundaries.
+    → **SENTENCE CONTINUITY**: Check for sentences spanning multiple subtitles to ensure logical flow.
     
     [P3 - ABSOLUTE] Timestamp Preservation
     → DO NOT modify timestamps of existing subtitles
