@@ -5,8 +5,12 @@ import { blobToBase64 } from '@/services/audio/converter';
 import { sliceAudioBuffer } from '@/services/audio/processor';
 import { mapInParallel } from '@/services/utils/concurrency';
 import { logger } from '@/services/utils/logger';
-import { GLOSSARY_SCHEMA, SAFETY_SETTINGS } from './schemas';
-import { generateContentWithRetry, isRetryableError, getActionableErrorMessage } from './client';
+import { GLOSSARY_SCHEMA, SAFETY_SETTINGS } from '@/services/api/gemini/schemas';
+import {
+  generateContentWithRetry,
+  isRetryableError,
+  getActionableErrorMessage,
+} from '@/services/api/gemini/client';
 import { GLOSSARY_EXTRACTION_PROMPT } from '@/services/api/gemini/prompts';
 import { extractJsonArray } from '@/services/subtitle/parser';
 import { MODELS } from '@/constants/models';

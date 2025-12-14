@@ -1,6 +1,6 @@
 import { logger } from '@/services/utils/logger';
 import { isElectron } from '@/services/utils/env';
-import { smartDecodeAudio } from './ffmpegExtractor';
+import { smartDecodeAudio } from '@/services/audio/ffmpegExtractor';
 
 /**
  * Decode audio file to AudioBuffer

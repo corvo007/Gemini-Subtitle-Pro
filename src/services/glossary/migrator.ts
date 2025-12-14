@@ -1,5 +1,5 @@
 import { Glossary, GlossaryItem } from '@/types/glossary';
-import { validateGlossaryItem } from './validator';
+import { validateGlossaryItem } from '@/services/glossary/validator';
 
 /**
  * Migrate legacy glossary items to new Glossary structure

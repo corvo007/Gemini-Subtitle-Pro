@@ -1,5 +1,5 @@
 import { SubtitleItem } from '@/types/subtitle';
-import { toAssTime } from './time';
+import { toAssTime } from '@/services/subtitle/time';
 import { getSpeakerColor } from '@/utils/colors';
 
 // Helper to convert Hex (#RRGGBB) to ASS BGR (&HBBGGRR)

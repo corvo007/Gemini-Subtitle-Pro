@@ -3,9 +3,9 @@ import { Languages, Search } from 'lucide-react';
 import { SubtitleItem } from '@/types';
 import { SpeakerUIProfile } from '@/types/speaker';
 import { GenerationStatus } from '@/types/api';
-import { SubtitleBatch } from './SubtitleBatch';
-import { SubtitleRow, validateSubtitle } from './SubtitleRow';
-import { BatchHeader, SubtitleFilters, defaultFilters } from './BatchHeader';
+import { SubtitleBatch } from '@/components/editor/SubtitleBatch';
+import { SubtitleRow, validateSubtitle } from '@/components/editor/SubtitleRow';
+import { BatchHeader, SubtitleFilters, defaultFilters } from '@/components/editor/BatchHeader';
 import { SimpleConfirmationModal } from '@/components/modals/SimpleConfirmationModal';
 import { Virtuoso } from 'react-virtuoso';
 

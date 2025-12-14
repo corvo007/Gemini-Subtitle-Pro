@@ -3,9 +3,9 @@ import {
   mergeAudioBuffers,
   extractBufferSlice,
   audioBufferToWav,
-} from './processor';
+} from '@/services/audio/processor';
 import { logger } from '@/services/utils/logger';
-import { SmartSegmenter } from './segmenter';
+import { SmartSegmenter } from '@/services/audio/segmenter';
 
 interface AudioSample {
   startTime: number;

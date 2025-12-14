@@ -3,7 +3,7 @@ import {
   CompressionOptions,
   CompressionProgress,
   HardwareAccelInfo,
-} from '../../services/compression/types';
+} from '@/services/compression/types';
 import {
   FileVideo,
   Settings,
@@ -17,12 +17,12 @@ import {
   Zap,
   Loader2,
 } from 'lucide-react';
-import { SimpleConfirmationModal } from '../modals/SimpleConfirmationModal';
-import { generateAssContent } from '../../services/subtitle/generator';
-import { SubtitleItem } from '../../types/subtitle';
-import { CustomSelect } from '../settings/CustomSelect';
-import { generateOutputPath, getPathSeparator, removeExtension } from '../../services/utils/path';
-import { formatDuration } from '../../services/subtitle/time';
+import { SimpleConfirmationModal } from '@/components/modals/SimpleConfirmationModal';
+import { generateAssContent } from '@/services/subtitle/generator';
+import { SubtitleItem } from '@/types/subtitle';
+import { CustomSelect } from '@/components/settings/CustomSelect';
+import { generateOutputPath, getPathSeparator, removeExtension } from '@/services/utils/path';
+import { formatDuration } from '@/services/subtitle/time';
 
 interface CompressionPageProps {
   onGoBack?: () => void;

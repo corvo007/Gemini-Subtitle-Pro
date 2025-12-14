@@ -12,13 +12,13 @@ import { decodeAudioWithRetry } from '@/services/audio/decoder';
 import { formatTime, timeToSeconds } from '@/services/subtitle/time';
 import { SmartSegmenter } from '@/services/audio/segmenter';
 import { selectChunksByDuration } from '@/services/glossary/selector';
-import { extractGlossaryFromAudio } from './glossary';
-import { GlossaryState } from './glossary-state';
+import { extractGlossaryFromAudio } from '@/services/api/gemini/glossary';
+import { GlossaryState } from '@/services/api/gemini/glossary-state';
 import { sliceAudioBuffer } from '@/services/audio/processor';
 import { transcribeAudio } from '@/services/api/openai/transcribe';
 import { blobToBase64 } from '@/services/audio/converter';
 import { intelligentAudioSampling } from '@/services/audio/sampler';
-import { extractSpeakerProfiles, SpeakerProfile } from './speakerProfile';
+import { extractSpeakerProfiles, SpeakerProfile } from '@/services/api/gemini/speakerProfile';
 import {
   getSystemInstruction,
   getSystemInstructionWithDiarization,
@@ -28,9 +28,17 @@ import { parseGeminiResponse, cleanNonSpeechAnnotations } from '@/services/subti
 import { mapInParallel, Semaphore } from '@/services/utils/concurrency';
 import { logger } from '@/services/utils/logger';
 import { calculateDetailedCost } from '@/services/api/gemini/pricing';
-import { REFINEMENT_SCHEMA, REFINEMENT_WITH_DIARIZATION_SCHEMA, SAFETY_SETTINGS } from './schemas';
-import { generateContentWithRetry, formatGeminiError, getActionableErrorMessage } from './client';
-import { translateBatch } from './batch';
+import {
+  REFINEMENT_SCHEMA,
+  REFINEMENT_WITH_DIARIZATION_SCHEMA,
+  SAFETY_SETTINGS,
+} from '@/services/api/gemini/schemas';
+import {
+  generateContentWithRetry,
+  formatGeminiError,
+  getActionableErrorMessage,
+} from '@/services/api/gemini/client';
+import { translateBatch } from '@/services/api/gemini/batch';
 import { MODELS } from '@/constants/models';
 
 import { ENV } from '@/config/env';

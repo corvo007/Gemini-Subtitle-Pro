@@ -2,7 +2,7 @@ import React from 'react';
 import { CheckSquare, Square, Wand2 } from 'lucide-react';
 import { SubtitleItem } from '@/types';
 import { SpeakerUIProfile } from '@/types/speaker';
-import { SubtitleRow } from './SubtitleRow';
+import { SubtitleRow } from '@/components/editor/SubtitleRow';
 import { GenerationStatus } from '@/types/api';
 
 interface SubtitleBatchProps {

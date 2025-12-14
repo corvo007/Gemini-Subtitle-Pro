@@ -16,20 +16,20 @@ import {
   getFixTimestampsPrompt,
   getProofreadPrompt,
 } from '@/services/api/gemini/prompts';
-import { SpeakerProfile } from './speakerProfile';
+import { SpeakerProfile } from '@/services/api/gemini/speakerProfile';
 import {
   TRANSLATION_SCHEMA,
   BATCH_SCHEMA,
   BATCH_WITH_DIARIZATION_SCHEMA,
   SAFETY_SETTINGS,
   PROOFREAD_BATCH_SIZE,
-} from './schemas';
+} from '@/services/api/gemini/schemas';
 import {
   generateContentWithRetry,
   generateContentWithLongOutput,
   formatGeminiError,
   getActionableErrorMessage,
-} from './client';
+} from '@/services/api/gemini/client';
 import { MODELS } from '@/constants/models';
 
 export async function processTranslationBatchWithRetry(

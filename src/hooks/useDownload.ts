@@ -7,7 +7,7 @@ import type {
   DownloadProgress,
   DownloadStatus,
   DownloadError,
-} from '../services/download/types';
+} from '@/services/download/types';
 import {
   parseVideoUrl,
   startDownload,
@@ -16,7 +16,7 @@ import {
   getDefaultOutputDir,
   onDownloadProgress,
   downloadThumbnail as downloadThumbnailService,
-} from '../services/download';
+} from '@/services/download';
 
 interface UseDownloadReturn {
   // State

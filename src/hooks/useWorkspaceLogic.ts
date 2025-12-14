@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SubtitleItem, SubtitleSnapshot, BatchOperationMode } from '@/types/subtitle';
-import { useSpeakerProfiles } from './useWorkspaceLogic/useSpeakerProfiles';
-import { useBatchSelection } from './useWorkspaceLogic/useBatchSelection';
-import { useSubtitleCRUD } from './useWorkspaceLogic/useSubtitleCRUD';
+import { useSpeakerProfiles } from '@/hooks/useWorkspaceLogic/useSpeakerProfiles';
+import { useBatchSelection } from '@/hooks/useWorkspaceLogic/useBatchSelection';
+import { useSubtitleCRUD } from '@/hooks/useWorkspaceLogic/useSubtitleCRUD';
 import { AppSettings } from '@/types/settings';
 import {
   GlossaryItem,

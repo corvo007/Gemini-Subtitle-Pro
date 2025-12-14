@@ -1,4 +1,4 @@
-import { LogEntry } from './logger';
+import { LogEntry } from '@/services/utils/logger';
 
 /**
  * Parses a backend log line into a structured LogEntry.

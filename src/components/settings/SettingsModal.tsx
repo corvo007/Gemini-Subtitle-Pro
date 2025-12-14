@@ -1,8 +1,8 @@
 import React from 'react';
 import { Settings, X, CheckCircle, Languages, Type, Clock, Book, Bug } from 'lucide-react';
 import { AppSettings } from '@/types/settings';
-import { CustomSelect } from './CustomSelect';
-import { LocalWhisperSettings } from './LocalWhisperSettings';
+import { CustomSelect } from '@/components/settings/CustomSelect';
+import { LocalWhisperSettings } from '@/components/settings/LocalWhisperSettings';
 
 interface SettingsModalProps {
   isOpen: boolean;

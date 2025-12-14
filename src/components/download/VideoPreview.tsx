@@ -2,8 +2,8 @@
  * Video Preview Component - Tailwind CSS Version
  */
 import React from 'react';
-import type { VideoInfo } from '../../services/download/types';
-import { formatDuration } from '../../services/subtitle/time';
+import type { VideoInfo } from '@/services/download/types';
+import { formatDuration } from '@/services/subtitle/time';
 
 interface VideoPreviewProps {
   videoInfo: VideoInfo;

@@ -1,6 +1,6 @@
 import { GoogleGenAI, Part, Content } from '@google/genai';
 import { logger } from '@/services/utils/logger';
-import { SAFETY_SETTINGS } from './schemas';
+import { SAFETY_SETTINGS } from '@/services/api/gemini/schemas';
 import { extractJsonArray } from '@/services/subtitle/parser';
 import { TokenUsage } from '@/types/api';
 

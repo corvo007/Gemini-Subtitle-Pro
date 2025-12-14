@@ -1,5 +1,5 @@
 import { SubtitleItem, GeminiSubtitleSchema } from '@/types/subtitle';
-import { timeToSeconds, normalizeTimestamp, formatTime } from './time';
+import { timeToSeconds, normalizeTimestamp, formatTime } from '@/services/subtitle/time';
 import { generateSubtitleId } from '@/utils/id';
 
 /**

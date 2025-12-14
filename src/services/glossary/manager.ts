@@ -1,5 +1,5 @@
 import { Glossary, GlossaryItem } from '@/types/glossary';
-import { validateGlossaryItem } from './validator';
+import { validateGlossaryItem } from '@/services/glossary/validator';
 
 /**
  * Create a new empty glossary

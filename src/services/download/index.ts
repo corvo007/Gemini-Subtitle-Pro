@@ -6,7 +6,7 @@ import type {
   DownloadProgress,
   DownloadOptions,
   ThumbnailDownloadOptions,
-} from './types';
+} from '@/services/download/types';
 
 // Re-export types
 export type { VideoInfo, DownloadProgress, DownloadOptions, ThumbnailDownloadOptions };

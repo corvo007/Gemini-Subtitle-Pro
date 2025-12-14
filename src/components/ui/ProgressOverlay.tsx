@@ -1,7 +1,7 @@
 import React from 'react';
 import { Loader2, Sparkles, CheckCircle, FileText, StopCircle } from 'lucide-react';
 import { GenerationStatus, ChunkStatus } from '@/types/api';
-import { TimeTracker } from './TimeTracker';
+import { TimeTracker } from '@/components/ui/TimeTracker';
 
 interface ProgressOverlayProps {
   isProcessing: boolean;

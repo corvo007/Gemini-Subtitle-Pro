@@ -1,5 +1,5 @@
 import { GlossaryItem } from '@/types/glossary';
-import { SpeakerProfile } from './speakerProfile';
+import { SpeakerProfile } from '@/services/api/gemini/speakerProfile';
 import { formatTime } from '@/services/subtitle/time';
 
 // --- Constants ---

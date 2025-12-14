@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { SubtitleItem } from '@/types';
 import { SpeakerUIProfile } from '@/types/speaker';
-import { SpeakerSelect } from './SpeakerSelect';
+import { SpeakerSelect } from '@/components/editor/SpeakerSelect';
 
 // Validation thresholds (from prompts.ts rules)
 const MAX_DURATION_SECONDS = 5;

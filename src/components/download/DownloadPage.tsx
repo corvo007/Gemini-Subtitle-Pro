@@ -14,11 +14,11 @@ import {
   X,
   Image,
 } from 'lucide-react';
-import { useDownload } from '../../hooks/useDownload';
-import { UrlInput } from './UrlInput';
-import { VideoPreview } from './VideoPreview';
-import { QualitySelector } from './QualitySelector';
-import { DownloadProgress } from './DownloadProgress';
+import { useDownload } from '@/hooks/useDownload';
+import { UrlInput } from '@/components/download/UrlInput';
+import { VideoPreview } from '@/components/download/VideoPreview';
+import { QualitySelector } from '@/components/download/QualitySelector';
+import { DownloadProgress } from '@/components/download/DownloadProgress';
 
 interface DownloadPageProps {
   onDownloadComplete?: (videoPath: string) => void;

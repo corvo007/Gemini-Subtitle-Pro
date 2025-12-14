@@ -11,7 +11,7 @@ import type {
   WizardState,
   WizardStep,
 } from '@/types/endToEnd';
-import type { VideoInfo } from '../../electron/services/ytdlp';
+import type { VideoInfo } from '@electron/services/ytdlp';
 
 // Re-export types for convenience
 export type { EndToEndConfig, PipelineProgress, PipelineResult, WizardStep };

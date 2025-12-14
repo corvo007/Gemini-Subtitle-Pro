@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, FileText, Download, Filter } from 'lucide-react';
 import type { LogEntry } from '@/services/utils/logger';
-import { CustomSelect } from '../settings/CustomSelect';
+import { CustomSelect } from '@/components/settings/CustomSelect';
 
 interface LogViewerModalProps {
   isOpen: boolean;
