@@ -71,14 +71,19 @@ export function StepInput({
             disabled={isParsing}
           />
           <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-            {validationResult?.platform && validationResult.valid && (
-              <span className="text-xs px-2 py-1 bg-violet-500/20 text-violet-300 rounded">
-                {validationResult.platform}
-              </span>
-            )}
             {isParsing && <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />}
           </div>
         </div>
+
+        {/* Platform indicator - shown below input when valid */}
+        {validationResult?.platform && validationResult.valid && !isParsing && (
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-emerald-400" />
+            <span className="text-sm text-emerald-300">
+              已识别: <span className="font-medium">{validationResult.platform}</span>
+            </span>
+          </div>
+        )}
 
         {/* Validation warning (not error) */}
         {validationResult?.error && validationResult.valid && (

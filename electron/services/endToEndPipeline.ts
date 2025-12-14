@@ -20,7 +20,7 @@ import type {
   PipelineResult,
   PipelineStage,
   StageOutput,
-} from '../../src/types/endToEnd';
+} from '@/types/endToEnd';
 
 // Re-export stage weights for use in progress calculation
 const STAGE_WEIGHTS_LOCAL: Record<PipelineStage, number> = {

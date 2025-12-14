@@ -194,7 +194,12 @@ export function EndToEndWizard({
           />
         )}
         {state.currentStep === 'config' && (
-          <StepConfig config={state.config} onConfigChange={updateConfig} videoInfo={videoInfo} />
+          <StepConfig
+            config={state.config}
+            onConfigChange={updateConfig}
+            videoInfo={videoInfo}
+            settings={settings}
+          />
         )}
         {state.currentStep === 'progress' && (
           <EndToEndProgress
