@@ -130,6 +130,10 @@ export function useDownload(): UseDownloadReturn {
     } catch (err: any) {
       console.error('Thumbnail download failed:', err);
       // Don't set error state for thumbnail failures - it's not critical
+      // But show a toast to notify the user
+      if (typeof window !== 'undefined' && (window as any).showToast) {
+        (window as any).showToast('封面下载失败', 'warning');
+      }
       return undefined;
     }
   }, [videoInfo, outputDir]);
