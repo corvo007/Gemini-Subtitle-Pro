@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.1] - 2025-12-14
+
+### Features
+
+- **Speaker Diarization**: Added `minSpeakers`/`maxSpeakers` hints for improved LLM diarization accuracy.
+- **End-to-End Pipeline**: Enhanced input parsing and pipeline handling.
+
+### Fixes
+
+- **YouTube**: Improved URL parsing to correctly handle playlist links.
+
+### Refactor
+
+- **Path Aliases**: Replaced relative imports with absolute aliases (`@/`, `@electron/`) throughout codebase.
+- **UI**: Refined `StepConfig` and `CustomSelect` component styling.
+
+### Documentation
+
+- **Architecture**: Updated project architecture documentation.
+
 ## [2.9.0] - 2025-12-14
 
 ### Features

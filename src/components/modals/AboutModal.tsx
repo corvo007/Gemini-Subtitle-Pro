@@ -7,7 +7,7 @@ interface AboutModalProps {
   version?: string;
 }
 
-export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose, version = '2.9.0' }) => {
+export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose, version = '2.9.1' }) => {
   if (!isOpen) return null;
 
   return (
