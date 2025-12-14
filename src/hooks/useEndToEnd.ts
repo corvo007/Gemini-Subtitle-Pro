@@ -51,7 +51,7 @@ const DEFAULT_CONFIG: Partial<EndToEndConfig> = {
   genre: 'general',
   useLocalWhisper: false,
   enableGlossary: true,
-  enableSpeakerDetection: false,
+  enableDiarization: false,
   enableCompression: true,
   compressionEncoder: 'libx264',
   compressionCrf: 23,

@@ -266,7 +266,7 @@ export class EndToEndPipeline {
           // Include basic steps + optional steps based on config
           const prepSteps = ['decoding', 'segmenting'];
           if (config.enableGlossary) prepSteps.push('glossary');
-          if (config.enableSpeakerDetection) prepSteps.push('diarization');
+          if (config.enableDiarization) prepSteps.push('diarization');
 
           let completedPrep = 0;
           for (const step of prepSteps) {
@@ -284,11 +284,14 @@ export class EndToEndPipeline {
           );
 
           let contentProgress = 0;
+          let completed = 0;
+          let total = 0;
+
           if (contentChunks.length > 0) {
-            const completed = contentChunks.filter((c) => c.status === 'completed').length;
+            completed = contentChunks.filter((c) => c.status === 'completed').length;
             const firstWithTotal = contentChunks.find((c) => c.total);
             // Fallback to current length if total not found (though usually first chunk has it)
-            const total = firstWithTotal ? firstWithTotal.total : Math.max(contentChunks.length, 1);
+            total = firstWithTotal ? firstWithTotal.total : Math.max(contentChunks.length, 1);
             contentProgress = (completed / total) * 90;
           }
 
@@ -303,7 +306,7 @@ export class EndToEndPipeline {
               stageProgress,
               config.enableCompression
             ),
-            message: chunkStatus.message || `正在生成字幕...`,
+            message: total > 0 ? `正在生成字幕 (${completed}/${total})` : `正在生成字幕...`,
             transcribeProgress: chunks,
             pipelineStartTime: this.startTime,
           });

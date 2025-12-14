@@ -62,18 +62,29 @@ function TranscribeChunkList({ chunks }: { chunks: ChunkStatus[] }) {
     return String(a.id).localeCompare(String(b.id));
   });
 
+  // 前导环节
+  const prepChunks = sortedChunks.filter((c) =>
+    ['decoding', 'segmenting', 'glossary', 'diarization'].includes(String(c.id))
+  );
+  const prepCompleted = prepChunks.filter((c) => c.status === 'completed').length;
+
+  // 内容片段
   const contentChunks = sortedChunks.filter(
     (c) => !['decoding', 'segmenting', 'glossary', 'diarization'].includes(String(c.id))
   );
-  const completed = contentChunks.filter((c) => c.status === 'completed').length;
-  const total = contentChunks.length > 0 ? contentChunks[0].total : 0;
+  const contentCompleted = contentChunks.filter((c) => c.status === 'completed').length;
+  const contentTotal = contentChunks.length > 0 ? contentChunks[0].total : 0;
+
+  // 总计：前导 + 内容
+  const totalCompleted = prepCompleted + contentCompleted;
+  const totalCount = prepChunks.length + contentTotal;
 
   return (
     <div className="mt-4 pt-3 border-t border-white/10">
       <div className="flex justify-between text-sm text-white/40 mb-2">
         <span>字幕生成进度</span>
         <span>
-          {completed}/{total} 已完成
+          {totalCompleted}/{totalCount} 已完成
         </span>
       </div>
       <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
@@ -134,17 +145,17 @@ const stageConfig: Record<
   },
   transcribing: {
     icon: <FileText className="w-4 h-4" />,
-    label: '语音转录',
-    description: '使用 AI 识别语音内容',
+    label: '生成字幕',
+    description: 'AI 转录与翻译',
   },
   extracting_glossary: {
     icon: <FileText className="w-4 h-4" />,
     label: '提取术语',
-    description: '自动识别专业术语',
+    description: '生成专有词汇表',
   },
   extracting_speakers: {
     icon: <FileText className="w-4 h-4" />,
-    label: '识别说话人',
+    label: '说话人分析',
     description: '识别音频中的说话人',
   },
   refining: {
@@ -184,7 +195,7 @@ const processingStages: PipelineStage[] = [
   'downloading',
   'extracting_audio',
   'transcribing',
-  'translating',
+  // 'translating', // Merged into transcribing
   'compressing',
 ];
 
@@ -286,16 +297,35 @@ export function EndToEndProgress({ progress, onAbort, onRetry }: EndToEndProgres
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const currentStage = progress?.stage || 'idle';
-  const currentStageIndex = processingStages.indexOf(currentStage);
+
+  // Map diverse generation stages to the unified 'transcribing' UI stage
+  const getUiStage = (stage: PipelineStage): PipelineStage => {
+    switch (stage) {
+      case 'extracting_glossary':
+      case 'extracting_speakers':
+      case 'refining':
+      case 'translating':
+      case 'exporting_subtitle':
+        return 'transcribing'; // All these are part of "Generation"
+      default:
+        return stage;
+    }
+  };
+
+  const uiStage = getUiStage(currentStage);
+  const currentStageIndex = processingStages.indexOf(uiStage);
+
   const isError = currentStage === 'failed';
   const isCompleted = currentStage === 'completed';
 
   // Determine status for each stage
   const getStageStatus = (stage: PipelineStage): 'pending' | 'active' | 'completed' | 'error' => {
     const stageIndex = processingStages.indexOf(stage);
-    if (isError && stage === progress?.stage) return 'error';
+    if (isError && stage === uiStage) return 'error'; // Use mapped UI stage for error check
     if (stageIndex < currentStageIndex) return 'completed';
     if (stageIndex === currentStageIndex) return 'active';
+    // Special case: if completed, everything is completed
+    if (isCompleted) return 'completed';
     return 'pending';
   };
 
@@ -312,7 +342,7 @@ export function EndToEndProgress({ progress, onAbort, onRetry }: EndToEndProgres
     onAbort();
   };
 
-  const config = stageConfig[currentStage] || stageConfig.idle;
+  const config = stageConfig[uiStage] || stageConfig.idle;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -412,9 +442,6 @@ export function EndToEndProgress({ progress, onAbort, onRetry }: EndToEndProgres
               <div className="flex items-center justify-between">
                 <span>{progress.message}</span>
                 <div className="flex items-center gap-4">
-                  {progress.downloadProgress.speed && (
-                    <span className="text-blue-400">{progress.downloadProgress.speed}</span>
-                  )}
                   {progress.downloadProgress.eta && (
                     <span>ETA: {progress.downloadProgress.eta}</span>
                   )}

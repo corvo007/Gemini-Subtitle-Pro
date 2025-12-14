@@ -71,7 +71,7 @@ export interface EndToEndConfig {
 
   // 高级选项
   enableGlossary: boolean; // 启用术语提取 (自动确认)
-  enableSpeakerDetection: boolean; // 启用说话人识别
+  enableDiarization: boolean; // 启用说话人识别
   minSpeakers?: number; // 最少说话人数 (可选)
   maxSpeakers?: number; // 最多说话人数 (可选)
 
@@ -98,7 +98,7 @@ export const DEFAULT_END_TO_END_CONFIG: Partial<EndToEndConfig> = {
   genre: 'anime',
   useLocalWhisper: false,
   enableGlossary: true,
-  enableSpeakerDetection: true,
+  enableDiarization: true,
   enableCompression: true,
   compressionEncoder: 'libx264',
   compressionCrf: 23,

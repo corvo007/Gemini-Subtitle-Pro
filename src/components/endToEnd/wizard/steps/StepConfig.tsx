@@ -180,11 +180,11 @@ export function StepConfig({
             <ToggleOptionInline
               label="说话人识别"
               description="识别音频中的不同说话人"
-              checked={config.enableSpeakerDetection !== false}
-              onChange={(v) => onConfigChange({ enableSpeakerDetection: v })}
+              checked={config.enableDiarization !== false}
+              onChange={(v) => onConfigChange({ enableDiarization: v })}
             />
             {/* Speaker Options */}
-            {config.enableSpeakerDetection !== false && (
+            {config.enableDiarization !== false && (
               <div className="ml-8 mt-1 space-y-2 border-l-2 border-white/10 pl-3">
                 <ToggleOptionInline
                   label="显示说话人名称"
