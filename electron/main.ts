@@ -29,6 +29,8 @@ import { localWhisperService } from './services/localWhisper.ts';
 import { ytDlpService, classifyError } from './services/ytdlp.ts';
 import { VideoCompressorService } from './services/videoCompressor.ts';
 import type { CompressionOptions } from './services/videoCompressor.ts';
+import { endToEndPipeline } from './services/endToEndPipeline.ts';
+import type { EndToEndConfig } from '../src/types/endToEnd.ts';
 
 const videoCompressorService = new VideoCompressorService();
 
@@ -423,7 +425,16 @@ ipcMain.handle('snapshots-save', async (_event, snapshots: any[]) => {
 // IPC Handler: Read Local File (Bypass CSP/Sandbox for local playback)
 ipcMain.handle('read-local-file', async (event, filePath) => {
   try {
-    const buffer = await fs.promises.readFile(filePath);
+    // Security: Validate path to prevent directory traversal attacks
+    const normalizedPath = path.normalize(filePath);
+    if (!path.isAbsolute(normalizedPath)) {
+      throw new Error('无效的文件路径：必须使用绝对路径');
+    }
+    if (normalizedPath.includes('..')) {
+      throw new Error('无效的文件路径：不允许使用相对路径符号');
+    }
+
+    const buffer = await fs.promises.readFile(normalizedPath);
     return buffer;
   } catch (error) {
     console.error('Failed to read file:', error);
@@ -618,6 +629,54 @@ ipcMain.handle(
 // IPC Handler: Get Main Logs (Recent History)
 ipcMain.handle('log:get-history', async () => {
   return mainLogger.getLogs();
+});
+
+// ============================================================================
+// End-to-End Pipeline IPC Handlers
+// ============================================================================
+
+// Store reference to main window for pipeline progress updates
+let mainWindowRef: BrowserWindow | null = null;
+
+// IPC Handler: Start End-to-End Pipeline
+ipcMain.handle('end-to-end:start', async (event, config: EndToEndConfig) => {
+  try {
+    console.log('[Main] Starting end-to-end pipeline:', config.url);
+
+    // Get the main window from the event sender
+    mainWindowRef = BrowserWindow.fromWebContents(event.sender);
+    if (mainWindowRef) {
+      endToEndPipeline.setMainWindow(mainWindowRef);
+    }
+
+    const result = await endToEndPipeline.execute(config, (progress) => {
+      // Send progress updates to renderer
+      event.sender.send('end-to-end:progress', progress);
+    });
+
+    return result;
+  } catch (error: any) {
+    console.error('[Main] End-to-end pipeline failed:', error);
+    return {
+      success: false,
+      error: error.message,
+      finalStage: 'failed',
+      outputs: {},
+      duration: 0,
+    };
+  }
+});
+
+// IPC Handler: Abort End-to-End Pipeline
+ipcMain.handle('end-to-end:abort', async () => {
+  console.log('[Main] Aborting end-to-end pipeline');
+  endToEndPipeline.abort();
+  return { success: true };
+});
+
+// IPC Handler: Get Pipeline Status
+ipcMain.handle('end-to-end:status', async () => {
+  return endToEndPipeline.getStatus();
 });
 
 // ============================================================================

@@ -1,7 +1,8 @@
-﻿/**
+/**
  * yt-dlp Service for Video Download
  * Reference: Youtube-dl-REST and YoutubeDownloader repositories
  */
+
 import { app } from 'electron';
 import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
@@ -834,10 +835,22 @@ class YtDlpService {
       ? ['--js-runtimes', `quickjs:${this.quickjsPath}`]
       : [];
 
+    // Map friendly format names to yt-dlp selectors
+    let formatSelector = formatId;
+    if (formatId === 'best') {
+      formatSelector = 'bestvideo';
+    } else if (formatId === '1080p') {
+      formatSelector = 'bestvideo[height<=1080]';
+    } else if (formatId === '720p') {
+      formatSelector = 'bestvideo[height<=720]';
+    } else if (formatId === '480p') {
+      formatSelector = 'bestvideo[height<=480]';
+    }
+
     const args = [
       ...baseArgs,
       '-f',
-      `${formatId}+bestaudio/best`,
+      `${formatSelector}+bestaudio/best`,
       '-o',
       outputTemplate,
       '--merge-output-format',

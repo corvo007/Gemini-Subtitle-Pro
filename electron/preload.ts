@@ -122,4 +122,41 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener('show-about', subscription);
     };
   },
+
+  // End-to-End Pipeline APIs
+  endToEnd: {
+    start: (config: any) => ipcRenderer.invoke('end-to-end:start', config),
+    abort: () => ipcRenderer.invoke('end-to-end:abort'),
+    getStatus: () => ipcRenderer.invoke('end-to-end:status'),
+    onProgress: (callback: (progress: any) => void) => {
+      const subscription = (_event: any, progress: any) => callback(progress);
+      ipcRenderer.on('end-to-end:progress', subscription);
+      return () => {
+        ipcRenderer.removeListener('end-to-end:progress', subscription);
+      };
+    },
+    // Listen for subtitle generation request from main process
+    onGenerateSubtitles: (
+      callback: (data: { config: any; videoPath: string; audioPath: string }) => void
+    ) => {
+      const subscription = (_event: any, data: any) => callback(data);
+      ipcRenderer.on('end-to-end:generate-subtitles', subscription);
+      return () => {
+        ipcRenderer.removeListener('end-to-end:generate-subtitles', subscription);
+      };
+    },
+    // Send subtitle generation result back to main process
+    sendSubtitleResult: (result: {
+      success: boolean;
+      subtitles?: any[];
+      subtitlePath?: string;
+      error?: string;
+    }) => {
+      ipcRenderer.send('end-to-end:subtitle-complete', result);
+    },
+    // Send subtitle generation progress to main process
+    sendSubtitleProgress: (progress: any) => {
+      ipcRenderer.send('end-to-end:subtitle-progress', progress);
+    },
+  },
 });

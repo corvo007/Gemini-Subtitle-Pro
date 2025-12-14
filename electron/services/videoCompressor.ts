@@ -241,8 +241,8 @@ export class VideoCompressorService {
     );
     log(`[Compression] Hardware acceleration: ${hwAccel}`);
     log(`[Compression] CRF: ${options.crf}`);
-    if (options.width && options.width > 0) {
-      log(`[Compression] Resolution: ${options.width}x${options.height || '?'}`);
+    if ((options.width && options.width > 0) || (options.height && options.height > 0)) {
+      log(`[Compression] Resolution target: ${options.width || '?'}x${options.height || '?'}`);
     }
     if (options.subtitlePath) {
       log(`[Compression] Subtitle: ${options.subtitlePath}`);
@@ -382,9 +382,10 @@ export class VideoCompressorService {
         }
       }
 
-      if (options.width && options.width > 0) {
+      if ((options.width && options.width > 0) || (options.height && options.height > 0)) {
+        const w = options.width && options.width > 0 ? options.width : '?';
         const h = options.height && options.height > 0 ? options.height : '?';
-        command = command.size(`${options.width}x${h}`);
+        command = command.size(`${w}x${h}`);
         command.addOutputOption('-sws_flags', 'lanczos'); // Use Lanczos scaler
       }
 
@@ -393,7 +394,17 @@ export class VideoCompressorService {
         // Escape path for FFmpeg filter:
         // Windows path separators '\' need to be escaped as '\\' or '/'
         // Colons ':' need to be escaped as '\:'
-        const escapedPath = options.subtitlePath.replace(/\\/g, '/').replace(/:/g, '\\:');
+        // Escape path for FFmpeg filter:
+        // 1. Convert backslashes to forward slashes
+        // 2. Escape colons (key for Windows paths like C:/)
+        // 3. Escape single quotes (because we wrap the path in single quotes)
+        // 4. Escape brackets [ and ] (FFmpeg treats them specially)
+        const escapedPath = options.subtitlePath
+          .replace(/\\/g, '/')
+          .replace(/:/g, '\\:')
+          .replace(/'/g, "'\\''")
+          .replace(/\[/g, '\\[')
+          .replace(/\]/g, '\\]');
         logMsg(`[Compression] Subtitle path escaped: ${escapedPath}`);
         command.videoFilters(`subtitles='${escapedPath}'`);
       }
