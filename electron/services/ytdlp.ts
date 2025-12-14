@@ -86,11 +86,12 @@ const URL_PATTERNS = {
   // YouTube patterns
   youtube: {
     // Standard: https://www.youtube.com/watch?v=xxxxxxxxxxx
+    // With playlist: https://www.youtube.com/watch?v=xxxxxxxxxxx&list=PLyyy&index=N
     // Short: https://youtu.be/xxxxxxxxxxx
     // Shorts: https://www.youtube.com/shorts/xxxxxxxxxxx
     // Mobile: https://m.youtube.com/watch?v=xxxxxxxxxxx
     video:
-      /^https?:\/\/(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/(?:watch(?:\/|\?v=)|shorts\/|embed\/|v\/))([\w-]{11})(?:\?.*)?$/,
+      /^https?:\/\/(?:youtu\.be\/|(?:www\.|m\.)?youtube\.com\/(?:watch(?:\/|\?v=)|shorts\/|embed\/|v\/))([\w-]{11})(?:[?&].*)?$/,
     // Playlist: https://www.youtube.com/playlist?list=PLxxxxxxxx
     playlist: /^https?:\/\/(?:www\.|m\.)?youtube\.com\/playlist\?list=(PL[\w-]+)/,
     // Channel: https://www.youtube.com/@channelname or /channel/UCxxxx
