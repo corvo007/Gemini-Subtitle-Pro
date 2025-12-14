@@ -196,10 +196,13 @@ flowchart TB
             FFMPEG_SVC["ffmpegAudioExtractor.ts"]
             COMPRESSOR_SVC["videoCompressor.ts"]
             YTDLP_SVC["ytdlp.ts"]
+            PIPELINE_SVC["endToEndPipeline.ts<br/>全自动流水线"]
             STORAGE_SVC["storage.ts"]
         end
 
         MAIN_PROCESS --> ELECTRON_SVC
+        PIPELINE_SVC -.-> YTDLP_SVC
+        PIPELINE_SVC -.-> COMPRESSOR_SVC
     end
 
     APP_LAYER --> HOOKS_LAYER
@@ -347,6 +350,7 @@ Gemini-Subtitle-Pro/
 │       ├── 📄 ffmpegAudioExtractor.ts # FFmpeg 音频提取 (5KB)
 │       ├── 📄 videoCompressor.ts    # 视频压缩服务
 │       ├── 📄 ytdlp.ts              # 视频下载服务
+│       ├── 📄 endToEndPipeline.ts   # 全自动流水线 (核心业务)
 │       └── 📄 storage.ts            # 存储服务
 │
 ├── 📂 resources/                    # 资源文件
@@ -676,6 +680,49 @@ flowchart LR
 
 ---
 
+### 7. 全自动端到端模式 (End-to-End Pipeline)
+
+这是 Electron 端独有的核心功能，通过 `EndToEndPipeline` 服务编排所有子服务，实现"一键熟肉"。
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+
+    state "全自动处理流水线" as Pipeline {
+        state "1. 下载视频" as Download
+        state "2. 提取音频" as Extract
+        state "3. AI 转录/翻译" as Transcribe
+        state "4. 压制字幕" as Burn
+
+        Download --> Extract: 视频文件 (MP4)
+        Extract --> Transcribe: 音频文件 (WAV)
+        Transcribe --> Burn: 字幕文件 (SRT/ASS) + 视频文件
+    }
+
+    Idle --> Pipeline: 用户输入 URL
+    Pipeline --> Computed: 输出最终视频
+    Computed --> Idle
+
+    note right of Download
+        调用 YtDlpService
+        支持断点续传
+    end note
+
+    note right of Transcribe
+        复用前台的 Pipeline 逻辑
+        (Transcription -> Refinement)
+        自动处理并发
+    end note
+
+    note right of Burn
+        调用 VideoCompressor
+        检测 GPU 加速
+        生成硬字幕
+    end note
+```
+
+---
+
 ## 🧩 核心模块说明
 
 ### 1. Gemini API 模块 (`src/services/api/gemini/`)
@@ -710,12 +757,15 @@ flowchart LR
 
 ### 4. Electron 桌面端 (`electron/`)
 
-| 文件                               | 功能描述                            |
-| ---------------------------------- | ----------------------------------- |
-| `main.ts`                          | Electron 主进程，窗口管理、IPC 通信 |
-| `preload.ts`                       | 预加载脚本，暴露安全的 Node.js API  |
-| `services/localWhisper.ts`         | 本地 Whisper 模型调用 (whisper.cpp) |
-| `services/ffmpegAudioExtractor.ts` | FFmpeg 音频提取，支持视频文件       |
+| 文件                               | 功能描述                                   |
+| ---------------------------------- | ------------------------------------------ |
+| `main.ts`                          | Electron 主进程，窗口管理、IPC 通信        |
+| `preload.ts`                       | 预加载脚本，暴露安全的 Node.js API         |
+| `services/localWhisper.ts`         | 本地 Whisper 模型调用 (whisper.cpp)        |
+| `services/ffmpegAudioExtractor.ts` | FFmpeg 音频提取，支持视频文件              |
+| `services/ytdlp.ts`                | 视频下载服务 (YouTube/Bilibili)            |
+| `services/videoCompressor.ts`      | 视频压制服务 (支持 GPU 加速)               |
+| `services/endToEndPipeline.ts`     | **全自动流水线**，编排下载-转写-压制全流程 |
 
 ---
 
