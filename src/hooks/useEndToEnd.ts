@@ -182,6 +182,7 @@ export function useEndToEnd(): UseEndToEndReturn {
             ...prev,
             isParsing: false,
             videoInfo: result.videoInfo,
+            currentStep: 'config', // 解析成功后自动跳转到配置步骤
           }));
         } else {
           setState((prev) => ({
