@@ -7,13 +7,11 @@ import { useEffect, useCallback, useRef } from 'react';
 import { generateSubtitles } from '@/services/api/gemini/subtitle';
 import { generateAssContent, generateSrtContent } from '@/services/subtitle/generator';
 import { decodeAudioWithRetry } from '@/services/audio/decoder';
-import { createGlossary } from '@/services/glossary/manager';
-import { mergeGlossaryResults } from '@/services/glossary/merger';
+import { autoConfirmGlossaryTerms } from '@/services/glossary/autoConfirm';
 import { logger } from '@/services/utils/logger';
 import type { AppSettings } from '@/types/settings';
 import type { SubtitleItem } from '@/types/subtitle';
 import type { ChunkStatus } from '@/types/api';
-import type { GlossaryItem } from '@/types/glossary';
 
 interface UseEndToEndSubtitleGenerationProps {
   settings: AppSettings;
@@ -221,60 +219,16 @@ export function useEndToEndSubtitleGeneration({
               totalTerms: metadata.totalTerms,
             });
 
-            // Use mergeGlossaryResults to properly handle conflicts
-            const { unique, conflicts } = mergeGlossaryResults(metadata.results || []);
-
-            // For conflicts, auto-select the first new option
-            const autoResolvedConflicts = conflicts.map((c) => {
-              const newOption = c.options.find((opt) => !c.hasExisting || opt !== c.options[0]);
-              return newOption || c.options[0];
+            const result = autoConfirmGlossaryTerms({
+              metadata,
+              settings,
+              updateSetting,
+              targetGlossaryId: config.selectedGlossaryId,
+              fallbackTerms: mergedSettings.glossary || [],
+              logPrefix: '[EndToEnd]',
             });
 
-            // Combine unique terms and auto-resolved conflicts
-            const allTerms: GlossaryItem[] = [...unique, ...autoResolvedConflicts];
-
-            if (allTerms.length === 0) {
-              logger.info('[EndToEnd] No new terms extracted');
-              return mergedSettings.glossary || [];
-            }
-
-            // Persist to settings (same logic as useWorkspaceLogic)
-            const currentGlossaries = settings.glossaries || [];
-            let targetGlossaryId = config.selectedGlossaryId || settings.activeGlossaryId;
-            let updatedGlossaries = [...currentGlossaries];
-
-            // If no active glossary, create a new one for auto-extracted terms
-            if (!targetGlossaryId || !currentGlossaries.find((g) => g.id === targetGlossaryId)) {
-              const newGlossary = createGlossary('自动提取术语');
-              newGlossary.terms = [];
-              updatedGlossaries = [...currentGlossaries, newGlossary];
-              targetGlossaryId = newGlossary.id;
-              logger.info('[EndToEnd] Auto-created new glossary for extracted terms');
-            }
-
-            const activeG = updatedGlossaries.find((g) => g.id === targetGlossaryId);
-            const activeTerms = activeG?.terms || [];
-            const existingTerms = new Set(activeTerms.map((g) => g.term.toLowerCase()));
-            const newTerms = allTerms.filter((t) => !existingTerms.has(t.term.toLowerCase()));
-
-            if (newTerms.length > 0 || updatedGlossaries !== currentGlossaries) {
-              const finalGlossaries = updatedGlossaries.map((g) => {
-                if (g.id === targetGlossaryId) {
-                  const currentTerms = g.terms || [];
-                  return { ...g, terms: [...currentTerms, ...newTerms] };
-                }
-                return g;
-              });
-              updateSetting('glossaries', finalGlossaries);
-              updateSetting('activeGlossaryId', targetGlossaryId);
-              logger.info(
-                `[EndToEnd] Auto-added ${newTerms.length} terms to glossary "${activeG?.name || targetGlossaryId}"`
-              );
-              const updatedActive = finalGlossaries.find((g) => g.id === targetGlossaryId);
-              return updatedActive?.terms || [];
-            }
-
-            return activeTerms;
+            return result.terms;
           },
           signal
         );

@@ -14,8 +14,7 @@ import { SpeakerUIProfile } from '@/types/speaker';
 import { generateSrtContent, generateAssContent } from '@/services/subtitle/generator';
 import { downloadFile } from '@/services/subtitle/downloader';
 import { logger } from '@/services/utils/logger';
-import { mergeGlossaryResults } from '@/services/glossary/merger';
-import { createGlossary } from '@/services/glossary/manager';
+import { autoConfirmGlossaryTerms } from '@/services/glossary/autoConfirm';
 import { generateSubtitles } from '@/services/api/gemini/subtitle';
 import { runBatchOperation } from '@/services/api/gemini/batch';
 import { retryGlossaryExtraction } from '@/services/api/gemini/glossary';
@@ -446,54 +445,13 @@ export const useWorkspaceLogic = ({
           logger.info('onGlossaryReady called with metadata:', metadata);
 
           if (settings.glossaryAutoConfirm && !metadata.hasFailures) {
-            const { unique, conflicts } = mergeGlossaryResults(metadata.results);
-
-            // For conflicts, auto-select the first new option (not the existing one)
-            const autoResolvedConflicts = conflicts.map((c) => {
-              // Find the first non-existing option
-              const newOption = c.options.find((opt) => !c.hasExisting || opt !== c.options[0]);
-              return newOption || c.options[0];
+            const result = autoConfirmGlossaryTerms({
+              metadata,
+              settings,
+              updateSetting,
+              logPrefix: '[Workspace]',
             });
-
-            // Combine unique terms and auto-resolved conflicts
-            const allTerms = [...unique, ...autoResolvedConflicts];
-
-            // Ensure we have a glossaries array
-            const currentGlossaries = settings.glossaries || [];
-
-            // Find or create an active glossary
-            let targetGlossaryId = settings.activeGlossaryId;
-            let updatedGlossaries = [...currentGlossaries];
-
-            // If no active glossary, create a new one for auto-extracted terms
-            if (!targetGlossaryId || !currentGlossaries.find((g) => g.id === targetGlossaryId)) {
-              const newGlossary = createGlossary('自动提取术语');
-              newGlossary.terms = [];
-              updatedGlossaries = [...currentGlossaries, newGlossary];
-              targetGlossaryId = newGlossary.id;
-              logger.info('Auto-created new glossary for extracted terms');
-            }
-
-            const activeG = updatedGlossaries.find((g) => g.id === targetGlossaryId);
-            const activeTerms = activeG?.terms || (activeG as any)?.items || [];
-            const existingTerms = new Set(activeTerms.map((g: any) => g.term.toLowerCase()));
-            const newTerms = allTerms.filter((t) => !existingTerms.has(t.term.toLowerCase()));
-
-            if (newTerms.length > 0 || updatedGlossaries !== currentGlossaries) {
-              const finalGlossaries = updatedGlossaries.map((g) => {
-                if (g.id === targetGlossaryId) {
-                  const currentTerms = g.terms || (g as any).items || [];
-                  return { ...g, terms: [...currentTerms, ...newTerms] };
-                }
-                return g;
-              });
-              updateSetting('glossaries', finalGlossaries);
-              updateSetting('activeGlossaryId', targetGlossaryId);
-              logger.info(`Auto-added ${newTerms.length} terms to glossary`);
-              const updatedActive = finalGlossaries.find((g) => g.id === targetGlossaryId);
-              return updatedActive?.terms || [];
-            }
-            return activeTerms;
+            return result.terms;
           }
 
           // Manual confirmation required
