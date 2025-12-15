@@ -49,6 +49,31 @@ function getSegmentSplittingRule(
 }
 
 /**
+ * Get detailed timestamp splitting instructions
+ * This ensures AI follows strict rules when splitting segments to preserve timeline accuracy
+ */
+function getTimestampSplittingInstructions(): string {
+  return `
+**IF SPLITTING IS NEEDED**, follow these rules exactly:
+→ **PRESERVE ORIGINAL BOUNDARIES**: The FIRST split segment starts at original start time, the LAST split segment ends at original end time
+→ **NO GAPS, NO OVERLAPS**: Split segments must be perfectly continuous (segment N end = segment N+1 start)
+→ **LISTEN TO AUDIO FOR SPLIT TIMING**: Do NOT allocate time proportionally by text length. Instead:
+   1. Listen to the actual audio to hear when each phrase/sentence is spoken
+   2. Identify natural pauses, breath breaks, or sentence transitions in the audio
+   3. Set split timestamps based on ACTUAL speech timing in the audio
+   Example (English): Original segment 00:00:00,000 → 00:00:06,000, text "Hello world. How are you today?"
+   - If speaker says "Hello world." quickly (1.5s) then pauses, then speaks slowly:
+   - Split 1: "Hello world." → 00:00:00,000 → 00:00:01,500 (based on actual audio)
+   - Split 2: "How are you today?" → 00:00:01,500 → 00:00:06,000 (based on actual audio)
+   Example (Japanese): Original segment 00:00:00,000 → 00:00:05,000, text "今日はいい天気ですね。散歩に行きましょう。"
+   - If speaker says "今日はいい天気ですね。" slowly (3s), then quickly says the rest:
+   - Split 1: "今日はいい天気ですね。" → 00:00:00,000 → 00:00:03,000 (based on actual audio)
+   - Split 2: "散歩に行きましょう。" → 00:00:03,000 → 00:00:05,000 (based on actual audio)
+→ **NATURAL BREAKS ONLY**: Split at sentence boundaries, punctuation, or natural pauses - NEVER mid-word or mid-phrase
+→ **MINIMUM DURATION**: Each split segment must be at least 0.5 seconds`;
+}
+
+/**
  * Get filler words removal rule text
  */
 function getFillerWordsRule(): string {
@@ -248,11 +273,16 @@ Before returning, confirm:
     
     YOUR TASKS:
     1. Listen to the audio to verify the transcription.
-    2. **CHECK FOR MISSED HEARING**: If there is speech in the audio that is MISSING from the transcription, you MUST ADD IT.
-    3. FIX TIMESTAMPS: Ensure start/end times match the audio speech perfectly. **Timestamps MUST be strictly within the provided audio duration.**
+    2. **CHECK FOR MISSED SPEECH**: If there is CLEAR, MEANINGFUL speech in the audio that is MISSING from the transcription, you MUST ADD IT.
+       → Do NOT add: background noise, music lyrics, ambient sounds, or unintelligible mumbling
+    3. **ALIGN TIMESTAMPS**: Listen to audio and adjust start/end times to match actual speech boundaries.
+       → Whisper timestamps may drift, especially in long audio - correct any misalignment you detect
+       → **Timestamps MUST be strictly within the provided audio duration.**
+       → **NEVER MERGE** multiple segments into one - only SPLIT long segments when needed
     4. FIX TRANSCRIPTION: Correct mishearings, typos, and proper nouns (names, terminology).
     5. IGNORE FILLERS: Do not transcribe stuttering or meaningless filler words (${FILLER_WORDS_PROMPT}).
     6. SPLIT LINES: STRICT RULE. ${getSegmentSplittingRule()}, YOU MUST SPLIT IT into shorter, natural segments.
+    ${getTimestampSplittingInstructions()}
     7. **LANGUAGE RULE**: Keep the transcription in the ORIGINAL LANGUAGE spoken in the audio. DO NOT translate to any other language.
     8. FORMAT: Return a valid JSON array.
 
@@ -274,19 +304,20 @@ TASK RULES (Priority Order):
 
 [P1 - PRIMARY FOCUS] Timestamp Alignment
 → Listen to audio and align start/end times to actual speech boundaries
+→ Whisper timestamps may drift, especially in long audio - correct any misalignment you detect
 → Ensure timestamps are strictly within the provided audio duration
 → Timestamps must be relative to provided audio file (starting at 00:00:00)
-→ Fix timing drift and bunched-up segments
+→ **NEVER MERGE** multiple segments into one - only SPLIT long segments when needed
 
 ${diarizationSection}
 
 [P2 - READABILITY] Segment Splitting
 → ${getSegmentSplittingRule('translation')}
-→ When splitting: distribute timing proportionally based on audio
-→ Ensure natural speech breaks between split segments
+${getTimestampSplittingInstructions()}
 
 [P3 - CONTENT ACCURACY] Audio Content Verification
-→ If you hear speech NOT in subtitles → ADD new subtitle entries
+→ If you hear CLEAR, MEANINGFUL speech NOT in subtitles → ADD new subtitle entries
+→ Do NOT add: background noise, music lyrics, ambient sounds, or unintelligible speech
 → ${getFillerWordsRule()} from 'text_original'
 
 [P4 - ABSOLUTE RULE] Translation Preservation
@@ -339,11 +370,16 @@ export const getSystemInstruction = (
     
     YOUR TASKS:
     1. Listen to the audio to verify the transcription.
-    2. **CHECK FOR MISSED HEARING**: If there is speech in the audio that is MISSING from the transcription, you MUST ADD IT.
-    3. FIX TIMESTAMPS: Ensure start/end times match the audio speech perfectly. **Timestamps MUST be strictly within the provided audio duration.**
+    2. **CHECK FOR MISSED SPEECH**: If there is CLEAR, MEANINGFUL speech in the audio that is MISSING from the transcription, you MUST ADD IT.
+       → Do NOT add: background noise, music lyrics, ambient sounds, or unintelligible mumbling
+    3. **ALIGN TIMESTAMPS**: Listen to audio and adjust start/end times to match actual speech boundaries.
+       → Whisper timestamps may drift, especially in long audio - correct any misalignment you detect
+       → **Timestamps MUST be strictly within the provided audio duration.**
+       → **NEVER MERGE** multiple segments into one - only SPLIT long segments when needed
     4. FIX TRANSCRIPTION: Correct mishearings, typos, and proper nouns (names, terminology).
     5. IGNORE FILLERS: Do not transcribe stuttering or meaningless filler words (${FILLER_WORDS_PROMPT}).
     6. SPLIT LINES: STRICT RULE. ${getSegmentSplittingRule()}, YOU MUST SPLIT IT into shorter, natural segments.
+    ${getTimestampSplittingInstructions()}
     7. **LANGUAGE RULE**: Keep the transcription in the ORIGINAL LANGUAGE spoken in the audio. DO NOT translate to any other language.
     8. FORMAT: Return a valid JSON array.
     9. FINAL CHECK: Before outputting, strictly verify that ALL previous rules (1-8) have been perfectly followed. Correct any remaining errors.
@@ -397,7 +433,7 @@ export const getSystemInstruction = (
     → **MULTI-LINE CONTEXT**: Read the previous and next 1-2 lines to understand context. This helps with:
        - Resolving ambiguous pronouns (e.g., "it", "that")
        - Understanding incomplete sentences split across lines
-       - Maintaining consistent tone
+       - Maintaining consistent tone and terminology across related lines
     → **STRICT BOUNDARY RULE**: Use this context for **UNDERSTANDING** only. **NEVER** merge segments or move text between lines.
     → **PARTIAL SENTENCES**: If a sentence is split across lines, translate ONLY the specific fragment in the current line. Do not "complete" it using text from the next line.
 
@@ -418,8 +454,6 @@ export const getSystemInstruction = (
     Before returning, verify:
     ✓ Did I return the exact same number of items as the input?
     ✓ Are all IDs preserved?
-    ✓ Is the Chinese fluent and natural?
-    ✓ Did I remove all filler words?
     ✓ Is the Chinese fluent and natural?
     ✓ Did I remove all filler words?
 
@@ -465,17 +499,18 @@ Speaker (formal): "すごいですね" → "真是令人印象深刻。"
       
       [P1 - PRIMARY FOCUS] Timestamp Alignment
       → Listen to audio and align start/end times to actual speech boundaries
+      → Whisper timestamps may drift, especially in long audio - correct any misalignment you detect
       → Ensure timestamps are strictly within the provided audio duration
       → Timestamps must be relative to provided audio file (starting at 00:00:00)
-      → Fix timing drift and bunched-up segments
+      → **NEVER MERGE** multiple segments into one - only SPLIT long segments when needed
       
       [P2 - READABILITY] Segment Splitting
       → ${getSegmentSplittingRule('translation')}
-      → When splitting: distribute timing proportionally based on audio
-      → Ensure natural speech breaks between split segments
+      ${getTimestampSplittingInstructions()}
       
       [P3 - CONTENT ACCURACY] Audio Content Verification
-      → If you hear speech NOT in subtitles → ADD new subtitle entries
+      → If you hear CLEAR, MEANINGFUL speech NOT in subtitles → ADD new subtitle entries
+      → Do NOT add: background noise, music lyrics, ambient sounds, or unintelligible speech
       → ${getFillerWordsRule()} from 'text_original'
       
       [P4 - ABSOLUTE RULE] Translation Preservation
@@ -518,7 +553,8 @@ Speaker (formal): "すごいですね" → "真是令人印象深刻。"
     
     [P2 - CONTENT ACCURACY] Audio Verification
     → Listen to audio carefully
-    → If you hear speech NOT in the subtitles → ADD new subtitle entries
+    → If you hear CLEAR, MEANINGFUL speech NOT in the subtitles → ADD new subtitle entries
+    → Do NOT add: background noise, music lyrics, ambient sounds, or unintelligible speech
     → Verify 'text_original' matches what was actually said
     
     [P3 - ABSOLUTE] Timestamp Preservation
@@ -783,8 +819,6 @@ export const getTranslationBatchPrompt = (batchLength: number, payload: any[]): 
     ✓ All translations are Simplified Chinese
     ✓ No meaning lost from original text
     ✓ Filler words removed
-    ✓ No meaning lost from original text
-    ✓ Filler words removed
     
     Input JSON:
     ${JSON.stringify(payload)}
@@ -821,8 +855,7 @@ export const getFixTimestampsPrompt = (params: FixTimestampsPromptParams): strin
     
     [P2 - MANDATORY] Segment Splitting for Readability
     → ${getSegmentSplittingRule('translation')}
-    → When splitting: distribute timing based on actual audio speech
-    → Ensure splits occur at natural speech breaks
+    ${getTimestampSplittingInstructions()}
     → For NEW/SPLIT entries: provide appropriate translation in Simplified Chinese
     `;
 
@@ -903,7 +936,8 @@ export const getProofreadPrompt = (params: ProofreadPromptParams): string => `
     
     [P2 - CONTENT] Audio Content Verification
     → Listen to audio carefully
-    → If you hear speech NOT in subtitles → ADD new subtitle entries
+    → If you hear CLEAR, MEANINGFUL speech NOT in subtitles → ADD new subtitle entries
+    → Do NOT add: background noise, music lyrics, ambient sounds, or unintelligible speech
     → Verify 'text_original' matches what was actually said
 
     [P2.5 - CONTEXT-AWARE TRANSLATION]
@@ -960,8 +994,7 @@ export const getRefinementPrompt = (params: RefinementPromptParams): string => `
 
             [P2 - READABILITY] Segment Splitting
             → ${getSegmentSplittingRule()}
-            → When splitting: distribute timing based on actual audio speech
-            → Ensure splits occur at natural speech breaks
+            ${getTimestampSplittingInstructions()}
             
             [P3 - CLEANING] Remove Non-Speech Elements
             → ${getFillerWordsRule()}
