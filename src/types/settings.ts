@@ -3,6 +3,14 @@ import { GlossaryItem, Glossary } from '@/types/glossary';
 export const GENRE_PRESETS = ['general', 'anime', 'movie', 'news', 'tech'];
 export type Genre = 'general' | 'anime' | 'movie' | 'news' | 'tech';
 
+export const GENRE_LABELS: Record<string, string> = {
+  general: '通用',
+  anime: '动漫',
+  movie: '电影/剧集',
+  news: '新闻',
+  tech: '科技',
+};
+
 export interface DebugSettings {
   mockGemini: boolean;
   mockOpenAI: boolean;

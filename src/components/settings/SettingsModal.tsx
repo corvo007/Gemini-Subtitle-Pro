@@ -3,6 +3,10 @@ import { Settings, X, CheckCircle, Languages, Type, Clock, Book, Bug } from 'luc
 import { AppSettings } from '@/types/settings';
 import { CustomSelect } from '@/components/settings/CustomSelect';
 import { LocalWhisperSettings } from '@/components/settings/LocalWhisperSettings';
+import { Toggle } from '@/components/ui/Toggle';
+import { SettingRow } from '@/components/ui/SettingRow';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { OptionButton } from '@/components/ui/OptionButton';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -72,28 +76,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-6 animate-fade-in">
                 {/* Output Settings */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                    输出设置
-                  </h3>
+                  <SectionHeader>输出设置</SectionHeader>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
                       导出模式
                     </label>
                     <div className="grid grid-cols-2 gap-3">
-                      <button
+                      <OptionButton
+                        selected={settings.outputMode === 'bilingual'}
                         onClick={() => updateSetting('outputMode', 'bilingual')}
-                        className={`p-3 rounded-lg border text-sm flex items-center justify-center space-x-2 transition-all ${settings.outputMode === 'bilingual' ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'}`}
+                        size="md"
                       >
                         <Languages className="w-4 h-4" />
                         <span>双语字幕</span>
-                      </button>
-                      <button
+                      </OptionButton>
+                      <OptionButton
+                        selected={settings.outputMode === 'target_only'}
                         onClick={() => updateSetting('outputMode', 'target_only')}
-                        className={`p-3 rounded-lg border text-sm flex items-center justify-center space-x-2 transition-all ${settings.outputMode === 'target_only' ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'}`}
+                        size="md"
                       >
                         <Type className="w-4 h-4" />
                         <span>仅译文</span>
-                      </button>
+                      </OptionButton>
                     </div>
                     <p className="text-xs text-slate-500 mt-2">
                       双语模式会在字幕中同时显示原文和译文。
@@ -102,96 +106,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   {/* Speaker Diarization Settings */}
                   <div className="space-y-4 mt-4 pt-4 border-t border-slate-700/50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300">
-                          启用说话人区分
-                        </label>
-                        <p className="text-xs text-slate-500">
-                          识别音频或视频中的不同说话人，并打上标签
-                        </p>
-                      </div>
-                      <button
-                        onClick={() =>
-                          updateSetting('enableDiarization', !settings.enableDiarization)
-                        }
-                        className={`w-10 h-5 rounded-full transition-colors relative ${settings.enableDiarization ? 'bg-indigo-500' : 'bg-slate-600'}`}
-                      >
-                        <div
-                          className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.enableDiarization ? 'left-6' : 'left-1'}`}
-                        />
-                      </button>
-                    </div>
+                    <SettingRow
+                      label="启用说话人区分"
+                      description="识别音频或视频中的不同说话人，并打上标签"
+                    >
+                      <Toggle
+                        checked={settings.enableDiarization || false}
+                        onChange={(v) => updateSetting('enableDiarization', v)}
+                      />
+                    </SettingRow>
 
                     {settings.enableDiarization && (
-                      <>
-                        <div className="flex items-center justify-between pl-4 animate-fade-in">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300">
-                              导出时包含说话人名称
-                            </label>
-                            <p className="text-xs text-slate-500">
-                              在字幕文件中显示说话人（如：羊宫妃那：对话内容）
-                            </p>
-                          </div>
-                          <button
-                            onClick={() =>
-                              updateSetting(
-                                'includeSpeakerInExport',
-                                !settings.includeSpeakerInExport
-                              )
-                            }
-                            className={`w-10 h-5 rounded-full transition-colors relative ${settings.includeSpeakerInExport ? 'bg-indigo-500' : 'bg-slate-600'}`}
-                          >
-                            <div
-                              className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.includeSpeakerInExport ? 'left-6' : 'left-1'}`}
-                            />
-                          </button>
-                        </div>
-                        <div className="flex items-center justify-between pl-4 animate-fade-in mt-3">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300">
-                              使用说话人颜色 (ASS)
-                            </label>
-                            <p className="text-xs text-slate-500">
-                              为不同说话人分配不同颜色（仅 ASS 格式有效）
-                            </p>
-                          </div>
-                          <button
-                            onClick={() =>
-                              updateSetting('useSpeakerColors', !settings.useSpeakerColors)
-                            }
-                            className={`w-10 h-5 rounded-full transition-colors relative ${settings.useSpeakerColors ? 'bg-indigo-500' : 'bg-slate-600'}`}
-                          >
-                            <div
-                              className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.useSpeakerColors ? 'left-6' : 'left-1'}`}
-                            />
-                          </button>
-                        </div>
-                        <div className="flex items-center justify-between pl-4 animate-fade-in mt-3">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300">
-                              角色风格化翻译
-                            </label>
-                            <p className="text-xs text-slate-500">
-                              根据说话人特征调整翻译语气（正式/口语）
-                            </p>
-                          </div>
-                          <button
-                            onClick={() =>
-                              updateSetting(
-                                'useSpeakerStyledTranslation',
-                                !settings.useSpeakerStyledTranslation
-                              )
-                            }
-                            className={`w-10 h-5 rounded-full transition-colors relative ${settings.useSpeakerStyledTranslation ? 'bg-indigo-500' : 'bg-slate-600'}`}
-                          >
-                            <div
-                              className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.useSpeakerStyledTranslation ? 'left-6' : 'left-1'}`}
-                            />
-                          </button>
-                        </div>
-                      </>
+                      <div className="space-y-3 animate-fade-in">
+                        <SettingRow
+                          label="导出时包含说话人名称"
+                          description="在字幕文件中显示说话人（如：羊宫妃那：对话内容）"
+                          indented
+                        >
+                          <Toggle
+                            checked={settings.includeSpeakerInExport || false}
+                            onChange={(v) => updateSetting('includeSpeakerInExport', v)}
+                          />
+                        </SettingRow>
+                        <SettingRow
+                          label="使用说话人颜色 (ASS)"
+                          description="为不同说话人分配不同颜色（仅 ASS 格式有效）"
+                          indented
+                        >
+                          <Toggle
+                            checked={settings.useSpeakerColors || false}
+                            onChange={(v) => updateSetting('useSpeakerColors', v)}
+                          />
+                        </SettingRow>
+                        <SettingRow
+                          label="角色风格化翻译"
+                          description="根据说话人特征调整翻译语气（正式/口语）"
+                          indented
+                        >
+                          <Toggle
+                            checked={settings.useSpeakerStyledTranslation || false}
+                            onChange={(v) => updateSetting('useSpeakerStyledTranslation', v)}
+                          />
+                        </SettingRow>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -202,9 +159,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-6 animate-fade-in">
                 {/* API Settings */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                    翻译和润色服务
-                  </h3>
+                  <SectionHeader>翻译和润色服务</SectionHeader>
                   <div className="space-y-4">
                     {/* Gemini */}
                     <div>
@@ -262,29 +217,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 {/* Transcription Provider Settings */}
                 <div className="space-y-3 pt-4 border-t border-slate-800">
-                  <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                    语音识别
-                  </h3>
+                  <SectionHeader>语音识别</SectionHeader>
 
                   {isElectron ? (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-3">
-                        <button
-                          onClick={() => {
-                            updateSetting('useLocalWhisper', false);
-                          }}
-                          className={`p-3 rounded-lg border text-sm flex items-center justify-center space-x-2 transition-all ${!settings.useLocalWhisper ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'}`}
+                        <OptionButton
+                          selected={!settings.useLocalWhisper}
+                          onClick={() => updateSetting('useLocalWhisper', false)}
+                          size="md"
                         >
                           <span>OpenAI API</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            updateSetting('useLocalWhisper', true);
-                          }}
-                          className={`p-3 rounded-lg border text-sm flex items-center justify-center space-x-2 transition-all ${settings.useLocalWhisper ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'}`}
+                        </OptionButton>
+                        <OptionButton
+                          selected={settings.useLocalWhisper || false}
+                          onClick={() => updateSetting('useLocalWhisper', true)}
+                          size="md"
                         >
                           <span>本地 Whisper</span>
-                        </button>
+                        </OptionButton>
                       </div>
 
                       {settings.useLocalWhisper ? (
@@ -603,48 +554,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 <div className="pt-4 border-t border-slate-800">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300">智能分段</label>
-                      <p className="text-xs text-slate-500">
-                        使用 AI 语音检测在自然停顿处切分音频，提升转录准确度（推荐）
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => updateSetting('useSmartSplit', !settings.useSmartSplit)}
-                      className={`w-10 h-5 rounded-full transition-colors relative ${settings.useSmartSplit !== false ? 'bg-indigo-500' : 'bg-slate-600'}`}
-                    >
-                      <div
-                        className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.useSmartSplit !== false ? 'left-6' : 'left-1'}`}
-                      />
-                    </button>
-                  </div>
+                  <SettingRow
+                    label="智能分段"
+                    description="使用 AI 语音检测在自然停顿处切分音频，提升转录准确度（推荐）"
+                  >
+                    <Toggle
+                      checked={settings.useSmartSplit !== false}
+                      onChange={(v) => updateSetting('useSmartSplit', v)}
+                    />
+                  </SettingRow>
                 </div>
               </div>
             )}
 
             {activeTab === 'glossary' && (
               <div className="space-y-3 animate-fade-in">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300">
-                      启用自动术语表
-                    </label>
-                    <p className="text-xs text-slate-500">
-                      自动识别并提取专业术语，提升翻译准确性和一致性
-                    </p>
-                  </div>
-                  <button
-                    onClick={() =>
-                      updateSetting('enableAutoGlossary', !settings.enableAutoGlossary)
-                    }
-                    className={`w-10 h-5 rounded-full transition-colors relative ${settings.enableAutoGlossary !== false ? 'bg-indigo-500' : 'bg-slate-600'}`}
-                  >
-                    <div
-                      className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.enableAutoGlossary !== false ? 'left-6' : 'left-1'}`}
-                    />
-                  </button>
-                </div>
+                <SettingRow
+                  label="启用自动术语表"
+                  description="自动识别并提取专业术语，提升翻译准确性和一致性"
+                >
+                  <Toggle
+                    checked={settings.enableAutoGlossary !== false}
+                    onChange={(v) => updateSetting('enableAutoGlossary', v)}
+                  />
+                </SettingRow>
 
                 {settings.enableAutoGlossary !== false && (
                   <div className="space-y-4 animate-fade-in">
@@ -676,24 +609,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300">
-                          自动确认术语表
-                        </label>
-                        <p className="text-xs text-slate-500">提取术语后直接应用，无需人工确认</p>
-                      </div>
-                      <button
-                        onClick={() =>
-                          updateSetting('glossaryAutoConfirm', !settings.glossaryAutoConfirm)
-                        }
-                        className={`w-10 h-5 rounded-full transition-colors relative ${settings.glossaryAutoConfirm ? 'bg-indigo-500' : 'bg-slate-600'}`}
-                      >
-                        <div
-                          className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.glossaryAutoConfirm ? 'left-6' : 'left-1'}`}
-                        />
-                      </button>
-                    </div>
+                    <SettingRow
+                      label="自动确认术语表"
+                      description="提取术语后直接应用，无需人工确认"
+                    >
+                      <Toggle
+                        checked={settings.glossaryAutoConfirm || false}
+                        onChange={(v) => updateSetting('glossaryAutoConfirm', v)}
+                      />
+                    </SettingRow>
                   </div>
                 )}
 
@@ -723,71 +647,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </p>
 
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300">
-                          Mock Gemini API
-                        </label>
-                        <p className="text-xs text-slate-500">跳过术语提取、润色和翻译请求</p>
-                      </div>
-                      <button
-                        onClick={() =>
+                    <SettingRow label="Mock Gemini API" description="跳过术语提取、润色和翻译请求">
+                      <Toggle
+                        checked={settings.debug?.mockGemini || false}
+                        onChange={(v) =>
                           updateSetting('debug', {
                             ...settings.debug,
-                            mockGemini: !settings.debug?.mockGemini,
+                            mockGemini: v,
                           })
                         }
-                        className={`w-10 h-5 rounded-full transition-colors relative ${settings.debug?.mockGemini ? 'bg-amber-500' : 'bg-slate-600'}`}
-                      >
-                        <div
-                          className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.debug?.mockGemini ? 'left-6' : 'left-1'}`}
-                        />
-                      </button>
-                    </div>
+                        color="amber"
+                      />
+                    </SettingRow>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300">
-                          Mock OpenAI API
-                        </label>
-                        <p className="text-xs text-slate-500">跳过 OpenAI Whisper 转录请求</p>
-                      </div>
-                      <button
-                        onClick={() =>
+                    <SettingRow label="Mock OpenAI API" description="跳过 OpenAI Whisper 转录请求">
+                      <Toggle
+                        checked={settings.debug?.mockOpenAI || false}
+                        onChange={(v) =>
                           updateSetting('debug', {
                             ...settings.debug,
-                            mockOpenAI: !settings.debug?.mockOpenAI,
+                            mockOpenAI: v,
                           })
                         }
-                        className={`w-10 h-5 rounded-full transition-colors relative ${settings.debug?.mockOpenAI ? 'bg-amber-500' : 'bg-slate-600'}`}
-                      >
-                        <div
-                          className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.debug?.mockOpenAI ? 'left-6' : 'left-1'}`}
-                        />
-                      </button>
-                    </div>
+                        color="amber"
+                      />
+                    </SettingRow>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300">
-                          Mock Local Whisper
-                        </label>
-                        <p className="text-xs text-slate-500">跳过本地 Whisper 转录</p>
-                      </div>
-                      <button
-                        onClick={() =>
+                    <SettingRow label="Mock Local Whisper" description="跳过本地 Whisper 转录">
+                      <Toggle
+                        checked={settings.debug?.mockLocalWhisper || false}
+                        onChange={(v) =>
                           updateSetting('debug', {
                             ...settings.debug,
-                            mockLocalWhisper: !settings.debug?.mockLocalWhisper,
+                            mockLocalWhisper: v,
                           })
                         }
-                        className={`w-10 h-5 rounded-full transition-colors relative ${settings.debug?.mockLocalWhisper ? 'bg-amber-500' : 'bg-slate-600'}`}
-                      >
-                        <div
-                          className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${settings.debug?.mockLocalWhisper ? 'left-6' : 'left-1'}`}
-                        />
-                      </button>
-                    </div>
+                        color="amber"
+                      />
+                    </SettingRow>
 
                     <div className="pt-4 border-t border-slate-700">
                       <h4 className="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider">

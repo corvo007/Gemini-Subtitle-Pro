@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clapperboard, X } from 'lucide-react';
-import { GENRE_PRESETS } from '@/types/settings';
+import { GENRE_PRESETS, GENRE_LABELS } from '@/types/settings';
+import { OptionButton } from '@/components/ui/OptionButton';
 
 interface GenreSettingsDialogProps {
   isOpen: boolean;
@@ -53,30 +54,16 @@ export const GenreSettingsDialog: React.FC<GenreSettingsDialogProps> = ({
             <label className="block text-sm font-medium text-slate-300 mb-2">选择预设</label>
             <div className="grid grid-cols-2 gap-2">
               {GENRE_PRESETS.map((g) => (
-                <button
-                  key={g}
-                  onClick={() => setTempGenre(g)}
-                  className={`px-3 py-2 rounded-lg text-sm border transition-all ${tempGenre === g ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}
-                >
-                  {g === 'general'
-                    ? '通用'
-                    : g === 'anime'
-                      ? '动漫'
-                      : g === 'movie'
-                        ? '电影/剧集'
-                        : g === 'news'
-                          ? '新闻'
-                          : g === 'tech'
-                            ? '科技'
-                            : g}
-                </button>
+                <OptionButton key={g} selected={tempGenre === g} onClick={() => setTempGenre(g)}>
+                  {GENRE_LABELS[g] || g}
+                </OptionButton>
               ))}
-              <button
+              <OptionButton
+                selected={tempGenre === 'custom'}
                 onClick={() => setTempGenre('custom')}
-                className={`px-3 py-2 rounded-lg text-sm border transition-all ${tempGenre === 'custom' ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}
               >
                 自定义...
-              </button>
+              </OptionButton>
             </div>
           </div>
           {tempGenre === 'custom' && (
