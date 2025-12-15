@@ -724,67 +724,88 @@ flowchart LR
 
 ### 7. 全自动端到端模式 (End-to-End Pipeline)
 
-这是 Electron 端独有的核心功能，通过 `EndToEndPipeline` 服务编排所有子服务，实现"一键熟肉"。
+这是 Electron 端独有的核心功能，通过 IPC 通信协调主进程（资源调度）与渲染进程（AI 运算），实现"一键熟肉"。
+
+#### 7.1 跨进程交互架构
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Idle
+sequenceDiagram
+    participant User as 用户输入
+    participant Main as 🖥️ 主进程 (Node.js)
+    participant Renderer as 🎨 渲染进程 (Web)
+    participant Ext as 🛠️ 外部工具 (yt-dlp/ffmpeg)
+    participant AI as ☁️ AI 服务 (Gemini/OpenAI)
 
-    state "全自动处理流水线" as Pipeline {
-        state "1. downloading (15%)<br/>下载视频" as Download
-        state "2. extracting_audio (5%)<br/>提取音频" as Extract
-        state "3. transcribing (25%)<br/>语音转写" as Transcribe
-        state "4. extracting_glossary (10%)<br/>术语提取" as Glossary
-        state "5. extracting_speakers (5%)<br/>说话人识别" as Speakers
-        state "6. refining (15%)<br/>校正润色" as Refine
-        state "7. translating (15%)<br/>翻译" as Translate
-        state "8. exporting_subtitle (2%)<br/>导出字幕" as Export
-        state "9. compressing (8%)<br/>视频压制" as Compress
+    User->>Main: 1. 提交视频 URL
+    activate Main
 
-        Download --> Extract: 视频文件 (MP4)
-        Extract --> Transcribe: 音频文件 (WAV)
-        Transcribe --> Glossary
-        Glossary --> Speakers
-        Speakers --> Refine
-        Refine --> Translate
-        Translate --> Export: 字幕内容
-        Export --> Compress: 字幕文件 (ASS/SRT)
-    }
+    note over Main: [Phase 1: 资源准备]
+    Main->>Ext: 调用 yt-dlp 下载
+    Ext-->>Main: 原始视频 (.mp4)
+    Main->>Ext: 调用 ffmpeg 提取音频
+    Ext-->>Main: 临时音频 (.wav)
 
-    Idle --> Pipeline: 用户输入 URL
-    Pipeline --> Completed: 成功
-    Pipeline --> Failed: 失败
+    note over Main: [Phase 2: 渲染进程接管]
+    Main->>Renderer: IPC: generate-subtitles
+    activate Renderer
 
-    note right of Download
-        调用 YtDlpService
-        支持 YouTube/Bilibili
-    end note
+    note right of Renderer: useEndToEndSubtitleGeneration
+    Renderer->>Main: IPC: read-focal-file
+    Main-->>Renderer: Audio Buffer
 
-    note right of Transcribe
-        渲染进程处理
-        使用 Whisper API
-    end note
+    Renderer->>AI: 1. Whisper 转写
+    Renderer->>AI: 2. Gemini 术语提取
+    Renderer->>AI: 3. Gemini 说话人分析
+    Renderer->>AI: 4. Gemini 翻译润色
 
-    note right of Compress
-        可选阶段
-        根据配置跳过
-        支持 GPU 加速
-    end note
+    AI-->>Renderer: SUBTITLE_DATA
+
+    Renderer->>Main: IPC: subtitle-result (JSON)
+    deactivate Renderer
+
+    note over Main: [Phase 3: 后处理]
+    Main->>Main: jsonToAss/Srt()
+    Main->>Main: 写入本地磁盘
+
+    opt Video Compression
+        Main->>Ext: ffmpeg 视频压制 (Hardsub)
+        Ext-->>Main: 成片视频
+    end
+
+    Main->>User: 任务完成通知
+    deactivate Main
 ```
 
-**阶段权重说明：**
+#### 7.2 数据流向与状态管理
 
-| 阶段                  | 权重 | 说明                   |
-| --------------------- | ---- | ---------------------- |
-| `downloading`         | 15%  | 视频下载 (yt-dlp)      |
-| `extracting_audio`    | 5%   | FFmpeg 音频提取        |
-| `transcribing`        | 25%  | Whisper 语音转写       |
-| `extracting_glossary` | 10%  | Gemini Pro 术语提取    |
-| `extracting_speakers` | 5%   | Gemini Pro 说话人识别  |
-| `refining`            | 15%  | Gemini Flash 校正润色  |
-| `translating`         | 15%  | Gemini Flash 翻译      |
-| `exporting_subtitle`  | 2%   | 保存字幕文件           |
-| `compressing`         | 8%   | FFmpeg 视频压制 (可选) |
+所有中间状态和配置通过 `EndToEndWizard` 组件管理，数据流转如下：
+
+1.  **用户配置 (Configuration)**
+    - 源: `EndToEndWizard` UI
+    - 流向: 通过 `IPC (start-processing)` -> 主进程 `EndToEndPipeline` 服务
+    - 内容: URL, 模型选择, 翻译风格, 压制参数
+
+2.  **音视频流 (Media Stream)**
+    - `yt-dlp` -> 磁盘临时目录 -> `ffmpeg` (提取音频) -> 磁盘 WAV
+    - 磁盘 WAV -> `IPC (read-file)` -> 渲染进程内存 (ArrayBuffer) -> Web Audio API
+
+3.  **字幕数据 (Subtitle Data)**
+    - 渲染进程生成 `SubtitleItem[]` 数组
+    - 通过 `IPC (subtitle-result)` 回传主进程
+    - 主进程将对象序列化为 ASS/SRT 格式文本并写入文件
+
+4.  **进度反馈 (Progress Feedback)**
+    - 各阶段 (下载/转写/压制) 均产生进度事件
+    - 主进程 -> `IPC (progress)` -> 渲染进程 `useEndToEnd` Hook -> UI 进度条
+
+#### 7.3 关键 IPC 通道
+
+| 通道名 (Channel)                | 方向             | 载荷 (Payload)    | 作用                               |
+| :------------------------------ | :--------------- | :---------------- | :--------------------------------- |
+| `end-to-end:start`              | Renderer -> Main | `EndToEndConfig`  | 启动全自动任务                     |
+| `end-to-end:generate-subtitles` | Main -> Renderer | `path, config`    | 主进程准备好音频，请求前端开始生成 |
+| `end-to-end:subtitle-result`    | Renderer -> Main | `SubtitleItem[]`  | 前端完成生成，返回结果             |
+| `end-to-end:progress`           | Main -> Renderer | `stage, progress` | 实时进度同步                       |
 
 ---
 
