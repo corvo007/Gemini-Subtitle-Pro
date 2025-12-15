@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.2] - 2025-12-15
+
+### Features
+
+- **End-to-End Pipeline**: Auto-advance after successful parsing, persist auto-confirmed glossary terms.
+- **UI Architecture**: Implemented new reusable UI components and unified page layouts.
+- **Electron**: Added context menu support.
+
+### Fixes
+
+- **End-to-End**: Fixed double-click requirement for starting Full Auto mode.
+
+### Refactor
+
+- **UI Migration**: Migrated pages, modals, and settings to new layout and component primitives.
+- **Prompts**: Enforced strict segment boundaries and improved timestamp verification rules.
+- **Codebase**: Unified glossary logic and improved variable naming (`enableDiarization`).
+
 ## [2.9.1] - 2025-12-14
 
 ### Features
