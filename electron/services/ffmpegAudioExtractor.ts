@@ -1,17 +1,33 @@
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegPath from 'ffmpeg-static';
-import ffprobePath from 'ffprobe-static';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
+import { app } from 'electron';
 
-// 设置 FFmpeg 路径
-const fixPathForAsar = (pathStr: string) => {
-  return pathStr.replace('app.asar', 'app.asar.unpacked');
+// 获取正确的 FFmpeg/FFprobe 路径
+const getBinaryPath = (binaryName: string) => {
+  const isProd = app.isPackaged;
+  const basePath = isProd ? process.resourcesPath : path.join(process.cwd(), 'resources');
+
+  const binaryPath = path.join(basePath, binaryName);
+
+  // 在开发环境检查文件是否存在
+  if (!isProd && !fs.existsSync(binaryPath)) {
+    console.warn(
+      `[FFmpeg] Binary not found at ${binaryPath}. Please run 'yarn postinstall' or manually copy binaries to resources/`
+    );
+  }
+
+  return binaryPath;
 };
 
-ffmpeg.setFfmpegPath(fixPathForAsar(ffmpegPath as string));
-ffmpeg.setFfprobePath(fixPathForAsar(ffprobePath.path));
+// 设置 FFmpeg 路径
+ffmpeg.setFfmpegPath(getBinaryPath('ffmpeg.exe'));
+ffmpeg.setFfprobePath(getBinaryPath('ffprobe.exe'));
+
+// 导出获取函数供其他模块使用（如日志）
+export const getFFmpegPath = () => getBinaryPath('ffmpeg.exe');
+export const getFFprobePath = () => getBinaryPath('ffprobe.exe');
 
 export interface AudioExtractionOptions {
   format?: 'wav' | 'mp3' | 'flac';
@@ -87,8 +103,8 @@ export async function extractAudioFromVideo(
 
     // Log FFmpeg path and command
     if (onLog) {
-      onLog(`[INFO] FFmpeg Path: ${ffmpegPath}`);
-      onLog(`[INFO] FFmpeg Probe Path: ${ffprobePath.path}`);
+      onLog(`[INFO] FFmpeg Path: ${getFFmpegPath()}`);
+      onLog(`[INFO] FFmpeg Probe Path: ${getFFprobePath()}`);
     }
 
     // 监听日志

@@ -1,8 +1,8 @@
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegPath from 'ffmpeg-static';
-import ffprobePath from 'ffprobe-static';
 import fs from 'fs';
+import path from 'path';
 import { execSync } from 'child_process';
+import { app } from 'electron';
 
 // GPU Encoder definitions with priority order
 // Priority: NVIDIA (nvenc) > Intel (qsv) > AMD (amf) > CPU (lib*)
@@ -42,29 +42,34 @@ export interface HardwareAccelInfo {
   preferredH265: EncoderType;
 }
 
-const fixPathForAsar = (pathStr: string) => {
-  return pathStr.replace('app.asar', 'app.asar.unpacked');
+// 获取正确的 FFmpeg/FFprobe 路径
+const getBinaryPath = (binaryName: string) => {
+  const isProd = app.isPackaged;
+  const basePath = isProd ? process.resourcesPath : path.join(process.cwd(), 'resources');
+
+  const binaryPath = path.join(basePath, binaryName);
+  return binaryPath;
 };
 
 // Set FFmpeg paths with null checks and logging
 console.log('[VideoCompressor] Initializing FFmpeg paths...');
-console.log('[VideoCompressor] ffmpegPath module:', ffmpegPath);
-console.log('[VideoCompressor] ffprobePath module:', ffprobePath);
+const ffmpegPath = getBinaryPath('ffmpeg.exe');
+const ffprobePath = getBinaryPath('ffprobe.exe');
+console.log('[VideoCompressor] ffmpegPath:', ffmpegPath);
+console.log('[VideoCompressor] ffprobePath:', ffprobePath);
 
-if (ffmpegPath) {
-  const fixedPath = fixPathForAsar(ffmpegPath);
-  console.log('[VideoCompressor] Setting FFmpeg path:', fixedPath);
-  ffmpeg.setFfmpegPath(fixedPath);
+if (fs.existsSync(ffmpegPath)) {
+  console.log('[VideoCompressor] Setting FFmpeg path:', ffmpegPath);
+  ffmpeg.setFfmpegPath(ffmpegPath);
 } else {
-  console.error('[VideoCompressor] ERROR: ffmpegPath is undefined!');
+  console.error('[VideoCompressor] ERROR: ffmpeg.exe not found at:', ffmpegPath);
 }
 
-if (ffprobePath?.path) {
-  const fixedPath = fixPathForAsar(ffprobePath.path);
-  console.log('[VideoCompressor] Setting FFprobe path:', fixedPath);
-  ffmpeg.setFfprobePath(fixedPath);
+if (fs.existsSync(ffprobePath)) {
+  console.log('[VideoCompressor] Setting FFprobe path:', ffprobePath);
+  ffmpeg.setFfprobePath(ffprobePath);
 } else {
-  console.error('[VideoCompressor] ERROR: ffprobePath.path is undefined!');
+  console.error('[VideoCompressor] ERROR: ffprobe.exe not found at:', ffprobePath);
 }
 
 export interface VideoMetadata {
@@ -132,8 +137,8 @@ export class VideoCompressorService {
     };
 
     try {
-      // Get the fixed FFmpeg path
-      const ffmpegBinary = ffmpegPath ? fixPathForAsar(ffmpegPath) : 'ffmpeg';
+      // Get the FFmpeg binary path (already correctly set based on environment)
+      const ffmpegBinary = ffmpegPath || 'ffmpeg';
 
       // For each encoder, actually TEST if it works by trying to encode 1 frame
       // This is more reliable than just checking if FFmpeg lists the encoder
