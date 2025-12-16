@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronDown, Users } from 'lucide-react';
 import { SpeakerUIProfile } from '@/types/speaker';
 import { getSpeakerColor } from '@/services/utils/colors';
+import { cn } from '@/lib/cn';
 
 interface SpeakerSelectProps {
   currentSpeaker?: string;
@@ -58,12 +59,15 @@ export const SpeakerSelect: React.FC<SpeakerSelectProps> = ({
         }}
       >
         <span>{currentSpeaker || '选择说话人'}</span>
-        <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={cn('w-3 h-3 transition-transform', isOpen && 'rotate-180')} />
       </button>
 
       {isOpen && (
         <div
-          className={`absolute left-0 ${dropUp ? 'bottom-full mb-1 origin-bottom' : 'top-full mt-1 origin-top'} bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 min-w-[150px] py-1 animate-fade-in`}
+          className={cn(
+            'absolute left-0 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 min-w-[150px] py-1 animate-fade-in',
+            dropUp ? 'bottom-full mb-1 origin-bottom' : 'top-full mt-1 origin-top'
+          )}
         >
           {speakerProfiles.length === 0 ? (
             <div className="px-3 py-2 text-xs text-slate-500">暂无说话人</div>
@@ -75,9 +79,10 @@ export const SpeakerSelect: React.FC<SpeakerSelectProps> = ({
                   onSelect(profile.name);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 transition-colors ${
-                  currentSpeaker === profile.name ? 'bg-slate-800' : ''
-                }`}
+                className={cn(
+                  'w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 transition-colors',
+                  currentSpeaker === profile.name && 'bg-slate-800'
+                )}
               >
                 <span
                   className="w-2 h-2 rounded-full"

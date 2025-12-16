@@ -21,6 +21,7 @@ import {
 import { SubtitleItem } from '@/types';
 import { SpeakerUIProfile } from '@/types/speaker';
 import { getSpeakerColor } from '@/services/utils/colors';
+import { cn } from '@/lib/cn';
 
 // Multi-select filter type
 export interface SubtitleFilters {
@@ -212,11 +213,12 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
           <div className="relative flex-shrink-0" ref={issueFilterRef}>
             <button
               onClick={toggleIssueFilter}
-              className={`flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs transition-all border ${
+              className={cn(
+                'flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs transition-all border',
                 activeIssueFilterCount > 0
                   ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
                   : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
-              }`}
+              )}
               title="过滤问题"
             >
               <Filter className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -227,17 +229,21 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                 </span>
               )}
               <ChevronDown
-                className={`w-2.5 h-2.5 sm:w-3 sm:h-3 transition-transform ${isIssueFilterOpen ? 'rotate-180' : ''}`}
+                className={cn(
+                  'w-2.5 h-2.5 sm:w-3 sm:h-3 transition-transform',
+                  isIssueFilterOpen && 'rotate-180'
+                )}
               />
             </button>
 
             {isIssueFilterOpen && (
               <div
-                className={`absolute left-0 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 min-w-[180px] py-1 animate-fade-in ${
+                className={cn(
+                  'absolute left-0 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 min-w-[180px] py-1 animate-fade-in',
                   issueDropUp
                     ? 'bottom-full mb-1.5 origin-bottom-left'
                     : 'top-full mt-1.5 origin-top-left'
-                }`}
+                )}
               >
                 {/* Duration Filter */}
                 <button
@@ -330,11 +336,12 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
             <div className="relative flex-shrink-0" ref={speakerFilterRef}>
               <button
                 onClick={toggleSpeakerFilter}
-                className={`flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs transition-all border ${
+                className={cn(
+                  'flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs transition-all border',
                   activeSpeakerFilterCount > 0
                     ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
                     : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
-                }`}
+                )}
                 title="筛选说话人"
               >
                 <User className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -345,17 +352,21 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                   </span>
                 )}
                 <ChevronDown
-                  className={`w-2.5 h-2.5 sm:w-3 sm:h-3 transition-transform ${isSpeakerFilterOpen ? 'rotate-180' : ''}`}
+                  className={cn(
+                    'w-2.5 h-2.5 sm:w-3 sm:h-3 transition-transform',
+                    isSpeakerFilterOpen && 'rotate-180'
+                  )}
                 />
               </button>
 
               {isSpeakerFilterOpen && (
                 <div
-                  className={`absolute left-0 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 min-w-[200px] max-h-[60vh] overflow-y-auto py-1 animate-fade-in ${
+                  className={cn(
+                    'absolute left-0 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 min-w-[200px] max-h-[60vh] overflow-y-auto py-1 animate-fade-in',
                     speakerDropUp
                       ? 'bottom-full mb-1.5 origin-bottom-left'
                       : 'top-full mt-1.5 origin-top-left'
-                  }`}
+                  )}
                 >
                   {speakerProfiles.map((profile) => (
                     <button
@@ -369,11 +380,12 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                           style={{ backgroundColor: getSpeakerColor(profile.name) }}
                         />
                         <span
-                          className={`truncate ${
+                          className={cn(
+                            'truncate',
                             filters.speakers.has(profile.name)
                               ? 'text-indigo-300'
                               : 'text-slate-300'
-                          }`}
+                          )}
                         >
                           {profile.name}
                         </span>
@@ -441,11 +453,12 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                     ? '保守模式：仅处理有评论的行 + 微调时间轴，不拆分/合并/添加'
                     : '普通模式：AI可拆分/合并长段落，添加遗漏内容'
                 }
-                className={`flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs transition-all border ${
+                className={cn(
+                  'flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs transition-all border',
                   conservativeBatchMode
                     ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
                     : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
-                }`}
+                )}
               >
                 <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 <span className="hidden sm:inline">{conservativeBatchMode ? '保守' : '普通'}</span>
@@ -457,7 +470,12 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                 onClick={() => handleBatchAction('fix_timestamps')}
                 disabled={selectedBatches.size === 0}
                 title="校对时间轴 (保留翻译)"
-                className={`flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border ${selectedBatches.size > 0 ? 'bg-slate-700 border-slate-600 text-emerald-400 hover:bg-slate-600 hover:border-emerald-400/50' : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'}`}
+                className={cn(
+                  'flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border',
+                  selectedBatches.size > 0
+                    ? 'bg-slate-700 border-slate-600 text-emerald-400 hover:bg-slate-600 hover:border-emerald-400/50'
+                    : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'
+                )}
               >
                 <Clock className="w-3 h-3" />
                 <span className="hidden sm:inline">校对时间轴</span>
@@ -468,7 +486,12 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
               onClick={() => handleBatchAction('proofread')}
               disabled={selectedBatches.size === 0}
               title="润色翻译 (保留时间轴)"
-              className={`flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border ${selectedBatches.size > 0 ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500' : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'}`}
+              className={cn(
+                'flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border',
+                selectedBatches.size > 0
+                  ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500'
+                  : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'
+              )}
             >
               <Sparkles className="w-3 h-3" />
               <span className="hidden sm:inline">润色翻译</span>
@@ -501,11 +524,12 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
               <button
                 onClick={onConfirmDelete}
                 disabled={!selectedForDeleteCount || selectedForDeleteCount === 0}
-                className={`flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-3 py-1 rounded-md text-xs font-bold transition-all shadow-sm border ${
+                className={cn(
+                  'flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-3 py-1 rounded-md text-xs font-bold transition-all shadow-sm border',
                   selectedForDeleteCount && selectedForDeleteCount > 0
                     ? 'bg-red-600 border-red-500 text-white hover:bg-red-500'
                     : 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'
-                }`}
+                )}
               >
                 <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 <span>删除 ({selectedForDeleteCount || 0})</span>

@@ -4,6 +4,7 @@ import { SubtitleItem } from '@/types';
 import { SpeakerUIProfile } from '@/types/speaker';
 import { SubtitleRow } from '@/components/editor/SubtitleRow';
 import { GenerationStatus } from '@/types/api';
+import { cn } from '@/lib/cn';
 
 interface SubtitleBatchProps {
   chunk: SubtitleItem[];
@@ -73,10 +74,18 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(
 
     return (
       <div
-        className={`border rounded-xl overflow-hidden transition-all ${isSelected ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-slate-700/50 bg-slate-900/40'}`}
+        className={cn(
+          'border rounded-xl overflow-hidden transition-all',
+          isSelected
+            ? 'border-indigo-500/50 bg-indigo-500/5'
+            : 'border-slate-700/50 bg-slate-900/40'
+        )}
       >
         <div
-          className={`px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isSelected ? 'bg-indigo-900/20' : 'bg-slate-800/50'}`}
+          className={cn(
+            'px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3',
+            isSelected ? 'bg-indigo-900/20' : 'bg-slate-800/50'
+          )}
         >
           <div className="flex items-center space-x-3">
             {/* Hide batch checkbox in delete mode */}
@@ -94,7 +103,10 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(
             )}
             <div>
               <h3
-                className={`text-sm font-semibold ${isSelected ? 'text-indigo-300' : 'text-slate-300'}`}
+                className={cn(
+                  'text-sm font-semibold',
+                  isSelected ? 'text-indigo-300' : 'text-slate-300'
+                )}
               >
                 片段 {chunkIdx + 1}
               </h3>

@@ -15,6 +15,7 @@ import {
 import { SubtitleItem } from '@/types';
 import { SpeakerUIProfile } from '@/types/speaker';
 import { SpeakerSelect } from '@/components/editor/SpeakerSelect';
+import { cn } from '@/lib/cn';
 
 // Validation thresholds (from prompts.ts rules)
 const MAX_DURATION_SECONDS = 5;
@@ -326,7 +327,11 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
 
     return (
       <div
-        className={`p-2 sm:p-3 hover:bg-slate-800/30 transition-colors flex items-start space-x-2 sm:space-x-4 group/row ${getRowBackgroundClass()}${isDeleteMode && isSelectedForDelete ? ' bg-red-900/20' : ''}`}
+        className={cn(
+          'p-2 sm:p-3 hover:bg-slate-800/30 transition-colors flex items-start space-x-2 sm:space-x-4 group/row',
+          getRowBackgroundClass(),
+          isDeleteMode && isSelectedForDelete && 'bg-red-900/20'
+        )}
         onBlur={editing ? handleRowBlur : undefined}
       >
         {/* Delete mode checkbox */}
@@ -467,20 +472,22 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
           <div className="relative" ref={addMenuRef}>
             <button
               onClick={toggleMenu}
-              className={`p-1.5 rounded hover:bg-slate-700 transition-colors ${
+              className={cn(
+                'p-1.5 rounded hover:bg-slate-700 transition-colors',
                 showAddMenu
                   ? 'text-slate-300'
                   : 'text-slate-600 opacity-0 group-hover/row:opacity-100'
-              }`}
+              )}
               title="更多操作"
             >
               <MoreVertical className="w-6 h-6" />
             </button>
             {showAddMenu && (
               <div
-                className={`absolute right-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 min-w-[130px] ${
+                className={cn(
+                  'absolute right-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 min-w-[130px]',
                   menuDropUp ? 'bottom-full mb-1' : 'top-full mt-1'
-                }`}
+                )}
               >
                 {/* 1. 编辑行 */}
                 <button
@@ -509,9 +516,10 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
                     </button>
                     {showAddSubmenu && (
                       <div
-                        className={`absolute top-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 min-w-[110px] ${
+                        className={cn(
+                          'absolute top-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 min-w-[110px]',
                           submenuDropLeft ? 'right-full mr-1' : 'left-full ml-1'
-                        }`}
+                        )}
                       >
                         <button
                           onClick={() => {
