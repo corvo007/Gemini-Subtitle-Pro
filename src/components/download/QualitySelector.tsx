@@ -9,6 +9,8 @@ interface QualitySelectorProps {
   selectedFormat: string;
   onSelect: (formatId: string) => void;
   disabled?: boolean;
+  label?: string;
+  className?: string;
 }
 
 export function QualitySelector({
@@ -16,6 +18,8 @@ export function QualitySelector({
   selectedFormat,
   onSelect,
   disabled,
+  label = '画质选择',
+  className = '',
 }: QualitySelectorProps) {
   const formatFilesize = (bytes?: number): string => {
     if (!bytes) return '';
@@ -25,40 +29,25 @@ export function QualitySelector({
   };
 
   return (
-    <div className="pt-4 mb-6 border-t border-white/10">
-      <label className="block text-sm text-white/60 mb-3">画质选择</label>
+    <div className={className}>
+      <label className="block text-sm text-white/60 mb-3">{label}</label>
       <div className="flex flex-wrap gap-3">
         {formats.map((format) => (
-          <label
+          <button
             key={format.formatId}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-colors
-                            border ${
-                              selectedFormat === format.formatId
-                                ? 'bg-violet-500/20 border-violet-500/50'
-                                : 'bg-white/5 border-white/10 hover:bg-white/10'
-                            }
-                            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            type="button"
+            onClick={() => !disabled && onSelect(format.formatId)}
+            className={`px-4 py-2 rounded-lg text-sm transition-colors border ${
+              selectedFormat === format.formatId
+                ? 'bg-violet-500/20 border-violet-500/50 text-violet-400'
+                : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <input
-              type="radio"
-              name="quality"
-              value={format.formatId}
-              checked={selectedFormat === format.formatId}
-              onChange={() => onSelect(format.formatId)}
-              disabled={disabled}
-              className="accent-violet-500"
-            />
-            <span
-              className={`text-sm ${selectedFormat === format.formatId ? 'text-violet-400' : 'text-white/80'}`}
-            >
-              {format.quality}
-              {format.filesize && (
-                <span className="ml-2 text-white/40 text-xs">
-                  ~{formatFilesize(format.filesize)}
-                </span>
-              )}
-            </span>
-          </label>
+            {format.quality}
+            {format.filesize && (
+              <span className="ml-2 text-white/40 text-xs">~{formatFilesize(format.filesize)}</span>
+            )}
+          </button>
         ))}
       </div>
     </div>

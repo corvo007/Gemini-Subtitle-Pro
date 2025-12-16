@@ -4,6 +4,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import type { DownloadProgress as Progress } from '@/types/download';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 
 interface DownloadProgressProps {
   progress: Progress | null;
@@ -42,16 +43,12 @@ export function DownloadProgress({ progress, onCancel }: DownloadProgressProps) 
       </div>
 
       {/* Progress Bar */}
-      <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-3">
-        {progress ? (
-          <div
-            className="h-full bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full transition-all duration-300"
-            style={{ width: `${Math.min(progress.percent, 100)}%` }}
-          />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-r from-violet-500/50 to-indigo-500/50 rounded-full animate-pulse" />
-        )}
-      </div>
+      <ProgressBar
+        percent={progress?.percent || 0}
+        indeterminate={!progress}
+        size="sm"
+        className="mb-3"
+      />
 
       {/* Stats */}
       <div className="flex justify-between text-sm text-white/50">

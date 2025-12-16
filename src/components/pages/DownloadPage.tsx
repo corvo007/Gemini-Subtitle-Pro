@@ -13,6 +13,8 @@ import {
   X,
   Image,
 } from 'lucide-react';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { DirectorySelector } from '@/components/ui/DirectorySelector';
 import { useDownload } from '@/hooks/useDownload';
 import { UrlInput } from '@/components/download/UrlInput';
 import { VideoPreview } from '@/components/download/VideoPreview';
@@ -200,20 +202,13 @@ export function DownloadPage({
 
               {/* Output Directory */}
               <div className="pt-4 mb-4 border-t border-white/10">
-                <label className="block text-sm text-white/60 mb-2">保存位置</label>
-                <div className="flex items-center gap-3">
-                  <span className="flex-1 px-3 py-2 bg-white/5 rounded-md text-white/70 text-sm truncate">
-                    {outputDir}
-                  </span>
-                  <button
-                    onClick={selectDir}
-                    className="px-4 py-2 bg-transparent border border-white/20 rounded-md text-white/70 text-sm transition-colors hover:bg-white/5 hover:border-white/30"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <FolderOpen className="w-4 h-4" /> 更改
-                    </span>
-                  </button>
-                </div>
+                <label className="block text-sm text-white/60 mb-2">输出目录</label>
+                <DirectorySelector
+                  value={outputDir}
+                  placeholder="未选择"
+                  onSelect={selectDir}
+                  variant="accent"
+                />
               </div>
 
               {/* Download Thumbnail Option (Custom Checkbox) */}
@@ -267,14 +262,12 @@ export function DownloadPage({
                     <Download className="w-4 h-4" /> 下载视频
                   </span>
                 </button>
-                <button
+                <PrimaryButton
                   onClick={handleDownloadAndContinue}
-                  className="px-6 py-3 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-lg text-white font-medium transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-violet-500/40"
+                  icon={<Play className="w-4 h-4 fill-current" />}
                 >
-                  <span className="flex items-center gap-2">
-                    <Play className="w-4 h-4 fill-current" /> 下载并生成字幕
-                  </span>
-                </button>
+                  下载并生成字幕
+                </PrimaryButton>
               </div>
             </div>
           )}
@@ -306,14 +299,13 @@ export function DownloadPage({
                   下载新视频
                 </button>
                 {onDownloadComplete && (
-                  <button
+                  <PrimaryButton
                     onClick={() => onDownloadComplete(outputPath)}
-                    className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg text-white font-medium transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/40"
+                    variant="success"
+                    icon={<Play className="w-4 h-4 fill-current" />}
                   >
-                    <span className="flex items-center gap-2">
-                      <Play className="w-4 h-4 fill-current" /> 继续生成字幕
-                    </span>
-                  </button>
+                    继续生成字幕
+                  </PrimaryButton>
                 )}
               </div>
             </div>
