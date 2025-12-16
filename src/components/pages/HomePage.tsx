@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileVideo, FileText, Download, ArrowRight, Scissors, Wand2, Sparkles } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 interface HomePageProps {
   onStartNew: () => void;
@@ -93,11 +94,9 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           {/* Subtitle Workspace Section */}
           <div className="w-full mb-6">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-8 h-px bg-slate-800"></span>
+            <SectionHeader withDivider className="mb-4">
               字幕工作台
-              <span className="flex-1 h-px bg-slate-800"></span>
-            </h3>
+            </SectionHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <button
                 onClick={onStartNew}
@@ -128,11 +127,9 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           {/* Toolbox Section */}
           <div className="w-full">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-8 h-px bg-slate-800"></span>
+            <SectionHeader withDivider className="mb-4">
               工具箱
-              <span className="flex-1 h-px bg-slate-800"></span>
-            </h3>
+            </SectionHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <button
                 onClick={isElectron ? onStartDownload : undefined}

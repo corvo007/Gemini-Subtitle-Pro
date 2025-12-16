@@ -1,22 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { CompressionOptions, CompressionProgress, HardwareAccelInfo } from '@/types/compression';
-import {
-  FileVideo,
-  Settings,
-  Play,
-  FolderOpen,
-  FileText,
-  AlertCircle,
-  X,
-  Cpu,
-  Zap,
-  Loader2,
-} from 'lucide-react';
+import { CompressionOptions, CompressionProgress } from '@/types/compression';
+import { FileVideo, Settings, Play, FolderOpen, FileText, AlertCircle, X } from 'lucide-react';
 import { PageHeader, HeaderButton } from '@/components/layout/PageHeader';
 import { SimpleConfirmationModal } from '@/components/modals/SimpleConfirmationModal';
 import { generateAssContent } from '@/services/subtitle/generator';
 import { SubtitleItem } from '@/types/subtitle';
 import { CustomSelect } from '@/components/settings/CustomSelect';
+import { HardwareAccelerationSelector } from '@/components/settings/HardwareAccelerationSelector';
+import { ResolutionSelector } from '@/components/settings/ResolutionSelector';
+import { EncoderSelector } from '@/components/settings/EncoderSelector';
+import { useHardwareAcceleration } from '@/hooks/useHardwareAcceleration';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { DirectorySelector } from '@/components/ui/DirectorySelector';
 import { generateOutputPath, getPathSeparator, removeExtension } from '@/services/utils/path';
 import { formatDuration } from '@/services/subtitle/time';
 
@@ -74,39 +70,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
 
   // Hardware acceleration state
   const [hwAccelEnabled, setHwAccelEnabled] = useState(true);
-  const [hwAccelInfo, setHwAccelInfo] = useState<HardwareAccelInfo | null>(null);
-
-  // Fetch hardware acceleration info on mount (with localStorage cache)
-  useEffect(() => {
-    const fetchHwAccelInfo = async () => {
-      // Check sessionStorage cache first (cleared on app restart)
-      const cached = sessionStorage.getItem('hwAccelInfo');
-      if (cached) {
-        try {
-          const info = JSON.parse(cached) as HardwareAccelInfo;
-          setHwAccelInfo(info);
-          console.log('[CompressionPage] Using cached hardware acceleration info:', info);
-          return;
-        } catch {
-          sessionStorage.removeItem('hwAccelInfo');
-        }
-      }
-
-      // Fetch from backend if not cached
-      if (window.electronAPI?.compression?.getHwAccelInfo) {
-        try {
-          const info = await window.electronAPI.compression.getHwAccelInfo();
-          setHwAccelInfo(info);
-          // Cache to sessionStorage
-          sessionStorage.setItem('hwAccelInfo', JSON.stringify(info));
-          console.log('[CompressionPage] Hardware acceleration info:', info);
-        } catch (error) {
-          console.error('[CompressionPage] Failed to get hardware acceleration info:', error);
-        }
-      }
-    };
-    fetchHwAccelInfo();
-  }, []);
+  const { hwAccelInfo } = useHardwareAcceleration();
 
   // Check for workspace video on mount or update
   useEffect(() => {
@@ -356,31 +320,9 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                   <label className="w-32 text-sm font-medium text-slate-400 shrink-0">编码器</label>
                   <div className="flex-1">
-                    <CustomSelect
+                    <EncoderSelector
                       value={options.encoder}
                       onChange={(val) => setOptions({ ...options, encoder: val as any })}
-                      options={[
-                        {
-                          value: 'libx264',
-                          label: (
-                            <div className="text-left">
-                              <div className="font-medium text-slate-200">H.264 (AVC)</div>
-                              <div className="text-xs text-slate-500">
-                                兼容性最好，适合大多数场景
-                              </div>
-                            </div>
-                          ),
-                        },
-                        {
-                          value: 'libx265',
-                          label: (
-                            <div className="text-left">
-                              <div className="font-medium text-slate-200">H.265 (HEVC)</div>
-                              <div className="text-xs text-slate-500">高压缩率，同画质体积更小</div>
-                            </div>
-                          ),
-                        },
-                      ]}
                     />
                   </div>
                 </div>
@@ -390,97 +332,13 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                   <label className="w-32 text-sm font-medium text-slate-400 shrink-0">
                     硬件加速
                   </label>
-                  <div className="flex-1 space-y-2">
-                    <button
-                      onClick={() => hwAccelInfo?.available && setHwAccelEnabled(!hwAccelEnabled)}
-                      disabled={!hwAccelInfo || !hwAccelInfo.available}
-                      className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${
-                        !hwAccelInfo
-                          ? 'bg-slate-800/50 border-slate-700/50 cursor-wait opacity-70'
-                          : !hwAccelInfo.available
-                            ? 'bg-slate-800/50 border-slate-700/50 cursor-not-allowed opacity-60'
-                            : hwAccelEnabled
-                              ? 'bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20'
-                              : 'bg-slate-800 border-slate-700 hover:bg-slate-700'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {!hwAccelInfo ? (
-                          <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
-                        ) : !hwAccelInfo.available ? (
-                          <Cpu className="w-5 h-5 text-slate-500" />
-                        ) : hwAccelEnabled ? (
-                          <Zap className="w-5 h-5 text-emerald-400" />
-                        ) : (
-                          <Cpu className="w-5 h-5 text-slate-400" />
-                        )}
-                        <div className="text-left">
-                          <div
-                            className={`font-medium ${
-                              !hwAccelInfo
-                                ? 'text-slate-400'
-                                : !hwAccelInfo.available
-                                  ? 'text-slate-500'
-                                  : hwAccelEnabled
-                                    ? 'text-emerald-300'
-                                    : 'text-slate-300'
-                            }`}
-                          >
-                            {!hwAccelInfo
-                              ? '正在检测...'
-                              : !hwAccelInfo.available
-                                ? '硬件加速不可用'
-                                : hwAccelEnabled
-                                  ? 'GPU 加速已开启'
-                                  : 'CPU 模式'}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {!hwAccelInfo
-                              ? '正在检测硬件加速支持情况'
-                              : !hwAccelInfo.available
-                                ? '未检测到可以使用硬件加速的 GPU'
-                                : hwAccelEnabled
-                                  ? `将使用 ${options.encoder === 'libx264' ? hwAccelInfo.preferredH264 : hwAccelInfo.preferredH265}`
-                                  : '强制使用 CPU 编码'}
-                          </div>
-                        </div>
-                      </div>
-                      <div
-                        className={`w-10 h-5 rounded-full relative transition-colors ${
-                          !hwAccelInfo || !hwAccelInfo.available
-                            ? 'bg-slate-700'
-                            : hwAccelEnabled
-                              ? 'bg-emerald-500'
-                              : 'bg-slate-600'
-                        }`}
-                      >
-                        <div
-                          className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-all ${
-                            hwAccelEnabled && hwAccelInfo?.available ? 'left-5' : 'left-0.5'
-                          }`}
-                        />
-                      </div>
-                    </button>
-                    {hwAccelInfo?.available && hwAccelEnabled && (
-                      <div className="text-xs text-slate-500 flex items-center gap-2 flex-wrap">
-                        <span>可用编码器:</span>
-                        {hwAccelInfo.encoders.h264_nvenc && (
-                          <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded">
-                            NVENC
-                          </span>
-                        )}
-                        {hwAccelInfo.encoders.h264_qsv && (
-                          <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded">
-                            QSV
-                          </span>
-                        )}
-                        {hwAccelInfo.encoders.h264_amf && (
-                          <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded">
-                            AMF
-                          </span>
-                        )}
-                      </div>
-                    )}
+                  <div className="flex-1">
+                    <HardwareAccelerationSelector
+                      hwAccelInfo={hwAccelInfo}
+                      enabled={hwAccelEnabled}
+                      onToggle={() => setHwAccelEnabled(!hwAccelEnabled)}
+                      encoder={options.encoder}
+                    />
                   </div>
                 </div>
 
@@ -490,31 +348,13 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                     质量 (CRF)
                   </label>
                   <div className="flex-1 space-y-2">
-                    <input
-                      type="text"
-                      value={options.crf.toString()}
-                      onChange={(e) => {
-                        const input = e.target.value;
-                        // Allow empty, numbers, and one decimal point
-                        if (input === '' || /^\d*\.?\d*$/.test(input)) {
-                          const val = parseFloat(input);
-                          if (!isNaN(val) && val >= 0 && val <= 51) {
-                            setOptions({ ...options, crf: val });
-                          } else if (input === '' || input === '.') {
-                            // Allow empty or just decimal for in-progress typing
-                          }
-                        }
-                      }}
-                      onBlur={(e) => {
-                        // On blur, clamp value to valid range
-                        const val = parseFloat(e.target.value);
-                        if (isNaN(val) || val < 0) {
-                          setOptions({ ...options, crf: 0 });
-                        } else if (val > 51) {
-                          setOptions({ ...options, crf: 51 });
-                        }
-                      }}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
+                    <NumberInput
+                      value={options.crf}
+                      onChange={(v) => setOptions({ ...options, crf: v ?? 23 })}
+                      min={0}
+                      max={51}
+                      allowDecimals={true}
+                      className="w-full font-mono"
                     />
                     <div className="text-xs text-slate-500">
                       范围 0-51，数值越小画质越高。推荐：H.264 (23), H.265 (28)
@@ -525,87 +365,16 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                 {/* Resolution */}
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                   <label className="w-32 text-sm font-medium text-slate-400 shrink-0">分辨率</label>
-                  <div className="flex-1 space-y-3">
-                    <CustomSelect
-                      value={resolutionPreset}
-                      onChange={(val) => setResolutionPreset(val as ResolutionPreset)}
-                      options={[
-                        {
-                          value: 'original',
-                          label: (
-                            <div>
-                              <div className="font-medium text-slate-200">原始分辨率</div>
-                              <div className="text-xs text-slate-500">保持原始分辨率</div>
-                            </div>
-                          ),
-                        },
-                        {
-                          value: '1080p',
-                          label: (
-                            <div>
-                              <div className="font-medium text-slate-200">1080P</div>
-                              <div className="text-xs text-slate-500">1920x1080 - 全高清</div>
-                            </div>
-                          ),
-                        },
-                        {
-                          value: '720p',
-                          label: (
-                            <div>
-                              <div className="font-medium text-slate-200">720P</div>
-                              <div className="text-xs text-slate-500">1280x720 - 高清</div>
-                            </div>
-                          ),
-                        },
-                        {
-                          value: '480p',
-                          label: (
-                            <div>
-                              <div className="font-medium text-slate-200">480P</div>
-                              <div className="text-xs text-slate-500">854x480 - 标清</div>
-                            </div>
-                          ),
-                        },
-                        {
-                          value: 'custom',
-                          label: (
-                            <div>
-                              <div className="font-medium text-slate-200">自定义</div>
-                              <div className="text-xs text-slate-500">手动输入宽高</div>
-                            </div>
-                          ),
-                        },
-                      ]}
+                  <div className="flex-1">
+                    <ResolutionSelector
+                      resolution={resolutionPreset}
+                      width={options.width}
+                      height={options.height}
+                      onChange={(res, w, h) => {
+                        setResolutionPreset(res as any);
+                        setOptions((prev) => ({ ...prev, width: w, height: h }));
+                      }}
                     />
-
-                    {resolutionPreset === 'custom' && (
-                      <div className="flex gap-4 animate-fade-in">
-                        <div className="relative flex-1">
-                          <input
-                            type="number"
-                            value={options.width}
-                            onChange={(e) =>
-                              setOptions({ ...options, width: parseInt(e.target.value) })
-                            }
-                            placeholder="宽"
-                            className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all no-spinner"
-                          />
-                          <span className="absolute right-3 top-2.5 text-xs text-slate-500">W</span>
-                        </div>
-                        <div className="relative flex-1">
-                          <input
-                            type="number"
-                            value={options.height}
-                            onChange={(e) =>
-                              setOptions({ ...options, height: parseInt(e.target.value) })
-                            }
-                            placeholder="高"
-                            className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all no-spinner"
-                          />
-                          <span className="absolute right-3 top-2.5 text-xs text-slate-500">H</span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -708,21 +477,15 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                 </h2>
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                   <label className="w-20 text-sm font-medium text-slate-400 shrink-0">
-                    输出路径
+                    输出目录
                   </label>
-                  <div className="flex-1 flex gap-2">
-                    <input
-                      type="text"
+                  <div className="flex-1">
+                    <DirectorySelector
                       value={outputPath}
-                      readOnly
-                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-4 text-slate-400 text-sm focus:outline-none"
+                      placeholder="未选择"
+                      onSelect={handleSelectOutputDir}
+                      variant="accent"
                     />
-                    <button
-                      onClick={handleSelectOutputDir}
-                      className="bg-slate-700 hover:bg-slate-600 px-4 rounded-lg border border-slate-600 transition-colors text-slate-300 text-sm whitespace-nowrap"
-                    >
-                      更改目录
-                    </button>
                   </div>
                 </div>
               </div>
@@ -830,14 +593,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                     </div>
                   </div>
 
-                  <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-indigo-600 to-purple-600 h-full rounded-full transition-all duration-300 ease-out relative overflow-hidden"
-                      style={{ width: `${progress.percent}%` }}
-                    >
-                      <div className="absolute inset-0 bg-white/20 animate-shimmer" />
-                    </div>
-                  </div>
+                  <ProgressBar percent={progress.percent} size="md" showShimmer />
 
                   <div className="flex justify-between items-center text-xs text-slate-500 font-mono pt-2 border-t border-slate-800/50">
                     <span>
