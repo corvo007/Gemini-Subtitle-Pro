@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '@/lib/cn';
 
 interface ToggleProps {
   checked: boolean;
@@ -54,14 +55,21 @@ export const Toggle: React.FC<ToggleProps> = ({
       type="button"
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
-      className={`${sizeConfig.track} rounded-full transition-colors relative ${
-        disabled ? 'opacity-50 cursor-not-allowed' : ''
-      } ${checked ? colorClasses[color] : size === 'md' ? 'bg-slate-600' : 'bg-white/20'}`}
+      className={cn(
+        sizeConfig.track,
+        'rounded-full transition-colors relative',
+        disabled && 'opacity-50 cursor-not-allowed',
+        checked ? colorClasses[color] : size === 'md' ? 'bg-slate-600' : 'bg-white/20'
+      )}
     >
       <div
-        className={`absolute ${sizeConfig.knobTop} ${sizeConfig.knob} rounded-full bg-white transition-transform ${
-          usesTransform ? (checked ? sizeConfig.knobChecked : sizeConfig.knobUnchecked) : ''
-        }`}
+        className={cn(
+          'absolute',
+          sizeConfig.knobTop,
+          sizeConfig.knob,
+          'rounded-full bg-white transition-transform',
+          usesTransform && (checked ? sizeConfig.knobChecked : sizeConfig.knobUnchecked)
+        )}
         style={
           !usesTransform
             ? { left: checked ? sizeConfig.knobChecked : sizeConfig.knobUnchecked }

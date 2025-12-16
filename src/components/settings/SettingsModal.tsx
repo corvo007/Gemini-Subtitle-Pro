@@ -7,6 +7,7 @@ import { Toggle } from '@/components/ui/Toggle';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { OptionButton } from '@/components/ui/OptionButton';
+import { cn } from '@/lib/cn';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -60,7 +61,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-slate-800 text-indigo-400 border-t border-x border-slate-700' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
+                className={cn(
+                  'px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap',
+                  activeTab === tab
+                    ? 'bg-slate-800 text-indigo-400 border-t border-x border-slate-700'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                )}
               >
                 {tab === 'general' && '常规'}
                 {tab === 'services' && '服务'}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { RefreshCcw } from 'lucide-react';
+import { cn } from '@/lib/cn';
 
 interface FileUploaderProps {
   hasFile: boolean;
@@ -91,7 +92,10 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         {shouldUseNative ? (
           <button
             onClick={handleNativeClick}
-            className={`p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors ml-1 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            className={cn(
+              'p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors ml-1',
+              disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+            )}
             title="更改文件"
             disabled={disabled}
           >
@@ -99,7 +103,10 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
           </button>
         ) : (
           <label
-            className={`cursor-pointer p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors ml-1 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={cn(
+              'cursor-pointer p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors ml-1',
+              disabled && 'opacity-50 cursor-not-allowed'
+            )}
             title="更改文件"
           >
             <RefreshCcw className="w-3 h-3" />
@@ -121,7 +128,14 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       <button
         onClick={handleNativeClick}
         disabled={disabled}
-        className={`flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg bg-slate-800/30 hover:bg-slate-800/50 cursor-pointer transition-all group ${heightClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${error ? 'border-red-500/50 hover:border-red-500' : 'border-slate-700 hover:border-indigo-500/50'}`}
+        className={cn(
+          'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg bg-slate-800/30 hover:bg-slate-800/50 cursor-pointer transition-all group',
+          heightClass,
+          disabled && 'opacity-50 cursor-not-allowed',
+          error
+            ? 'border-red-500/50 hover:border-red-500'
+            : 'border-slate-700 hover:border-indigo-500/50'
+        )}
       >
         <div className="flex flex-col items-center justify-center py-4">
           <div className="mb-2 group-hover:scale-110 transition-transform">
@@ -142,7 +156,14 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
 
   return (
     <label
-      className={`flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg bg-slate-800/30 hover:bg-slate-800/50 cursor-pointer transition-all group ${heightClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${error ? 'border-red-500/50 hover:border-red-500' : 'border-slate-700 hover:border-indigo-500/50'}`}
+      className={cn(
+        'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg bg-slate-800/30 hover:bg-slate-800/50 cursor-pointer transition-all group',
+        heightClass,
+        disabled && 'opacity-50 cursor-not-allowed',
+        error
+          ? 'border-red-500/50 hover:border-red-500'
+          : 'border-slate-700 hover:border-indigo-500/50'
+      )}
     >
       <div className="flex flex-col items-center justify-center py-4">
         <div className="mb-2 group-hover:scale-110 transition-transform">

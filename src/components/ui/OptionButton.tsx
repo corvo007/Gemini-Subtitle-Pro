@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '@/lib/cn';
 
 interface OptionButtonProps {
   selected: boolean;
@@ -36,7 +37,13 @@ export const OptionButton: React.FC<OptionButtonProps> = ({
   return (
     <button
       onClick={onClick}
-      className={`rounded-lg text-sm border transition-all flex items-center justify-center space-x-2 ${sizeClasses[size]} ${colorClasses[color]} ${fullWidth ? 'w-full' : ''} ${className}`}
+      className={cn(
+        'rounded-lg text-sm border transition-all flex items-center justify-center space-x-2',
+        sizeClasses[size],
+        colorClasses[color],
+        fullWidth && 'w-full',
+        className
+      )}
     >
       {children}
     </button>

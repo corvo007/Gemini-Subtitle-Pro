@@ -2,6 +2,7 @@ import React from 'react';
 import { Loader2, Sparkles, CheckCircle, FileText, StopCircle } from 'lucide-react';
 import { GenerationStatus, ChunkStatus } from '@/types/api';
 import { TimeTracker } from '@/components/ui/TimeTracker';
+import { cn } from '@/lib/cn';
 
 interface ProgressOverlayProps {
   isProcessing: boolean;
@@ -114,7 +115,14 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
             >
               <div className="flex items-center space-x-3 min-w-[120px]">
                 <div
-                  className={`w-2 h-2 rounded-full ${chunk.status === 'completed' ? 'bg-emerald-500' : chunk.status === 'error' ? 'bg-red-500' : 'bg-blue-500 animate-pulse'}`}
+                  className={cn(
+                    'w-2 h-2 rounded-full',
+                    chunk.status === 'completed' && 'bg-emerald-500',
+                    chunk.status === 'error' && 'bg-red-500',
+                    chunk.status !== 'completed' &&
+                      chunk.status !== 'error' &&
+                      'bg-blue-500 animate-pulse'
+                  )}
                 />
                 <span className="text-slate-300 text-sm font-medium">
                   {typeof chunk.id === 'number'
@@ -154,13 +162,14 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
           </div>
           <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700/50">
             <div
-              className={`h-full transition-all duration-500 ease-out ${
-                status === GenerationStatus.CANCELLED
-                  ? 'bg-orange-500'
-                  : status === GenerationStatus.PROOFREADING
-                    ? 'bg-purple-500'
-                    : 'bg-blue-500'
-              }`}
+              className={cn(
+                'h-full transition-all duration-500 ease-out',
+                status === GenerationStatus.CANCELLED && 'bg-orange-500',
+                status === GenerationStatus.PROOFREADING && 'bg-purple-500',
+                status !== GenerationStatus.CANCELLED &&
+                  status !== GenerationStatus.PROOFREADING &&
+                  'bg-blue-500'
+              )}
               style={{ width: `${percent}%` }}
             ></div>
           </div>
