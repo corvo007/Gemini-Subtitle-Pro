@@ -15,6 +15,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { DirectorySelector } from '@/components/ui/DirectorySelector';
 import { generateOutputPath, getPathSeparator, removeExtension } from '@/services/utils/path';
 import { formatDuration } from '@/services/subtitle/time';
+import { cn } from '@/lib/cn';
 
 interface CompressionPageProps {
   onGoBack?: () => void;
@@ -204,9 +205,12 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
               {/* File Input */}
               <div className="space-y-4">
                 <div
-                  className={`relative group p-8 rounded-xl border-2 border-dashed transition-all cursor-pointer text-center
-                                    ${file ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800/50'}
-                                `}
+                  className={cn(
+                    'relative group p-8 rounded-xl border-2 border-dashed transition-all cursor-pointer text-center',
+                    file
+                      ? 'border-indigo-500/50 bg-indigo-500/5'
+                      : 'border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800/50'
+                  )}
                   onClick={() => {
                     const input = document.createElement('input');
                     input.type = 'file';
@@ -220,10 +224,13 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                 >
                   <div className="flex flex-col items-center justify-center gap-4">
                     <div
-                      className={`p-4 rounded-full ${file ? 'bg-indigo-500/20' : 'bg-slate-800 group-hover:bg-slate-700'} transition-colors`}
+                      className={cn(
+                        'p-4 rounded-full transition-colors',
+                        file ? 'bg-indigo-500/20' : 'bg-slate-800 group-hover:bg-slate-700'
+                      )}
                     >
                       <FolderOpen
-                        className={`w-8 h-8 ${file ? 'text-indigo-400' : 'text-slate-400'}`}
+                        className={cn('w-8 h-8', file ? 'text-indigo-400' : 'text-slate-400')}
                       />
                     </div>
                     {file ? (
@@ -558,12 +565,12 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                   }
                 }}
                 disabled={!file || isCompressing}
-                className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-lg
-                                ${
-                                  !file || isCompressing
-                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                                    : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 hover:shadow-indigo-500/30 border border-indigo-500'
-                                }`}
+                className={cn(
+                  'w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-lg',
+                  !file || isCompressing
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                    : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 hover:shadow-indigo-500/30 border border-indigo-500'
+                )}
               >
                 {isCompressing ? (
                   <span className="flex items-center gap-2">

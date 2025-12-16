@@ -21,6 +21,7 @@ import { VideoPreview } from '@/components/download/VideoPreview';
 import { QualitySelector } from '@/components/download/QualitySelector';
 import { DownloadProgress } from '@/components/download/DownloadProgress';
 import { PageHeader, HeaderButton } from '@/components/layout/PageHeader';
+import { cn } from '@/lib/cn';
 
 interface DownloadPageProps {
   onDownloadComplete?: (videoPath: string) => void;
@@ -155,12 +156,12 @@ export function DownloadPage({
           {/* Error Message */}
           {error && (
             <div
-              className={`flex flex-col gap-3 p-4 rounded-lg mb-4 border
-                            ${
-                              errorInfo?.retryable
-                                ? 'bg-amber-500/10 border-amber-500/40 text-amber-200'
-                                : 'bg-red-500/10 border-red-500/30 text-red-200'
-                            }`}
+              className={cn(
+                'flex flex-col gap-3 p-4 rounded-lg mb-4 border',
+                errorInfo?.retryable
+                  ? 'bg-amber-500/10 border-amber-500/40 text-amber-200'
+                  : 'bg-red-500/10 border-red-500/30 text-red-200'
+              )}
             >
               <div className="flex items-start gap-3">
                 <span className="text-xl shrink-0">{getErrorIcon()}</span>
@@ -218,18 +219,20 @@ export function DownloadPage({
                   onClick={() => setIncludeThumbnail(!includeThumbnail)}
                 >
                   <div
-                    className={`w-5 h-5 rounded flex items-center justify-center transition-all duration-200 border ${
+                    className={cn(
+                      'w-5 h-5 rounded flex items-center justify-center transition-all duration-200 border',
                       includeThumbnail
                         ? 'bg-violet-500 border-violet-500'
                         : 'bg-white/5 border-white/20 group-hover:border-white/30'
-                    }`}
+                    )}
                   >
                     {includeThumbnail && <CheckCircle className="w-3.5 h-3.5 text-white" />}
                   </div>
                   <span
-                    className={`text-sm transition-colors ${
+                    className={cn(
+                      'text-sm transition-colors',
                       includeThumbnail ? 'text-white' : 'text-white/70 group-hover:text-white/90'
-                    }`}
+                    )}
                   >
                     同时下载封面
                   </span>

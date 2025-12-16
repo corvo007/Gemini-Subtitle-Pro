@@ -2,6 +2,7 @@ import React from 'react';
 import { FileVideo, FileText, Download, ArrowRight, Scissors, Wand2, Sparkles } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { cn } from '@/lib/cn';
 
 interface HomePageProps {
   onStartNew: () => void;
@@ -134,19 +135,24 @@ export const HomePage: React.FC<HomePageProps> = ({
               <button
                 onClick={isElectron ? onStartDownload : undefined}
                 disabled={!isElectron}
-                className={`group relative bg-slate-900 border border-slate-800 rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 text-left
-                                    ${
-                                      isElectron
-                                        ? 'hover:border-violet-500/50 hover:bg-slate-800/50 cursor-pointer'
-                                        : 'opacity-50 cursor-not-allowed'
-                                    }`}
+                className={cn(
+                  'group relative bg-slate-900 border border-slate-800 rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 text-left',
+                  isElectron
+                    ? 'hover:border-violet-500/50 hover:bg-slate-800/50 cursor-pointer'
+                    : 'opacity-50 cursor-not-allowed'
+                )}
               >
                 <div
-                  className={`w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center shrink-0 transition-colors
-                                    ${isElectron ? 'group-hover:bg-violet-500/20' : ''}`}
+                  className={cn(
+                    'w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center shrink-0 transition-colors',
+                    isElectron && 'group-hover:bg-violet-500/20'
+                  )}
                 >
                   <Download
-                    className={`w-6 h-6 text-violet-400 ${isElectron ? 'group-hover:scale-110' : ''} transition-transform`}
+                    className={cn(
+                      'w-6 h-6 text-violet-400 transition-transform',
+                      isElectron && 'group-hover:scale-110'
+                    )}
                   />
                 </div>
                 <div>
@@ -157,19 +163,24 @@ export const HomePage: React.FC<HomePageProps> = ({
               <button
                 onClick={isElectron ? onStartCompression : undefined}
                 disabled={!isElectron}
-                className={`group relative bg-slate-900 border border-slate-800 rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 text-left
-                                    ${
-                                      isElectron
-                                        ? 'hover:border-amber-500/50 hover:bg-slate-800/50 cursor-pointer'
-                                        : 'opacity-50 cursor-not-allowed'
-                                    }`}
+                className={cn(
+                  'group relative bg-slate-900 border border-slate-800 rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 text-left',
+                  isElectron
+                    ? 'hover:border-amber-500/50 hover:bg-slate-800/50 cursor-pointer'
+                    : 'opacity-50 cursor-not-allowed'
+                )}
               >
                 <div
-                  className={`w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center shrink-0 transition-colors
-                                    ${isElectron ? 'group-hover:bg-amber-500/20' : ''}`}
+                  className={cn(
+                    'w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center shrink-0 transition-colors',
+                    isElectron && 'group-hover:bg-amber-500/20'
+                  )}
                 >
                   <Scissors
-                    className={`w-6 h-6 text-amber-400 ${isElectron ? 'group-hover:scale-110' : ''} transition-transform`}
+                    className={cn(
+                      'w-6 h-6 text-amber-400 transition-transform',
+                      isElectron && 'group-hover:scale-110'
+                    )}
                   />
                 </div>
                 <div>
