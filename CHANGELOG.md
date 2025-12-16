@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.4] - 2025-12-16
+
+### Features
+
+- **Core**: Added shared utility hooks for better `AbortController` signal handling.
+- **UI**: Added new base UI components for consistent design system usage.
+
+### Fixes
+
+- **UI**: Improved settings toggle and input consistency.
+
+### Refactor
+
+- **UI**: Cleaned up redundant wizard components (progress, header, resolution selectors) and simplified Title Editor integration.
+
 ## [2.9.3] - 2025-12-16
 
 ### Features
