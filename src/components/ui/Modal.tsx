@@ -52,7 +52,9 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in`}
+      className={cn(
+        'fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in'
+      )}
       style={{ zIndex }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >

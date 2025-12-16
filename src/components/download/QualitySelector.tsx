@@ -3,6 +3,7 @@
  */
 import React from 'react';
 import type { VideoFormat } from '@/types/download';
+import { cn } from '@/lib/cn';
 
 interface QualitySelectorProps {
   formats: VideoFormat[];
@@ -37,11 +38,13 @@ export function QualitySelector({
             key={format.formatId}
             type="button"
             onClick={() => !disabled && onSelect(format.formatId)}
-            className={`px-4 py-2 rounded-lg text-sm transition-colors border ${
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm transition-colors border',
               selectedFormat === format.formatId
                 ? 'bg-violet-500/20 border-violet-500/50 text-violet-400'
-                : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
-            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10',
+              disabled && 'opacity-50 cursor-not-allowed'
+            )}
           >
             {format.quality}
             {format.filesize && (

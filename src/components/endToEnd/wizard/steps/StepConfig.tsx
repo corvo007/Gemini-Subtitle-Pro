@@ -1,5 +1,6 @@
 import React from 'react';
 import { Settings, Download, FileText, Film } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import type { AppSettings } from '@/types/settings';
 import { HardwareAccelerationSelector } from '@/components/settings/HardwareAccelerationSelector';
 import { ResolutionSelector } from '@/components/settings/ResolutionSelector';
@@ -102,11 +103,12 @@ export function StepConfig({
                   <button
                     key={quality.value}
                     onClick={() => onConfigChange({ downloadFormat: quality.value })}
-                    className={`px-4 py-2 rounded-lg text-sm transition-colors border ${
+                    className={cn(
+                      'px-4 py-2 rounded-lg text-sm transition-colors border',
                       (config.downloadFormat || 'best') === quality.value
                         ? 'bg-violet-500/20 border-violet-500/50 text-violet-400'
                         : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
-                    }`}
+                    )}
                   >
                     {quality.label}
                   </button>

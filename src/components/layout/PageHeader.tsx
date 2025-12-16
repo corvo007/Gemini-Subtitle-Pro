@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { cn } from '@/lib/cn';
 
 interface PageHeaderProps {
   /** 主标题 */
@@ -27,7 +28,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 }) => {
   return (
     <header
-      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-3 sm:pb-4 border-b border-slate-800 shrink-0 window-drag-region"
+      className={cn(
+        'flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-3 sm:pb-4 border-b border-slate-800 shrink-0 window-drag-region'
+      )}
       style={{ WebkitAppRegion: 'drag' } as any}
     >
       <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
@@ -99,14 +102,15 @@ export const HeaderButton: React.FC<HeaderButtonProps> = ({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center space-x-1.5 sm:space-x-2 px-2 sm:px-4 py-1.5 sm:py-2 border rounded-lg transition-colors text-xs sm:text-sm font-medium group ${
+      className={cn(
+        'flex items-center space-x-1.5 sm:space-x-2 px-2 sm:px-4 py-1.5 sm:py-2 border rounded-lg transition-colors text-xs sm:text-sm font-medium group',
         highlighted
           ? 'bg-indigo-900/30 border-indigo-500/50 text-indigo-200'
           : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
-      }`}
+      )}
       title={title}
     >
-      <span className={`text-slate-400 ${hoverColorClass} transition-colors`}>{icon}</span>
+      <span className={cn('text-slate-400 transition-colors', hoverColorClass)}>{icon}</span>
       {label && <span className="hidden sm:inline group-hover:text-white">{label}</span>}
     </button>
   );

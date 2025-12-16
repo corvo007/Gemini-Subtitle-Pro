@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle, XCircle, Film, FileText, Wand2, RefreshCw } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { OutputItem } from '@/components/endToEnd/wizard/shared/OutputItem';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 
@@ -26,11 +27,12 @@ export function StepResult({
     <div className="max-w-2xl mx-auto">
       <div className="text-center mb-8">
         <div
-          className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl border mb-4 ${
+          className={cn(
+            'inline-flex items-center justify-center w-16 h-16 rounded-2xl border mb-4',
             success
               ? 'bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border-emerald-500/30'
               : 'bg-gradient-to-br from-red-500/20 to-orange-500/20 border-red-500/30'
-          }`}
+          )}
         >
           {success ? (
             <CheckCircle className="w-8 h-8 text-emerald-400" />
