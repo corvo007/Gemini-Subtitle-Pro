@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.7] - 2025-12-16
+
+### Features
+
+- **Performance**: Optimized file loading and improved UI loading indicators.
+
+### UI
+
+- **Style**: Refined overall UI layout and spacing.
+
+### Build & Packaging
+
+- **FFmpeg**: Bundled FFmpeg/FFprobe binaries and optimized path resolution logic.
+- **CI**: Automated changelog inclusion in GitHub releases.
+- **Docs**: Updated README for zip distribution format.
+
 ## [2.9.6] - 2025-12-16
 
 ### Features
