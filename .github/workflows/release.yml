@@ -44,12 +44,33 @@ jobs:
             gh release delete-asset ${{ github.ref_name }} "$asset" -y
           done
 
+      - name: Extract Changelog for Release
+        id: changelog
+        shell: bash
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"  # Remove 'v' prefix
+          # Extract content between this version and next version header
+          CHANGELOG=$(awk -v ver="$VERSION" '
+            /^## \[/ {
+              if (found) exit
+              if (index($0, "["ver"]")) found=1
+              next
+            }
+            found { print }
+          ' CHANGELOG.md)
+          # Escape for GitHub Actions output
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             release/*.zip
+          body: ${{ steps.changelog.outputs.content }}
           draft: false
           prerelease: false
         env:
