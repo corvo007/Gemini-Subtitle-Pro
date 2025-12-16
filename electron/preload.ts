@@ -158,5 +158,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     sendSubtitleProgress: (progress: any) => {
       ipcRenderer.send('end-to-end:subtitle-progress', progress);
     },
+    // Listen for abort signal from main process
+    onAbortSubtitleGeneration: (callback: () => void) => {
+      const subscription = () => callback();
+      ipcRenderer.on('end-to-end:abort-subtitle-generation', subscription);
+      return () => {
+        ipcRenderer.removeListener('end-to-end:abort-subtitle-generation', subscription);
+      };
+    },
   },
 });

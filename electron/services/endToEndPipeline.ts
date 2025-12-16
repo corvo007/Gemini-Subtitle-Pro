@@ -492,6 +492,11 @@ export class EndToEndPipeline {
     // Abort sub-services
     ytDlpService.abort();
     this.videoCompressor.cancel();
+
+    // Signal renderer to abort subtitle generation
+    if (this.mainWindow) {
+      this.mainWindow.webContents.send('end-to-end:abort-subtitle-generation');
+    }
   }
 
   /**

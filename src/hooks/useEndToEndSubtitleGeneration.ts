@@ -346,11 +346,25 @@ export function useEndToEndSubtitleGeneration({
 
     logger.info('[EndToEnd] Setting up subtitle generation listener');
 
-    const unsubscribe = window.electronAPI.endToEnd.onGenerateSubtitles(handleGenerateRequest);
+    const unsubscribeGenerate =
+      window.electronAPI.endToEnd.onGenerateSubtitles(handleGenerateRequest);
+
+    let unsubscribeAbort: (() => void) | undefined;
+    if (window.electronAPI.endToEnd.onAbortSubtitleGeneration) {
+      unsubscribeAbort = window.electronAPI.endToEnd.onAbortSubtitleGeneration(() => {
+        logger.info('[EndToEnd] Received abort signal from main process');
+        if (isProcessingRef.current && abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+      });
+    }
 
     return () => {
       logger.info('[EndToEnd] Cleaning up subtitle generation listener');
-      unsubscribe();
+      unsubscribeGenerate();
+      if (unsubscribeAbort) {
+        unsubscribeAbort();
+      }
 
       // Abort any ongoing operation
       if (abortControllerRef.current) {

@@ -277,6 +277,7 @@ export interface ElectronAPI {
       error?: string;
     }) => void;
     sendSubtitleProgress: (progress: any) => void;
+    onAbortSubtitleGeneration: (callback: () => void) => () => void;
   };
 }
 
