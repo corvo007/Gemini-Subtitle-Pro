@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.6] - 2025-12-16
+
+### Features
+
+- **UI**: Improved High-DPI support and overall UI responsiveness.
+
+### Build
+
+- **Windows**: Switched build target from portable exe to zip for faster application startup.
+- **Electron**: Fixed electron-builder zip configuration.
+
+### Chore
+
+- **Cleanup**: Removed unused AboutModal and related code.
+
 ## [2.9.5] - 2025-12-16
 
 ### Features
