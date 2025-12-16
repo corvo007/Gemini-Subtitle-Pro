@@ -101,26 +101,26 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
               <button
                 onClick={onStartNew}
-                className="group relative bg-slate-900 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-800/50 rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 text-left"
+                className="w-full group relative bg-slate-900 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-800/50 rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 text-left"
               >
                 <div className="w-12 h-12 bg-slate-800 group-hover:bg-indigo-500/20 rounded-xl flex items-center justify-center shrink-0 transition-colors">
                   <FileVideo className="w-6 h-6 text-indigo-400 group-hover:scale-110 transition-transform" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-lg font-bold text-white mb-0.5">新建项目</h2>
-                  <p className="text-slate-500 text-sm">上传本地视频，生成字幕并翻译</p>
+                  <p className="text-slate-500 text-sm truncate">上传本地视频，生成字幕并翻译</p>
                 </div>
               </button>
               <button
                 onClick={onStartImport}
-                className="group relative bg-slate-900 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-800/50 rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 text-left"
+                className="w-full group relative bg-slate-900 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-800/50 rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 text-left"
               >
                 <div className="w-12 h-12 bg-slate-800 group-hover:bg-emerald-500/20 rounded-xl flex items-center justify-center shrink-0 transition-colors">
                   <FileText className="w-6 h-6 text-emerald-400 group-hover:scale-110 transition-transform" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-lg font-bold text-white mb-0.5">打开字幕</h2>
-                  <p className="text-slate-500 text-sm">导入已有字幕文件，编辑或翻译</p>
+                  <p className="text-slate-500 text-sm truncate">导入已有字幕文件，编辑或翻译</p>
                 </div>
               </button>
             </div>
@@ -136,7 +136,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 onClick={isElectron ? onStartDownload : undefined}
                 disabled={!isElectron}
                 className={cn(
-                  'group relative bg-slate-900 border border-slate-800 rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 text-left',
+                  'w-full group relative bg-slate-900 border border-slate-800 rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 text-left',
                   isElectron
                     ? 'hover:border-violet-500/50 hover:bg-slate-800/50 cursor-pointer'
                     : 'opacity-50 cursor-not-allowed'
@@ -155,16 +155,16 @@ export const HomePage: React.FC<HomePageProps> = ({
                     )}
                   />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-lg font-bold text-white mb-0.5">下载视频</h2>
-                  <p className="text-slate-500 text-sm">从 YouTube / Bilibili 下载视频</p>
+                  <p className="text-slate-500 text-sm truncate">从 YouTube / Bilibili 下载视频</p>
                 </div>
               </button>
               <button
                 onClick={isElectron ? onStartCompression : undefined}
                 disabled={!isElectron}
                 className={cn(
-                  'group relative bg-slate-900 border border-slate-800 rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 text-left',
+                  'w-full group relative bg-slate-900 border border-slate-800 rounded-2xl p-5 transition-all duration-300 flex items-center gap-4 text-left',
                   isElectron
                     ? 'hover:border-amber-500/50 hover:bg-slate-800/50 cursor-pointer'
                     : 'opacity-50 cursor-not-allowed'
@@ -183,9 +183,9 @@ export const HomePage: React.FC<HomePageProps> = ({
                     )}
                   />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-lg font-bold text-white mb-0.5">视频压制</h2>
-                  <p className="text-slate-500 text-sm">将字幕嵌入视频并压缩导出</p>
+                  <p className="text-slate-500 text-sm truncate">将字幕嵌入视频并压缩导出</p>
                 </div>
               </button>
             </div>

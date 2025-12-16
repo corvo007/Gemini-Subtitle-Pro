@@ -234,9 +234,18 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                       />
                     </div>
                     {file ? (
-                      <div className="space-y-1">
-                        <p className="text-lg font-medium text-indigo-300 break-all">
-                          {window.electronAPI?.getFilePath(file) || (file as any).path || file.name}
+                      <div className="space-y-1 overflow-hidden w-full">
+                        <p
+                          className="text-lg font-medium text-indigo-300 truncate"
+                          title={file.name}
+                        >
+                          {file.name}
+                        </p>
+                        <p
+                          className="text-xs text-slate-500 truncate font-mono"
+                          title={window.electronAPI?.getFilePath(file) || (file as any).path}
+                        >
+                          {window.electronAPI?.getFilePath(file) || (file as any).path}
                         </p>
                         <p className="text-sm text-slate-500">
                           {(file.size / 1024 / 1024).toFixed(2)} MB
@@ -486,7 +495,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                   <label className="w-20 text-sm font-medium text-slate-400 shrink-0">
                     输出目录
                   </label>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <DirectorySelector
                       value={outputPath}
                       placeholder="未选择"
