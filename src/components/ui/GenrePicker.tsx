@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { cn } from '@/lib/cn';
 import { GENRE_PRESETS, GENRE_LABELS } from '@/types/settings';
 import { OptionButton } from '@/components/ui/OptionButton';
 import { TextInput } from '@/components/ui/TextInput';
@@ -45,7 +46,7 @@ export const GenrePicker: React.FC<GenrePickerProps> = ({
 
   return (
     <>
-      <div className={`grid ${gridCols} gap-2`}>
+      <div className={cn('grid gap-2', gridCols)}>
         {GENRE_PRESETS.map((genre) => (
           <OptionButton
             key={genre}

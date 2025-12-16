@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertCircle, CheckCircle, MessageSquareText, X } from 'lucide-react';
+import { cn } from '@/lib/cn';
 
 export interface ToastMessage {
   id: string;
@@ -18,18 +19,13 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, removeTo
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`
-          pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium animate-fade-in
-          ${
-            toast.type === 'error'
-              ? 'bg-red-500/90 text-white'
-              : toast.type === 'warning'
-                ? 'bg-amber-500/90 text-white'
-                : toast.type === 'success'
-                  ? 'bg-emerald-500/90 text-white'
-                  : 'bg-slate-800/90 text-slate-200 border border-slate-700'
-          }
-        `}
+          className={cn(
+            'pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium animate-fade-in',
+            toast.type === 'error' && 'bg-red-500/90 text-white',
+            toast.type === 'warning' && 'bg-amber-500/90 text-white',
+            toast.type === 'success' && 'bg-emerald-500/90 text-white',
+            toast.type === 'info' && 'bg-slate-800/90 text-slate-200 border border-slate-700'
+          )}
         >
           {toast.type === 'error' && <AlertCircle className="w-4 h-4" />}
           {toast.type === 'warning' && <AlertCircle className="w-4 h-4" />}

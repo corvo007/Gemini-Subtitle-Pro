@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '@/lib/cn';
 import { CustomSelect } from '../settings/CustomSelect';
 import { NumberInput } from '../ui/NumberInput';
 
@@ -20,7 +21,7 @@ export const ResolutionSelector: React.FC<ResolutionSelectorProps> = ({
   className = '',
 }) => {
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={cn('space-y-3', className)}>
       <CustomSelect
         value={resolution}
         onChange={(val) => {

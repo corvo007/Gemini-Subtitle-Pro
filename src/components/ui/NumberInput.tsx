@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { cn } from '@/lib/cn';
 
 interface NumberInputProps {
   value: number | undefined;
@@ -102,8 +103,10 @@ export const NumberInput: React.FC<NumberInputProps> = ({
       onFocus={handleFocus}
       onBlur={handleBlur}
       placeholder={placeholder}
-      className={`bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 
-        focus:outline-none focus:border-indigo-500 text-sm ${className}`}
+      className={cn(
+        'bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm',
+        className
+      )}
     />
   );
 };

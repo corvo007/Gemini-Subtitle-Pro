@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/cn';
 
 interface PrimaryButtonProps {
   children: React.ReactNode;
@@ -46,17 +47,15 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
       type={type}
       onClick={onClick}
       disabled={isDisabled}
-      className={`
-        ${variantClasses[variant]}
-        ${sizeClasses[size]}
-        ${fullWidth ? 'w-full' : ''}
-        rounded-xl text-white font-medium
-        transition-all hover:-translate-y-0.5 hover:shadow-lg
-        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none
-        ${className}
-      `
-        .trim()
-        .replace(/\s+/g, ' ')}
+      className={cn(
+        variantClasses[variant],
+        sizeClasses[size],
+        fullWidth && 'w-full',
+        'rounded-xl text-white font-medium',
+        'transition-all hover:-translate-y-0.5 hover:shadow-lg',
+        'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none',
+        className
+      )}
     >
       {loading ? (
         <span className="flex items-center justify-center gap-2">

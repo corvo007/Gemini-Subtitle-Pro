@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '@/lib/cn';
 
 interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: React.ReactNode;
@@ -24,11 +25,13 @@ export const TextInput: React.FC<TextInputProps> = ({
       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">{icon}</span>
     )}
     <input
-      className={`w-full border rounded-lg py-2 px-3 text-sm focus:outline-none
-        ${variantClasses[variant]}
-        ${icon ? 'pl-10' : ''} 
-        ${error ? 'border-red-500' : ''} 
-        ${className}`}
+      className={cn(
+        'w-full border rounded-lg py-2 px-3 text-sm focus:outline-none',
+        variantClasses[variant],
+        icon && 'pl-10',
+        error && 'border-red-500',
+        className
+      )}
       {...props}
     />
     {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
