@@ -163,6 +163,31 @@ export const useWorkspaceLogic = ({
     return () => clearInterval(intervalId);
   }, [subtitles, batchComments, status, snapshotsValues, file]);
 
+  // Debounced auto-save: triggers 30 seconds after last edit
+  React.useEffect(() => {
+    // Only enable when there are subtitles, status is completed, and file exists
+    if (subtitles.length === 0 || status !== GenerationStatus.COMPLETED || !file) {
+      return;
+    }
+
+    const DEBOUNCE_DELAY = 30 * 1000; // 30 seconds after last edit
+
+    const timeoutId = setTimeout(() => {
+      const fileId = window.electronAPI?.getFilePath?.(file) || file.name;
+      const saved = snapshotsValues.createAutoSaveSnapshot(
+        subtitles,
+        batchComments,
+        fileId,
+        file.name
+      );
+      if (saved) {
+        logger.info('Debounced auto-save snapshot created');
+      }
+    }, DEBOUNCE_DELAY);
+
+    return () => clearTimeout(timeoutId);
+  }, [subtitles, batchComments, status, file, snapshotsValues]);
+
   // Helpers
   const cancelOperation = React.useCallback(() => {
     if (abortControllerRef.current) {
@@ -374,7 +399,6 @@ export const useWorkspaceLogic = ({
           setSpeakerProfiles(profiles);
 
           setStatus(GenerationStatus.COMPLETED);
-          snapshotsValues.setSnapshots([]);
           setBatchComments({});
           const fileId = window.electronAPI?.getFilePath?.(subFile) || subFile.name;
           snapshotsValues.createSnapshot('初始导入', parsed, {}, fileId, subFile.name);
@@ -421,7 +445,6 @@ export const useWorkspaceLogic = ({
       setSpeakerProfiles(profiles);
 
       setStatus(GenerationStatus.COMPLETED);
-      snapshotsValues.setSnapshots([]);
       setBatchComments({});
       const fileId = result.filePath || result.fileName;
       snapshotsValues.createSnapshot('初始导入', parsed, {}, fileId, result.fileName);
@@ -869,6 +892,7 @@ export const useWorkspaceLogic = ({
       error,
       startTime,
       selectedBatches,
+      setSelectedBatches,
       batchComments,
       setBatchComments,
       showSourceText,
@@ -878,6 +902,7 @@ export const useWorkspaceLogic = ({
       isLoadingFile,
       isLoadingSubtitle,
       subtitleFileName,
+      setSubtitleFileName,
       setIsLoadingFile,
 
       // Handlers
@@ -907,6 +932,7 @@ export const useWorkspaceLogic = ({
 
       // Speaker Profiles
       speakerProfiles,
+      setSpeakerProfiles,
       addSpeaker,
       renameSpeaker,
       deleteSpeaker,

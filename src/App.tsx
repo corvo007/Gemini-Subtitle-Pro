@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { GenerationStatus } from '@/types/api';
 import { logger, LogEntry } from '@/services/utils/logger';
+import { getSpeakerColor } from '@/services/utils/colors';
+import { SpeakerUIProfile } from '@/types/speaker';
 
 import { GlossaryManager } from '@/components/glossary/GlossaryManager';
 import { SettingsModal, GenreSettingsDialog } from '@/components/settings';
@@ -336,15 +338,57 @@ export default function App() {
           onUpdateSetting={updateSetting}
           onToggleSnapshots={() => setShowSnapshots(!showSnapshots)}
           onRestoreSnapshot={(snap) => {
+            // Detect cross-file restore
+            const currentFileId = workspace.file
+              ? window.electronAPI?.getFilePath?.(workspace.file) || workspace.file.name
+              : '';
+            const isCrossFile = currentFileId && currentFileId !== snap.fileId;
+
+            const message = isCrossFile
+              ? `确定要恢复到文件 "${snap.fileName}" 的 ${snap.timestamp} 版本吗？当前状态将自动备份。`
+              : `确定要恢复到 ${snap.timestamp} 的版本吗？当前状态将自动备份。`;
+
             showConfirm(
               '恢复快照',
-              `确定要恢复到 ${snap.timestamp} 的版本吗？当前未保存的进度将丢失。`,
+              message,
               () => {
+                // 1. Backup current state (if there are subtitles)
+                if (workspace.subtitles.length > 0) {
+                  snapshotsValues.createSnapshot(
+                    '恢复前备份',
+                    workspace.subtitles,
+                    workspace.batchComments,
+                    currentFileId || 'unknown',
+                    workspace.file?.name || '未知文件'
+                  );
+                }
+
+                // 2. Restore subtitles and batch comments
                 workspace.setSubtitles(JSON.parse(JSON.stringify(snap.subtitles)));
                 workspace.setBatchComments({ ...snap.batchComments });
+
+                // 3. Sync speakerProfiles (extract from subtitles)
+                const uniqueSpeakers = Array.from(
+                  new Set(snap.subtitles.map((s) => s.speaker).filter(Boolean))
+                ) as string[];
+                const profiles: SpeakerUIProfile[] = uniqueSpeakers.map((name) => ({
+                  id: name,
+                  name: name,
+                  color: getSpeakerColor(name),
+                }));
+                workspace.setSpeakerProfiles(profiles);
+
+                // 4. Sync subtitle file name
+                workspace.setSubtitleFileName(snap.fileName || null);
+
+                // 5. Clear selection state
+                workspace.setSelectedBatches(new Set());
+                workspace.setEditingCommentId(null);
+
+                // 6. Close snapshot panel
                 setShowSnapshots(false);
               },
-              'warning'
+              'info'
             );
           }}
           toggleAllBatches={workspace.toggleAllBatches}
