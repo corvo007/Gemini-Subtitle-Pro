@@ -10,6 +10,13 @@ export const formatTime = (seconds: number): string => {
 };
 
 /**
+ * Calculate duration between two time strings in seconds
+ */
+export const calculateDuration = (startTime: string, endTime: string): number => {
+  return timeToSeconds(endTime) - timeToSeconds(startTime);
+};
+
+/**
  * Formats seconds to H:MM:SS or M:SS (for display, no milliseconds)
  */
 export const formatDuration = (seconds: number): string => {

@@ -16,72 +16,34 @@ import { SubtitleItem } from '@/types';
 import { SpeakerUIProfile } from '@/types/speaker';
 import { SpeakerSelect } from '@/components/editor/SpeakerSelect';
 import { cn } from '@/lib/cn';
+import { countCJKCharacters } from '@/lib/text';
 import { useDropdownDirection } from '@/hooks/useDropdownDirection';
+import { timeToSeconds, formatTime, calculateDuration } from '@/services/subtitle/time';
 
 // Validation thresholds (from prompts.ts rules)
 const MAX_DURATION_SECONDS = 5;
 const MAX_CHINESE_CHARACTERS = 25;
 
-// Parse time string (HH:MM:SS,mmm or HH:MM:SS.mmm) to seconds
-export const parseTimeToSeconds = (timeStr: string): number => {
-  if (!timeStr) return 0;
-  const parts = timeStr.replace(',', '.').split(':');
-  if (parts.length !== 3) return 0;
-  const hours = parseFloat(parts[0]) || 0;
-  const minutes = parseFloat(parts[1]) || 0;
-  const seconds = parseFloat(parts[2]) || 0;
-  return hours * 3600 + minutes * 60 + seconds;
-};
-
-// Format seconds to time string (HH:MM:SS,mmm)
-const formatSecondsToTime = (totalSeconds: number): string => {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const secs = Math.floor(seconds);
-  const ms = Math.round((seconds - secs) * 1000);
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
-};
-
-// Validate time format and return normalized string or null
+/**
+ * Validate and normalize time input to HH:MM:SS,mmm format.
+ * Uses timeToSeconds + formatTime from time.ts for conversion.
+ */
 const validateAndNormalizeTime = (input: string): string | null => {
-  // Try to parse various formats: HH:MM:SS, HH:MM:SS,mmm, HH:MM:SS.mmm, MM:SS
   const trimmed = input.trim();
   if (!trimmed) return null;
 
-  // Handle MM:SS format
-  const shortMatch = trimmed.match(/^(\d{1,2}):(\d{2})$/);
-  if (shortMatch) {
-    const mins = parseInt(shortMatch[1]);
-    const secs = parseInt(shortMatch[2]);
-    return formatSecondsToTime(mins * 60 + secs);
-  }
+  // Try parsing with timeToSeconds (handles HH:MM:SS,mmm and MM:SS formats)
+  const seconds = timeToSeconds(trimmed);
 
-  // Handle HH:MM:SS or HH:MM:SS,mmm or HH:MM:SS.mmm
-  const fullMatch = trimmed.match(/^(\d{1,2}):(\d{2}):(\d{2})([,.](\d{1,3}))?$/);
-  if (fullMatch) {
-    const hours = parseInt(fullMatch[1]);
-    const mins = parseInt(fullMatch[2]);
-    const secs = parseInt(fullMatch[3]);
-    const ms = fullMatch[5] ? parseInt(fullMatch[5].padEnd(3, '0')) : 0;
-    return formatSecondsToTime(hours * 3600 + mins * 60 + secs + ms / 1000);
+  // Accept if: non-zero result, OR input looks like a valid zero timestamp
+  // Zero timestamps: "00:00:00", "0:00", "00:00", "00:00:00,000", etc.
+  const isValidZero = seconds === 0 && /^\d{1,2}:\d{2}(:\d{2})?(,\d+)?$/.test(trimmed);
+
+  if (seconds > 0 || isValidZero) {
+    return formatTime(seconds);
   }
 
   return null;
-};
-
-// Calculate subtitle duration in seconds
-const calculateDuration = (startTime: string, endTime: string): number => {
-  return parseTimeToSeconds(endTime) - parseTimeToSeconds(startTime);
-};
-
-// Count Chinese characters (CJK range)
-const countChineseCharacters = (text: string): number => {
-  if (!text) return 0;
-  const cjkRegex =
-    /[\u4e00-\u9fff\u3400-\u4dbf\u{20000}-\u{2a6df}\u{2a700}-\u{2b73f}\u{2b740}-\u{2b81f}\u{2b820}-\u{2ceaf}\u{2ceb0}-\u{2ebef}]/gu;
-  const matches = text.match(cjkRegex);
-  return matches ? matches.length : 0;
 };
 
 // Overlap threshold in seconds (only show warning if overlap > this value)
@@ -100,13 +62,13 @@ export interface ValidationResult {
 // Validate a subtitle item
 export const validateSubtitle = (sub: SubtitleItem, prevEndTime?: string): ValidationResult => {
   const duration = calculateDuration(sub.startTime, sub.endTime);
-  const charCount = countChineseCharacters(sub.translated);
+  const charCount = countCJKCharacters(sub.translated);
 
   // Check overlap: current start time < previous end time
   let overlapAmount = 0;
   if (prevEndTime) {
-    const prevEnd = parseTimeToSeconds(prevEndTime);
-    const currentStart = parseTimeToSeconds(sub.startTime);
+    const prevEnd = timeToSeconds(prevEndTime);
+    const currentStart = timeToSeconds(sub.startTime);
     overlapAmount = prevEnd - currentStart; // Positive means overlap
   }
 
