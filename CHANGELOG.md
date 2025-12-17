@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.9] - 2025-12-18
+
+### Fixes
+
+- **UI**: Made project settings collapse logic responsive to zoom level.
+- **Compatibility**: Improved overall zoom level compatibility.
+
 ## [2.9.8] - 2025-12-17
 
 ### Features
