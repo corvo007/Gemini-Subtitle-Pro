@@ -44,12 +44,19 @@ export const useSettings = () => {
 
   // Effect: Apply Zoom Level
   useEffect(() => {
-    if (isSettingsLoaded && window.electronAPI?.setZoomFactor) {
-      // Default to 1.0 if undefined
-      const zoom = settings.zoomLevel || 1.0;
+    if (!isSettingsLoaded) return;
+
+    // Default to 1.0 if undefined
+    const zoom = settings.zoomLevel || 1.0;
+
+    if (window.electronAPI?.setZoomFactor) {
       window.electronAPI.setZoomFactor(zoom);
-      logger.info(`Applied zoom factor: ${zoom}`);
+    } else {
+      // Web fallback
+      // @ts-ignore
+      document.body.style.zoom = zoom;
     }
+    logger.info(`Applied zoom factor: ${zoom}`);
   }, [settings.zoomLevel, isSettingsLoaded]);
 
   // Initialize: Load from storage (Electron or localStorage)
