@@ -3,6 +3,7 @@ import { ChevronDown, Users } from 'lucide-react';
 import { SpeakerUIProfile } from '@/types/speaker';
 import { getSpeakerColor } from '@/services/utils/colors';
 import { cn } from '@/lib/cn';
+import { useDropdownDirection } from '@/hooks/useDropdownDirection';
 
 interface SpeakerSelectProps {
   currentSpeaker?: string;
@@ -19,21 +20,14 @@ export const SpeakerSelect: React.FC<SpeakerSelectProps> = ({
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [dropUp, setDropUp] = React.useState(false);
-  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const { ref: dropdownRef, getDirection } = useDropdownDirection<HTMLDivElement>({
+    minSpaceBelow: 250, // 保持原有阈值
+  });
 
   const toggleOpen = () => {
     if (!isOpen) {
-      // Check position before opening
-      if (dropdownRef.current) {
-        const rect = dropdownRef.current.getBoundingClientRect();
-        const zoom = parseFloat(
-          getComputedStyle(document.documentElement).getPropertyValue('--app-zoom') || '1'
-        );
-        const effectiveViewportHeight = window.innerHeight / zoom;
-        const spaceBelow = effectiveViewportHeight - rect.bottom;
-        // If less than 250px below, open upwards
-        setDropUp(spaceBelow < 250);
-      }
+      const { dropUp: shouldDropUp } = getDirection();
+      setDropUp(shouldDropUp);
     }
     setIsOpen(!isOpen);
   };

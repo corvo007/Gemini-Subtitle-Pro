@@ -22,6 +22,7 @@ import { SubtitleItem } from '@/types';
 import { SpeakerUIProfile } from '@/types/speaker';
 import { getSpeakerColor } from '@/services/utils/colors';
 import { cn } from '@/lib/cn';
+import { useDropdownDirection } from '@/hooks/useDropdownDirection';
 
 // Multi-select filter type
 export interface SubtitleFilters {
@@ -67,9 +68,6 @@ interface BatchHeaderProps {
   onToggleConservativeMode?: () => void;
 }
 
-// Minimum space required below to open downward (in pixels)
-const MIN_SPACE_BELOW = 200;
-
 export const BatchHeader: React.FC<BatchHeaderProps> = ({
   chunks,
   selectedBatches,
@@ -103,21 +101,16 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
   const [issueDropUp, setIssueDropUp] = React.useState(false);
   const [speakerDropUp, setSpeakerDropUp] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
-  const issueFilterRef = React.useRef<HTMLDivElement>(null);
-  const speakerFilterRef = React.useRef<HTMLDivElement>(null);
+  const { ref: issueFilterRef, getDirection: getIssueDirection } =
+    useDropdownDirection<HTMLDivElement>();
+  const { ref: speakerFilterRef, getDirection: getSpeakerDirection } =
+    useDropdownDirection<HTMLDivElement>();
 
   // Toggle issue filter with smart direction detection
   const toggleIssueFilter = () => {
     if (!isIssueFilterOpen) {
-      if (issueFilterRef.current) {
-        const rect = issueFilterRef.current.getBoundingClientRect();
-        const zoom = parseFloat(
-          getComputedStyle(document.documentElement).getPropertyValue('--app-zoom') || '1'
-        );
-        const effectiveViewportHeight = window.innerHeight / zoom;
-        const spaceBelow = effectiveViewportHeight - rect.bottom;
-        setIssueDropUp(spaceBelow < MIN_SPACE_BELOW);
-      }
+      const { dropUp } = getIssueDirection();
+      setIssueDropUp(dropUp);
     }
     setIsIssueFilterOpen(!isIssueFilterOpen);
     setIsSpeakerFilterOpen(false);
@@ -126,15 +119,8 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
   // Toggle speaker filter with smart direction detection
   const toggleSpeakerFilter = () => {
     if (!isSpeakerFilterOpen) {
-      if (speakerFilterRef.current) {
-        const rect = speakerFilterRef.current.getBoundingClientRect();
-        const zoom = parseFloat(
-          getComputedStyle(document.documentElement).getPropertyValue('--app-zoom') || '1'
-        );
-        const effectiveViewportHeight = window.innerHeight / zoom;
-        const spaceBelow = effectiveViewportHeight - rect.bottom;
-        setSpeakerDropUp(spaceBelow < MIN_SPACE_BELOW);
-      }
+      const { dropUp } = getSpeakerDirection();
+      setSpeakerDropUp(dropUp);
     }
     setIsSpeakerFilterOpen(!isSpeakerFilterOpen);
     setIsIssueFilterOpen(false);

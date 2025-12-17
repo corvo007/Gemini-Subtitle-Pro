@@ -16,6 +16,7 @@ import { SubtitleItem } from '@/types';
 import { SpeakerUIProfile } from '@/types/speaker';
 import { SpeakerSelect } from '@/components/editor/SpeakerSelect';
 import { cn } from '@/lib/cn';
+import { useDropdownDirection } from '@/hooks/useDropdownDirection';
 
 // Validation thresholds (from prompts.ts rules)
 const MAX_DURATION_SECONDS = 5;
@@ -177,7 +178,7 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
     const [showAddSubmenu, setShowAddSubmenu] = React.useState(false);
     const [menuDropUp, setMenuDropUp] = React.useState(false);
     const [submenuDropLeft, setSubmenuDropLeft] = React.useState(false);
-    const addMenuRef = React.useRef<HTMLDivElement>(null);
+    const { ref: addMenuRef, getDirection } = useDropdownDirection<HTMLDivElement>();
 
     // Close add menu when clicking outside
     React.useEffect(() => {
@@ -198,16 +199,9 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
     // Toggle menu with smart direction detection
     const toggleMenu = () => {
       if (!showAddMenu) {
-        if (addMenuRef.current) {
-          const rect = addMenuRef.current.getBoundingClientRect();
-          const zoom = parseFloat(
-            getComputedStyle(document.documentElement).getPropertyValue('--app-zoom') || '1'
-          );
-          const effectiveViewportHeight = window.innerHeight / zoom;
-          const spaceBelow = effectiveViewportHeight - rect.bottom;
-          // If less than 220px below, open upwards
-          setMenuDropUp(spaceBelow < 220);
-        }
+        const { dropUp, dropLeft } = getDirection();
+        setMenuDropUp(dropUp);
+        setSubmenuDropLeft(dropLeft);
       }
       setShowAddMenu(!showAddMenu);
     };

@@ -60,9 +60,10 @@ export const Modal: React.FC<ModalProps> = ({
     >
       <div
         className={cn(
-          'bg-slate-900 border border-slate-700 rounded-xl p-6 w-full shadow-2xl max-h-[90vh] overflow-y-auto',
+          'bg-slate-900 border border-slate-700 rounded-xl p-6 w-full shadow-2xl overflow-y-auto',
           maxWidthClasses[maxWidth]
         )}
+        style={{ maxHeight: 'calc(var(--app-height-safe, 100vh) * 0.9)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (

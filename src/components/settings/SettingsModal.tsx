@@ -38,7 +38,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl animate-fade-in relative overflow-hidden">
+      <div
+        className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl flex flex-col shadow-2xl animate-fade-in relative overflow-hidden"
+        style={{ maxHeight: 'calc(var(--app-height-safe, 100vh) * 0.9)' }}
+      >
         <div className="p-6 overflow-y-auto custom-scrollbar">
           <button
             onClick={onClose}

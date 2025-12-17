@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
-
-// Minimum space required below to open downward (in pixels)
-const MIN_SPACE_BELOW = 200;
+import { useDropdownDirection } from '@/hooks/useDropdownDirection';
 
 interface CustomSelectProps {
   value: string;
@@ -26,7 +24,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [dropUp, setDropUp] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { ref: containerRef, getDirection } = useDropdownDirection<HTMLDivElement>();
 
   // Toggle open with smart direction detection
   const toggleOpen = () => {
@@ -34,16 +32,9 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       // If forceDropUp is set, use it; otherwise auto-detect
       if (forceDropUp !== undefined) {
         setDropUp(forceDropUp);
-      } else if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        // Calculate effective viewport height based on zoom
-        const zoom = parseFloat(
-          getComputedStyle(document.documentElement).getPropertyValue('--app-zoom') || '1'
-        );
-        const effectiveViewportHeight = window.innerHeight / zoom;
-        const spaceBelow = effectiveViewportHeight - rect.bottom;
-        // If less than MIN_SPACE_BELOW below, open upwards
-        setDropUp(spaceBelow < MIN_SPACE_BELOW);
+      } else {
+        const { dropUp: shouldDropUp } = getDirection();
+        setDropUp(shouldDropUp);
       }
     }
     setIsOpen(!isOpen);

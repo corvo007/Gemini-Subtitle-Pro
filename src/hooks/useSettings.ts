@@ -51,6 +51,8 @@ export const useSettings = () => {
 
     if (window.electronAPI?.setZoomFactor) {
       window.electronAPI.setZoomFactor(zoom);
+      // 同时设置 CSS 变量，确保组件可统一从 CSS 读取 zoom 值
+      document.documentElement.style.setProperty('--app-zoom', `${zoom}`);
     } else {
       // Web fallback: Use CSS Variable for transform scaling
       if (zoom === 1) {
