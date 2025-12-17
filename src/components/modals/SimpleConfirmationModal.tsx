@@ -12,6 +12,7 @@ interface SimpleConfirmationModalProps {
   confirmText?: string;
   cancelText?: string;
   type?: 'info' | 'warning' | 'danger';
+  hideCancelButton?: boolean;
 }
 
 export const SimpleConfirmationModal: React.FC<SimpleConfirmationModalProps> = ({
@@ -23,6 +24,7 @@ export const SimpleConfirmationModal: React.FC<SimpleConfirmationModalProps> = (
   confirmText = '确认',
   cancelText = '取消',
   type = 'info',
+  hideCancelButton = false,
 }) => {
   const getIcon = () => {
     switch (type) {
@@ -55,12 +57,14 @@ export const SimpleConfirmationModal: React.FC<SimpleConfirmationModalProps> = (
       </div>
       <p className="text-slate-300 mb-6 leading-relaxed">{message}</p>
       <div className="flex justify-end space-x-3">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium"
-        >
-          {cancelText}
-        </button>
+        {!hideCancelButton && (
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium"
+          >
+            {cancelText}
+          </button>
+        )}
         <button
           onClick={() => {
             onConfirm();

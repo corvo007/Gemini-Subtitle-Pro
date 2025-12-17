@@ -54,6 +54,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
   const [showAutoLoadPrompt, setShowAutoLoadPrompt] = useState(false);
   const [showDownloadedVideoPrompt, setShowDownloadedVideoPrompt] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Update elapsed time every second during compression
 
@@ -514,7 +515,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                   // Get file path - try getFilePath API first, fallback to path property
                   const inputPath = window.electronAPI?.getFilePath?.(file) || (file as any).path;
                   if (!inputPath) {
-                    alert('无法获取视频文件路径，请重新选择文件');
+                    setErrorMessage('无法获取视频文件路径，请重新选择文件');
                     return;
                   }
 
@@ -564,8 +565,8 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                     setShowSuccessModal(true);
                   } catch (e: any) {
                     // Don't show error for user-initiated cancellation
-                    if (e.message !== 'CANCELLED') {
-                      alert('压制失败: ' + e.message);
+                    if (!e.message?.includes('CANCELLED')) {
+                      setErrorMessage('压制失败: ' + e.message);
                     }
                   } finally {
                     setIsCompressing(false);
@@ -651,6 +652,17 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
         confirmText="打开输出目录"
         cancelText="关闭"
         type="info"
+      />
+      {/* Error Modal */}
+      <SimpleConfirmationModal
+        isOpen={!!errorMessage}
+        onClose={() => setErrorMessage(null)}
+        onConfirm={() => setErrorMessage(null)}
+        title="压制失败"
+        message={errorMessage || ''}
+        confirmText="确定"
+        type="warning"
+        hideCancelButton
       />
     </div>
   );

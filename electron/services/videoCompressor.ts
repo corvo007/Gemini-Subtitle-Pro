@@ -265,7 +265,8 @@ export class VideoCompressorService {
       );
     } catch (error: any) {
       // If GPU encoding failed and we were using GPU, try CPU fallback
-      if (isGpuEncoder && hwAccel === 'auto') {
+      // But NOT if the user cancelled the operation
+      if (isGpuEncoder && hwAccel === 'auto' && !this.isCancelled) {
         log(`[Compression] GPU encoding failed, falling back to CPU encoder: ${options.encoder}`);
         console.warn('[VideoCompressor] GPU encoding failed, falling back to CPU:', error.message);
 
