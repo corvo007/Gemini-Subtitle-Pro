@@ -239,7 +239,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
   return (
     <div
       className={cn(
-        'h-screen bg-slate-950 text-slate-200 p-4 md:p-8 flex flex-col overflow-y-auto',
+        'h-screen-safe bg-slate-950 text-slate-200 p-4 md:p-8 flex flex-col overflow-y-auto',
         !forceVerticalLayout && 'md:overflow-hidden'
       )}
     >

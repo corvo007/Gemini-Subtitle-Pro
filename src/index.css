@@ -160,16 +160,33 @@ body {
 /* ========================================
    Viewport-aware Height Utilities
    Uses dvh for accurate mobile viewport height
+   with Zoom support via transform
    ======================================== */
 
+:root {
+  --zoom-level: 1;
+}
+
+#root {
+  /* Using transform for web-based zoom */
+  transform: scale(var(--zoom-level));
+  transform-origin: 0 0;
+  width: calc(100% / var(--zoom-level));
+  height: calc(100% / var(--zoom-level));
+  transition:
+    transform 0.2s ease-out,
+    width 0.2s ease-out,
+    height 0.2s ease-out;
+}
+
 .h-screen-safe {
-  height: 100dvh;
+  height: calc(100dvh / var(--zoom-level));
 }
 
 .min-h-screen-safe {
-  min-height: 100dvh;
+  min-height: calc(100dvh / var(--zoom-level));
 }
 
 .max-h-screen-safe {
-  max-height: 100dvh;
+  max-height: calc(100dvh / var(--zoom-level));
 }

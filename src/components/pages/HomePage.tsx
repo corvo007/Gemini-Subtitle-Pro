@@ -31,7 +31,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col p-4 md:p-8">
+    <div className="min-h-screen-safe bg-slate-950 flex flex-col p-4 md:p-8">
       <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
         <Header
           onShowLogs={onShowLogs}
