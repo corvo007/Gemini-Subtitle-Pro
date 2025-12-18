@@ -147,6 +147,22 @@ export class SmartSegmenter {
       currentChunkStart = bestSplitPoint;
     }
 
+    // Post-processing: Merge very short trailing chunks
+    // If the last chunk is too short (< 30s), merge it with the previous chunk
+    const MIN_CHUNK_DURATION = 30;
+    if (chunks.length > 1) {
+      const lastChunk = chunks[chunks.length - 1];
+      const lastChunkDuration = lastChunk.end - lastChunk.start;
+      if (lastChunkDuration < MIN_CHUNK_DURATION) {
+        logger.debug(
+          `Last chunk too short (${lastChunkDuration.toFixed(2)}s < ${MIN_CHUNK_DURATION}s), merging with previous chunk.`
+        );
+        // Remove last chunk and extend previous chunk to total duration
+        chunks.pop();
+        chunks[chunks.length - 1].end = totalDuration;
+      }
+    }
+
     logger.debug(`Segmented audio into ${chunks.length} chunks.`);
 
     // Return both chunks and VAD segments for caching
