@@ -71,6 +71,7 @@ export interface ElectronAPI {
     error?: string;
     canceled?: boolean;
   }>;
+  saveDebugArtifact: (name: string, content: string) => Promise<boolean>;
   selectWhisperModel: () => Promise<{
     success: boolean;
     path?: string;

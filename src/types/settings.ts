@@ -18,6 +18,7 @@ export interface DebugSettings {
   ffmpegPath?: string;
   ffprobePath?: string;
   whisperPath?: string;
+  saveIntermediateArtifacts?: boolean;
 }
 
 export interface AppSettings {

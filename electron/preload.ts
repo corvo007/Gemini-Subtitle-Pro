@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveSubtitleDialog: (defaultName: string, content: string, format: 'srt' | 'ass') =>
     ipcRenderer.invoke('save-subtitle-dialog', defaultName, content, format),
   saveLogsDialog: (content: string) => ipcRenderer.invoke('save-logs-dialog', content),
+  saveDebugArtifact: (name: string, content: string) =>
+    ipcRenderer.invoke('debug:save-artifact', name, content),
 
   // New: Local Whisper APIs
   selectWhisperModel: () => ipcRenderer.invoke('select-whisper-model'),

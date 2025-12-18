@@ -277,6 +277,34 @@ ipcMain.handle('save-logs-dialog', async (_event, content: string) => {
   }
 });
 
+// IPC Handler: Save Debug Artifact (Invisible to user, for debugging)
+ipcMain.handle('debug:save-artifact', async (_event, name: string, content: string) => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const artifactsDir = path.join(userDataPath, 'logs', 'artifacts', dateStr);
+
+    if (!fs.existsSync(artifactsDir)) {
+      await fs.promises.mkdir(artifactsDir, { recursive: true });
+    }
+
+    // Sanitize filename to prevent issues
+    const safeName = name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    // Add timestamp to filename to prevent overwrites and sort by time
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}-${String(now.getMilliseconds()).padStart(3, '0')}`;
+    const filename = `${timeStr}_${safeName}`;
+    const filePath = path.join(artifactsDir, filename);
+
+    await fs.promises.writeFile(filePath, content, 'utf-8');
+    // Don't log success to avoid spamming logs
+    return true;
+  } catch (error: any) {
+    console.error(`[Main] Failed to save debug artifact ${name}:`, error);
+    return false;
+  }
+});
+
 // IPC Handler: 提取音频（带进度回调）
 ipcMain.handle(
   'extract-audio-ffmpeg',
