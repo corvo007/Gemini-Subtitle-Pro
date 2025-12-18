@@ -51,8 +51,8 @@ flowchart TB
 
         subgraph GOOGLE["Google AI"]
             GEMINI_SDK["@google/genai 1.30<br/>Gemini SDK"]
-            FLASH["Gemini 2.5 Flash<br/>翻译/校对"]
-            PRO["Gemini 3.0 Pro<br/>术语/说话人"]
+            FLASH["Gemini 3 Flash<br/>翻译/校对"]
+            PRO["Gemini 3 Pro<br/>术语/说话人"]
         end
 
         subgraph OPENAI_SVC["OpenAI"]
@@ -390,7 +390,7 @@ flowchart TB
         direction TB
 
         subgraph GLOSSARY["📚 术语提取 Pipeline"]
-            H["glossaryPromise<br/>(Gemini 3.0 Pro)"]
+            H["glossaryPromise<br/>(Gemini 3 Pro)"]
             H --> I[选择采样片段]
             I --> J["并发提取术语<br/>(concurrencyPro=2)"]
             J --> K[Search Grounding 验证]
@@ -399,7 +399,7 @@ flowchart TB
         end
 
         subgraph SPEAKER["🗣️ 说话人识别 Pipeline"]
-            N["speakerProfilePromise<br/>(Gemini 3.0 Pro)"]
+            N["speakerProfilePromise<br/>(Gemini 3 Pro)"]
             N --> O["智能音频采样<br/>(复用 VAD Segments)"]
             O --> P[提取说话人档案]
             P --> Q["SpeakerProfile[]<br/>{name, style, tone, catchphrases}"]
@@ -557,7 +557,7 @@ sequenceDiagram
 sequenceDiagram
     participant Pipeline as generateSubtitles
     participant Glossary as extractGlossaryFromAudio
-    participant Pro as Gemini 3.0 Pro
+    participant Pro as Gemini 3 Pro
     participant State as GlossaryState
     participant UI as 用户界面
     participant Chunks as Chunk Workers
@@ -844,10 +844,10 @@ await mapInParallel(chunks, async (chunk) => {
 
 ### 模型选择策略
 
-| 模型             | 用途                | 并发数 | 特点                     |
-| ---------------- | ------------------- | ------ | ------------------------ |
-| Gemini 2.5 Flash | 翻译/校对           | 5      | 快速、低成本             |
-| Gemini 3.0 Pro   | 术语提取/说话人识别 | 2      | 多模态、Search Grounding |
+| 模型           | 用途                | 并发数 | 特点                     |
+| -------------- | ------------------- | ------ | ------------------------ |
+| Gemini 3 Flash | 翻译/校对           | 5      | 快速、低成本             |
+| Gemini 3 Pro   | 术语提取/说话人识别 | 2      | 多模态、Search Grounding |
 
 ### 重试机制
 
@@ -905,7 +905,7 @@ flowchart TB
 
         subgraph GLOSSARY_EXTRACT["术语提取"]
             SAMPLE_SELECT --> AUDIO_SAMPLE1["采样音频"]
-            AUDIO_SAMPLE1 --> GEMINI_PRO1["Gemini 3.0 Pro<br/>+ Search Grounding"]
+            AUDIO_SAMPLE1 --> GEMINI_PRO1["Gemini 3 Pro<br/>+ Search Grounding"]
             GEMINI_PRO1 --> RAW_TERMS["GlossaryExtractionResult[]"]
             RAW_TERMS --> USER_CONFIRM["用户确认"]
             USER_CONFIRM --> FINAL_GLOSSARY["最终术语表<br/>GlossaryItem[]"]
@@ -913,7 +913,7 @@ flowchart TB
 
         subgraph SPEAKER_EXTRACT["说话人提取"]
             SAMPLE_SELECT --> AUDIO_SAMPLE2["采样音频"]
-            AUDIO_SAMPLE2 --> GEMINI_PRO2["Gemini 3.0 Pro"]
+            AUDIO_SAMPLE2 --> GEMINI_PRO2["Gemini 3 Pro"]
             GEMINI_PRO2 --> SPEAKER_PROFILES["SpeakerProfile[]<br/>{id, name, style, tone}"]
         end
     end
@@ -928,10 +928,10 @@ flowchart TB
         FINAL_GLOSSARY -.-> WAIT_DEPS
         SPEAKER_PROFILES -.-> WAIT_DEPS
 
-        WAIT_DEPS --> REFINEMENT["Gemini 2.5 Flash<br/>校对 & 时间轴修正"]
+        WAIT_DEPS --> REFINEMENT["Gemini 3 Flash<br/>校对 & 时间轴修正"]
         REFINEMENT --> REFINED_SUBS["校对字幕<br/>+ speaker 标注"]
 
-        REFINED_SUBS --> TRANSLATION["Gemini 2.5 Flash<br/>翻译"]
+        REFINED_SUBS --> TRANSLATION["Gemini 3 Flash<br/>翻译"]
         TRANSLATION --> TRANSLATED_SUBS["双语字幕<br/>{original, translated, speaker}[]"]
     end
 

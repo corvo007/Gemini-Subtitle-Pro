@@ -34,7 +34,7 @@
 
     **⚠️ 注意事项：**
     1. 如果需要使用本地 Whisper 模型的话，请参考下一节进行配置。
-    2. 你需要保证你的 API KEY 能请求 **Gemini 2.5 Flash** 及 **Gemini 3 Pro** 模型。推荐使用公益站/中转站的API KEY（个人推荐：[云雾API](https://yunwu.ai/register?aff=wmHr)）。
+    2. 你需要保证你的 API KEY 能请求 **Gemini 3 Flash** 及 **Gemini 3 Pro** 模型。推荐使用公益站/中转站的API KEY（个人推荐：[云雾API](https://yunwu.ai/register?aff=wmHr)）。
     3. 为了保证翻译质量，目前暂不支持自定义模型。
 
 5.  Enjoy！
@@ -102,8 +102,8 @@
 
 **技术特点**：根据不同模型动态调整并发数
 
-- Gemini 2.5 Flash：并发数 5（速度优先）
-- Gemini 3.0 Pro：并发数 2（避免超限）
+- Gemini 3 Flash：并发数 5（速度优先）
+- Gemini 3 Pro：并发数 2（避免超限）
 
 **效果**：30 分钟视频约 8-10 分钟处理完成
 

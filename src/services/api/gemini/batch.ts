@@ -401,7 +401,7 @@ async function processBatch(
 
     // Model Selection:
     // Proofread -> Gemini 3 Pro (Best quality) + Search Grounding
-    // Fix Timestamps / Retranslate -> Gemini 2.5 Flash (Fast/Efficient)
+    // Fix Timestamps / Retranslate -> Gemini Flash series model (Fast/Efficient)
     const model =
       mode === 'proofread' ? STEP_MODELS.batchProofread : STEP_MODELS.batchFixTimestamps;
     const stepConfig =
@@ -545,7 +545,7 @@ export const runBatchOperation = async (
 
   // Determine concurrency based on mode
   // Proofread uses Gemini 3 Pro (Low RPM) -> Concurrency PRO
-  // Others use Gemini 2.5 Flash (High RPM) -> Concurrency FLASH
+  // Others use Gemini Flash series model (High RPM) -> Concurrency FLASH
   const concurrency =
     mode === 'proofread' ? settings.concurrencyPro || 2 : settings.concurrencyFlash || 5;
 

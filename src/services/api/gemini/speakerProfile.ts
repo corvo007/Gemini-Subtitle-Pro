@@ -39,7 +39,7 @@ export interface SpeakerProfileSet {
 }
 
 /**
- * Extracts speaker profiles from audio using Gemini 3.0 Pro.
+ * Extracts speaker profiles from audio using Gemini 3 Pro.
  *
  * @param ai GoogleGenAI instance
  * @param audioBlob Sampled audio blob

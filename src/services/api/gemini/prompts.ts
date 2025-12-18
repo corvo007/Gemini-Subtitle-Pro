@@ -276,7 +276,7 @@ For each subtitle line:
 If you encounter a voice that does NOT match ANY profile AND you are >90% confident it's a NEW speaker:
 - Assign a new ID: "Speaker ${speakerProfiles.length + 1}", "Speaker ${speakerProfiles.length + 2}", etc.
 - Add brief characteristics in a comment field (you can use "comment" for this)
-- This should be RARE - Gemini 3.0 Pro is very thorough
+- This should be RARE - Gemini 3 Pro is very thorough
 
 **QUALITY VERIFICATION**:
 ✓ Every subtitle has a "speaker" field
@@ -707,7 +707,7 @@ export const getSpeakerProfileExtractionPrompt = (
 **CONTEXT**:
 - Genre: ${genre}
 - Audio: Representative samples from different time periods
-- Purpose: Create voice fingerprint database for Gemini 2.5 Flash to identify speakers
+- Purpose: Create voice fingerprint database for Gemini Flash to identify speakers
 - **Tools Available**: Google Search (use to verify public figures if names are mentioned)${speakerCountHint}
 
 **SPEAKER PROFILE EXTRACTION**:
