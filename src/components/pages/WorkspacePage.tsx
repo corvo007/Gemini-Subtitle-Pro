@@ -484,8 +484,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                       />
                     </div>
 
-                    {/* Speaker Count Hints - Only visible when diarization enabled */}
-                    {settings.enableDiarization && (
+                    {/* Speaker Count Hints - Only visible when diarization enabled AND in new project mode */}
+                    {activeTab === 'new' && settings.enableDiarization && (
                       <div className="flex flex-col space-y-1.5 pt-2 border-t border-slate-700/50">
                         <span className="text-slate-500 text-xs flex items-center gap-1.5">
                           <Users className="w-3.5 h-3.5" />
