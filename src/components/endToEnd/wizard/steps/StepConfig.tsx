@@ -181,7 +181,13 @@ export function StepConfig({
                   label="启用说话人预分析 (实验性)"
                   description="在生成字幕前预先分析音频以识别说话人数量和声音特征，可提高区分准确度，但会增加耗时"
                   checked={!!config.enableSpeakerPreAnalysis}
-                  onChange={(v) => onConfigChange({ enableSpeakerPreAnalysis: v })}
+                  onChange={(v) =>
+                    onConfigChange({
+                      enableSpeakerPreAnalysis: v,
+                      // Auto-disable styled translation when pre-analysis is disabled
+                      ...(v ? {} : { useSpeakerStyledTranslation: false }),
+                    })
+                  }
                 />
                 <ToggleOptionInline
                   label="导出时包含说话人名称"
@@ -197,9 +203,14 @@ export function StepConfig({
                 />
                 <ToggleOptionInline
                   label="角色风格化翻译"
-                  description="根据说话人特征调整翻译语气（正式/口语）"
+                  description={
+                    config.enableSpeakerPreAnalysis
+                      ? '根据说话人特征调整翻译语气（正式/口语）'
+                      : '需要启用「说话人预分析」才能使用此功能'
+                  }
                   checked={!!config.useSpeakerStyledTranslation}
                   onChange={(v) => onConfigChange({ useSpeakerStyledTranslation: v })}
+                  disabled={!config.enableSpeakerPreAnalysis}
                 />
                 {/* Min/Max Speaker Count */}
                 <div className="pt-3">

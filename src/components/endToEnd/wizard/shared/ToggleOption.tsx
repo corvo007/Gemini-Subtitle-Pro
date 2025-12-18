@@ -35,24 +35,32 @@ export function ToggleOptionInline({
   description,
   checked,
   onChange,
+  disabled = false,
 }: {
   label: string;
   description?: string;
   checked: boolean;
   onChange: (value: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <div
-      className="flex items-center justify-between py-2 cursor-pointer group"
-      onClick={() => onChange(!checked)}
+      className={`flex items-center justify-between py-2 group ${
+        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+      }`}
+      onClick={() => !disabled && onChange(!checked)}
     >
       <div className="flex-1">
-        <div className="text-sm text-white group-hover:text-violet-300 transition-colors">
+        <div
+          className={`text-sm text-white ${
+            disabled ? '' : 'group-hover:text-violet-300'
+          } transition-colors`}
+        >
           {label}
         </div>
         {description && <div className="text-xs text-white/40">{description}</div>}
       </div>
-      <Toggle checked={checked} onChange={onChange} color="violet" size="sm" />
+      <Toggle checked={checked} onChange={onChange} color="violet" size="md" disabled={disabled} />
     </div>
   );
 }

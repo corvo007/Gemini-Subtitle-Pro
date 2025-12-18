@@ -27,8 +27,8 @@ const sizeClasses = {
   md: {
     track: 'w-10 h-5',
     knob: 'w-3 h-3',
-    knobChecked: 'left-6',
-    knobUnchecked: 'left-1',
+    knobChecked: 'translate-x-6',
+    knobUnchecked: 'translate-x-1',
     knobTop: 'top-1',
   },
   lg: {
@@ -48,7 +48,6 @@ export const Toggle: React.FC<ToggleProps> = ({
   size = 'md',
 }) => {
   const sizeConfig = sizeClasses[size];
-  const usesTransform = size === 'sm' || size === 'lg';
 
   return (
     <button
@@ -67,14 +66,9 @@ export const Toggle: React.FC<ToggleProps> = ({
           'absolute',
           sizeConfig.knobTop,
           sizeConfig.knob,
-          'rounded-full bg-white transition-transform',
-          usesTransform && (checked ? sizeConfig.knobChecked : sizeConfig.knobUnchecked)
+          'rounded-full bg-white transition-transform duration-200',
+          checked ? sizeConfig.knobChecked : sizeConfig.knobUnchecked
         )}
-        style={
-          !usesTransform
-            ? { left: checked ? sizeConfig.knobChecked : sizeConfig.knobUnchecked }
-            : undefined
-        }
       />
     </button>
   );

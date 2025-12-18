@@ -167,7 +167,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       >
                         <Toggle
                           checked={settings.enableSpeakerPreAnalysis || false}
-                          onChange={(v) => updateSetting('enableSpeakerPreAnalysis', v)}
+                          onChange={(v) => {
+                            updateSetting('enableSpeakerPreAnalysis', v);
+                            // Auto-disable styled translation when pre-analysis is disabled
+                            if (!v) {
+                              updateSetting('useSpeakerStyledTranslation', false);
+                            }
+                          }}
                         />
                       </SettingRow>
                     )}
@@ -196,12 +202,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </SettingRow>
                         <SettingRow
                           label="角色风格化翻译"
-                          description="根据说话人特征调整翻译语气（正式/口语）"
+                          description={
+                            settings.enableSpeakerPreAnalysis
+                              ? '根据说话人特征调整翻译语气（正式/口语）'
+                              : '需要启用「说话人预分析」才能使用此功能'
+                          }
                           indented
+                          disabled={!settings.enableSpeakerPreAnalysis}
                         >
                           <Toggle
                             checked={settings.useSpeakerStyledTranslation || false}
                             onChange={(v) => updateSetting('useSpeakerStyledTranslation', v)}
+                            disabled={!settings.enableSpeakerPreAnalysis}
                           />
                         </SettingRow>
                       </div>
