@@ -1,6 +1,7 @@
 import { GlossaryItem } from '@/types/glossary';
 import { SpeakerProfile } from '@/services/api/gemini/speakerProfile';
 import { formatTime } from '@/services/subtitle/time';
+import { STEP_CONFIGS, StepName } from '@/config/models';
 
 // --- Constants ---
 
@@ -35,6 +36,60 @@ const FILLER_WORDS_PROMPT = FILLER_WORDS.join(', ');
 
 /** Model name for display in prompts */
 const SENIOR_MODEL_NAME = 'Gemini 3 Pro Thinking';
+
+// --- Search Enhancement Prompts ---
+
+/**
+ * Check if search is enabled for a specific step
+ */
+function isSearchEnabled(step: StepName): boolean {
+  return STEP_CONFIGS[step]?.useSearch === true;
+}
+
+/**
+ * Get search-enhanced prompt section for translation tasks
+ * Returns sub-items to be appended under the translation quality rule
+ */
+function getSearchEnhancedTranslationPrompt(step: StepName): string {
+  if (!isSearchEnabled(step)) return '';
+  return `
+    → **[SEARCH]** For proper nouns, names, places, and specialized terms, use Google Search to verify standard Chinese translations.
+    → **[SEARCH]** Search for context when translating cultural references, idioms, or slang to ensure natural Chinese equivalents.
+    → **[SEARCH]** When unsure about the correct translation, search for authoritative sources rather than guessing.`;
+}
+
+/**
+ * Get search-enhanced prompt section for terminology verification
+ * Returns a sub-item to be appended under the terminology rule
+ */
+function getSearchEnhancedTerminologyPrompt(step: StepName): string {
+  if (!isSearchEnabled(step)) return '';
+  return `
+    → **[SEARCH]** Use search to verify glossary translations are current and accurate.`;
+}
+
+/**
+ * Get search-enhanced prompt section for proofreading tasks
+ * Returns sub-items to be appended under the translation quality rule
+ */
+function getSearchEnhancedProofreadPrompt(step: StepName): string {
+  if (!isSearchEnabled(step)) return '';
+  return `
+    → **[SEARCH]** Search to confirm correct Chinese translations for names, places, and organizations.
+    → **[SEARCH]** Verify specialized terms, technical jargon, and domain-specific vocabulary.
+    → **[SEARCH]** If a translation looks wrong, search to verify and correct it.`;
+}
+
+/**
+ * Get search-enhanced prompt section for refinement tasks
+ * Returns sub-items to be appended under the accuracy rule
+ */
+function getSearchEnhancedRefinementPrompt(step: StepName): string {
+  if (!isSearchEnabled(step)) return '';
+  return `
+            → **[SEARCH]** Search to verify correct spelling of proper nouns (names, places, brands).
+            → **[SEARCH]** Verify specialized terminology and technical jargon heard in audio.`;
+}
 
 // --- Helper Functions ---
 
@@ -157,7 +212,7 @@ export const getSystemInstructionWithDiarization = (
     if (speakerProfiles && speakerProfiles.length > 0) {
       // **SCENARIO A: WITH PRE-ANALYZED PROFILES**
       diarizationSection = `
-[P1.5 - SPEAKER IDENTIFICATION] Diarization (ENABLED - WITH PROFILE DATABASE)
+[P2 - SPEAKER IDENTIFICATION] Diarization (ENABLED - WITH PROFILE DATABASE)
 
 **IMPORTANT**: A senior AI (${SENIOR_MODEL_NAME}) has pre-analyzed this audio and identified ${speakerProfiles.length} speakers.
 Your task is to MATCH voices to these profiles.${speakerCountHint}
@@ -232,7 +287,7 @@ If you encounter a voice that does NOT match ANY profile AND you are >90% confid
     } else {
       // **SCENARIO B: NO PROFILES (REAL-TIME DETECTION)**
       diarizationSection = `
-[P1.5 - SPEAKER IDENTIFICATION] Audio Diarization
+[P2 - SPEAKER IDENTIFICATION] Audio Diarization
 → **CRITICAL TASK**: Identify and label DISTINCT SPEAKERS in the audio
 → **OUTPUT FORMAT**: Add "speaker" field to EVERY subtitle entry
 → **LABELING**: Use "Speaker 1", "Speaker 2", "Speaker 3", etc.${speakerCountHint}
@@ -311,16 +366,16 @@ TASK RULES (Priority Order):
 
 ${diarizationSection}
 
-[P2 - READABILITY] Segment Splitting
+[P3 - READABILITY] Segment Splitting
 → ${getSegmentSplittingRule('translation')}
 ${getTimestampSplittingInstructions()}
 
-[P3 - CONTENT ACCURACY] Audio Content Verification
+[P4 - CONTENT ACCURACY] Audio Content Verification
 → If you hear CLEAR, MEANINGFUL speech NOT in subtitles → ADD new subtitle entries
 → Do NOT add: background noise, music lyrics, ambient sounds, or unintelligible speech
 → ${getFillerWordsRule()} from 'text_original'
 
-[P4 - ABSOLUTE RULE] Translation Preservation
+[P5 - ABSOLUTE RULE] Translation Preservation
 → DO NOT modify 'text_translated' field under ANY circumstances
 → Even if translation is incorrect → LEAVE IT UNCHANGED
 → Your job is TIMING and SPEAKER IDENTIFICATION, not translation
@@ -428,14 +483,9 @@ export const getSystemInstruction = (
     → **CONTEXT AWARENESS**: Use the provided genre context to determine tone and style.
     → **COMPLETENESS**: Ensure every meaningful part of the original text is represented.
     → **NO HALLUCINATIONS**: Do not invent information not present in the source.
-
-    [P1.5 - CONTEXT-AWARE TRANSLATION (STRICT BOUNDARIES)]
-    → **MULTI-LINE CONTEXT**: Read the previous and next 1-2 lines to understand context. This helps with:
-       - Resolving ambiguous pronouns (e.g., "it", "that")
-       - Understanding incomplete sentences split across lines
-       - Maintaining consistent tone and terminology across related lines
-    → **STRICT BOUNDARY RULE**: Use this context for **UNDERSTANDING** only. **NEVER** merge segments or move text between lines.
-    → **PARTIAL SENTENCES**: If a sentence is split across lines, translate ONLY the specific fragment in the current line. Do not "complete" it using text from the next line.
+    → **MULTI-LINE CONTEXT**: Read the previous and next 1-2 lines to understand context (for pronouns, incomplete sentences, tone consistency).
+    → **STRICT BOUNDARY RULE**: Use context for UNDERSTANDING only. NEVER merge segments or move text between lines.
+    → **PARTIAL SENTENCES**: If a sentence is split across lines, translate ONLY the fragment in the current line.${getSearchEnhancedTranslationPrompt('translation')}
 
     [P2 - CLEANUP & REFINEMENT]
     → **REMOVE FILLERS**: Ignore stuttering, hesitation, and meaningless fillers (e.g., "uh", "um", "ah", "eto", "ano", "呃", "那个").
@@ -443,7 +493,7 @@ export const getSystemInstruction = (
 
     [P3 - TERMINOLOGY]
     → **GLOSSARY**: Strictly follow the provided glossary for specific terms.
-    → **CONSISTENCY**: Maintain consistent terminology for names and places.
+    → **CONSISTENCY**: Maintain consistent terminology for names and places.${getSearchEnhancedTerminologyPrompt('translation')}
 
     OUTPUT REQUIREMENTS:
     ✓ Valid JSON matching input structure
@@ -549,8 +599,8 @@ Speaker (formal): "すごいですね" → "真是令人印象深刻。"
     → Improve awkward or unnatural Chinese phrasing
     → Ensure ALL 'text_translated' fields are Simplified Chinese (never English, Japanese, or other languages)
     → Apply glossary terms consistently
-    → Verify translation captures the full intent of 'text_original'
-    
+    → Verify translation captures the full intent of 'text_original'${getSearchEnhancedProofreadPrompt('batchProofread')}
+
     [P2 - CONTENT ACCURACY] Audio Verification
     → Listen to audio carefully
     → If you hear CLEAR, MEANINGFUL speech NOT in the subtitles → ADD new subtitle entries
@@ -794,21 +844,16 @@ export const getTranslationBatchPrompt = (batchLength: number, payload: any[]): 
     → Ensure no meaning is lost from source text
     → ID matching is critical - do not skip any ID
     → Output exactly ${batchLength} items in the response
-    
-    [P1.5 - CONTEXT-AWARE TRANSLATION (STRICT BOUNDARIES)]
-    → **MULTI-LINE CONTEXT**: Read the previous and next 1-2 lines to understand context. This helps with:
-       - Resolving ambiguous pronouns (e.g., "it", "that")
-       - Understanding incomplete sentences split across lines
-       - Maintaining consistent tone
-    → **STRICT BOUNDARY RULE**: Use this context for **UNDERSTANDING** only. **NEVER** merge segments or move text between lines.
-    → **PARTIAL SENTENCES**: If a sentence is split across lines, translate ONLY the specific fragment in the current line. Do not "complete" it using text from the next line.
+    → **MULTI-LINE CONTEXT**: Read the previous and next 1-2 lines to understand context (for pronouns, incomplete sentences, tone consistency).
+    → **STRICT BOUNDARY RULE**: Use context for UNDERSTANDING only. NEVER merge segments or move text between lines.
+    → **PARTIAL SENTENCES**: If a sentence is split across lines, translate ONLY the fragment in the current line.
     
     [P2 - QUALITY] Translation Excellence
     → ${getFillerWordsRule()} and stuttering
     → Produce fluent, natural Simplified Chinese
     → Use terminology from system instruction if provided
-    → Maintain appropriate tone and style
-    
+    → Maintain appropriate tone and style${getSearchEnhancedTranslationPrompt('translation')}
+
     [P3 - OUTPUT] Format Requirements
     → 'text_translated' MUST BE in Simplified Chinese
     → Never output English, Japanese, or other languages in 'text_translated'
@@ -850,7 +895,6 @@ export const getFixTimestampsPrompt = (params: FixTimestampsPromptParams): strin
     → Output must have EXACTLY the same number of items as input
     `
     : `
-    [P1.5 - PRIORITY] Comment Lines First
     → If a line has a "comment" field, prioritize fixing it according to the user's instruction
     
     [P2 - MANDATORY] Segment Splitting for Readability
@@ -932,15 +976,13 @@ export const getProofreadPrompt = (params: ProofreadPromptParams): string => `
     → Fix mistranslations and missed meanings
     → Improve awkward or unnatural Chinese phrasing
     → Ensure ALL 'text_translated' are fluent Simplified Chinese (never English/Japanese/etc.)
-    → Verify translation captures full intent of 'text_original'
-    
+    → Verify translation captures full intent of 'text_original'${getSearchEnhancedProofreadPrompt('batchProofread')}
+
     [P2 - CONTENT] Audio Content Verification
     → Listen to audio carefully
     → If you hear CLEAR, MEANINGFUL speech NOT in subtitles → ADD new subtitle entries
     → Do NOT add: background noise, music lyrics, ambient sounds, or unintelligible speech
     → Verify 'text_original' matches what was actually said
-
-    [P2.5 - CONTEXT-AWARE TRANSLATION]
     → **MULTI-LINE CONTEXT**: Before refining each line, READ the previous and next 1-2 lines to understand the full context.
     → **SENTENCE CONTINUITY**: Check for sentences spanning multiple subtitles to ensure logical flow.
     
@@ -991,7 +1033,7 @@ export const getRefinementPrompt = (params: RefinementPromptParams): string => `
             → Fix misrecognized words and phrases in 'text'
             → Verify timing accuracy of 'start' and 'end' timestamps
             ${params.glossaryInfo ? `→ Pay special attention to key terminology listed below` : ''}
-
+${getSearchEnhancedRefinementPrompt('refinement')}
             [P2 - READABILITY] Segment Splitting
             → ${getSegmentSplittingRule()}
             ${getTimestampSplittingInstructions()}
