@@ -49,35 +49,27 @@ function isSearchEnabled(step: StepName): boolean {
 /**
  * Get search-enhanced prompt section for translation tasks
  * Returns sub-items to be appended under the translation quality rule
+ * NOTE: Glossary terms have absolute priority - search is only for terms NOT in glossary
  */
 function getSearchEnhancedTranslationPrompt(step: StepName): string {
   if (!isSearchEnabled(step)) return '';
   return `
-    → **[SEARCH]** For proper nouns, names, places, and specialized terms, use Google Search to verify standard Chinese translations.
-    → **[SEARCH]** Search for context when translating cultural references, idioms, or slang to ensure natural Chinese equivalents.
-    → **[SEARCH]** When unsure about the correct translation, search for authoritative sources rather than guessing.`;
-}
-
-/**
- * Get search-enhanced prompt section for terminology verification
- * Returns a sub-item to be appended under the terminology rule
- */
-function getSearchEnhancedTerminologyPrompt(step: StepName): string {
-  if (!isSearchEnabled(step)) return '';
-  return `
-    → **[SEARCH]** Use search to verify glossary translations are current and accurate.`;
+    → **[SEARCH]** For terms NOT in glossary: use Google Search to verify standard Chinese translations for proper nouns, names, and places.
+    → **[SEARCH]** Search for cultural references, idioms, or slang to find natural Chinese equivalents (glossary terms always take priority).
+    → **[SEARCH]** When unsure about a translation AND it's not in the glossary, search for authoritative sources.`;
 }
 
 /**
  * Get search-enhanced prompt section for proofreading tasks
  * Returns sub-items to be appended under the translation quality rule
+ * NOTE: Glossary terms have absolute priority - search is only for terms NOT in glossary
  */
 function getSearchEnhancedProofreadPrompt(step: StepName): string {
   if (!isSearchEnabled(step)) return '';
   return `
-    → **[SEARCH]** Search to confirm correct Chinese translations for names, places, and organizations.
-    → **[SEARCH]** Verify specialized terms, technical jargon, and domain-specific vocabulary.
-    → **[SEARCH]** If a translation looks wrong, search to verify and correct it.`;
+    → **[SEARCH]** For terms NOT in glossary: search to verify Chinese translations for names, places, and organizations.
+    → **[SEARCH]** Verify specialized terms not covered by glossary (glossary terms always take priority).
+    → **[SEARCH]** If a non-glossary translation looks wrong, search to verify and correct it.`;
 }
 
 /**
@@ -87,7 +79,7 @@ function getSearchEnhancedProofreadPrompt(step: StepName): string {
 function getSearchEnhancedRefinementPrompt(step: StepName): string {
   if (!isSearchEnabled(step)) return '';
   return `
-            → **[SEARCH]** Search to verify correct spelling of proper nouns (names, places, brands).
+            → **[SEARCH]** Search to verify correct spelling of proper nouns (names, places, brands) not in glossary.
             → **[SEARCH]** Verify specialized terminology and technical jargon heard in audio.`;
 }
 
@@ -488,7 +480,7 @@ export const getSystemInstruction = (
 
     [P3 - TERMINOLOGY]
     → **GLOSSARY**: Strictly follow the provided glossary for specific terms.
-    → **CONSISTENCY**: Maintain consistent terminology for names and places.${getSearchEnhancedTerminologyPrompt('translation')}
+    → **CONSISTENCY**: Maintain consistent terminology for names and places.
 
     OUTPUT REQUIREMENTS:
     ✓ Valid JSON matching input structure
