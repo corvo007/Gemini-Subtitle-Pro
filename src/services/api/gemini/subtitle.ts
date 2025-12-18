@@ -25,6 +25,7 @@ import {
   getRefinementPrompt,
 } from '@/services/api/gemini/prompts';
 import { parseGeminiResponse, cleanNonSpeechAnnotations } from '@/services/subtitle/parser';
+import { generateSrtContent } from '@/services/subtitle/generator';
 import { mapInParallel, Semaphore } from '@/services/utils/concurrency';
 import { logger } from '@/services/utils/logger';
 import { calculateDetailedCost } from '@/services/api/gemini/pricing';
@@ -172,6 +173,11 @@ export const generateSubtitles = async (
     logger.info('Fixed Segmentation Results', { count: chunksParams.length, chunks: chunksParams });
   }
 
+  // Intermediate results storage for full recording
+  const whisperChunksMap = new Map<number, SubtitleItem[]>();
+  const refinedChunksMap = new Map<number, SubtitleItem[]>();
+  const translatedChunksMap = new Map<number, SubtitleItem[]>();
+
   // PIPELINE CONCURRENCY CONFIGURATION
   // We separate the "Transcription" concurrency from the "Overall Pipeline" concurrency.
   // This allows chunks to proceed to Refinement/Translation (which use Gemini)
@@ -206,8 +212,7 @@ export const generateSubtitles = async (
           {
             term: 'Mock Term',
             translation: '模拟术语',
-            category: 'Mock Category',
-            confidence: 'high',
+            notes: 'Mock notes for validation',
           } as any,
         ],
         confidence: 'high',
@@ -345,6 +350,26 @@ export const generateSubtitles = async (
     glossaryHandlingPromise = Promise.resolve(settings.glossary || []);
   }
 
+  // DEBUG: Save Glossary Artifact
+  if (settings.debug?.saveIntermediateArtifacts && window.electronAPI?.saveDebugArtifact) {
+    glossaryHandlingPromise.then(async (glossary) => {
+      try {
+        await window.electronAPI.saveDebugArtifact(
+          'glossary_final.json',
+          JSON.stringify(glossary, null, 2)
+        );
+        if (extractedGlossaryResults) {
+          await window.electronAPI.saveDebugArtifact(
+            'glossary_extraction_raw.json',
+            JSON.stringify(extractedGlossaryResults, null, 2)
+          );
+        }
+      } catch (e) {
+        logger.warn('Failed to save glossary artifact', e);
+      }
+    });
+  }
+
   // Wrap glossary promise with GlossaryState for non-blocking access
   const glossaryState = new GlossaryState(glossaryHandlingPromise);
   logger.info('🔄 GlossaryState created - chunks can now access glossary independently');
@@ -363,6 +388,43 @@ export const generateSubtitles = async (
 
     speakerProfilePromise = (async () => {
       try {
+        const isDebug = window.electronAPI?.isDebug;
+        if (isDebug && settings.debug?.mockGemini) {
+          logger.info('⚠️ [MOCK] Speaker Profile Analysis ENABLED. Returning mock profiles.');
+          // Mock delay
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          const mockProfiles: SpeakerProfile[] = [
+            {
+              id: 'Mock Speaker 1',
+              characteristics: {
+                name: 'Mock Speaker 1',
+                gender: 'male',
+                pitch: 'medium',
+                speed: 'normal',
+                accent: 'standard',
+                tone: 'neutral',
+              },
+              sampleQuotes: ['This is a mock quote for speaker 1.'],
+              confidence: 0.95,
+            },
+            {
+              id: 'Mock Speaker 2',
+              characteristics: {
+                name: 'Mock Speaker 2',
+                gender: 'female',
+                pitch: 'high',
+                speed: 'fast',
+                accent: 'standard',
+                tone: 'energetic',
+              },
+              sampleQuotes: ['This is a mock quote for speaker 2.'],
+              confidence: 0.88,
+            },
+          ];
+          return mockProfiles;
+        }
+
         // 1. Intelligent Sampling (returns blob and duration)
         const { blob: sampledAudioBlob, duration } = await intelligentAudioSampling(
           audioBuffer,
@@ -410,6 +472,24 @@ export const generateSubtitles = async (
         return [];
       }
     })();
+  }
+
+  // DEBUG: Save Speaker Profile Artifact
+  if (
+    settings.debug?.saveIntermediateArtifacts &&
+    window.electronAPI?.saveDebugArtifact &&
+    speakerProfilePromise
+  ) {
+    speakerProfilePromise.then(async (profiles) => {
+      try {
+        await window.electronAPI.saveDebugArtifact(
+          'speaker_profiles.json',
+          JSON.stringify(profiles, null, 2)
+        );
+      } catch (e) {
+        logger.warn('Failed to save speaker profile artifact', e);
+      }
+    });
   }
 
   // --- UNIFIED PARALLEL PIPELINE: Transcription → Wait for Glossary/Profiles → Refine & Translate ---
@@ -503,6 +583,22 @@ export const generateSubtitles = async (
           original: cleanNonSpeechAnnotations(seg.original),
         }))
         .filter((seg) => seg.original.length > 0);
+
+      // DEBUG: Save Transcription Artifact
+      if (settings.debug?.saveIntermediateArtifacts && window.electronAPI?.saveDebugArtifact) {
+        window.electronAPI
+          .saveDebugArtifact(`chunk_${index}_whisper.json`, JSON.stringify(rawSegments, null, 2))
+          .catch((e) => logger.warn(`Failed to save chunk ${index} whisper artifact`, e));
+      }
+      // Collect intermediate result
+      whisperChunksMap.set(
+        index,
+        rawSegments.map((seg) => ({
+          ...seg,
+          startTime: formatTime(timeToSeconds(seg.startTime) + start),
+          endTime: formatTime(timeToSeconds(seg.endTime) + start),
+        }))
+      ); // Adjust time to global for full SRT
 
       // Skip if no segments (after cleaning)
       if (rawSegments.length === 0) {
@@ -663,6 +759,25 @@ export const generateSubtitles = async (
           refinedSegments = [...rawSegments];
         }
 
+        // DEBUG: Save Refinement Artifact
+        if (settings.debug?.saveIntermediateArtifacts && window.electronAPI?.saveDebugArtifact) {
+          window.electronAPI
+            .saveDebugArtifact(
+              `chunk_${index}_refinement.json`,
+              JSON.stringify(refinedSegments, null, 2)
+            )
+            .catch((e) => logger.warn(`Failed to save chunk ${index} refinement artifact`, e));
+        }
+        // Collect intermediate result
+        refinedChunksMap.set(
+          index,
+          refinedSegments.map((seg) => ({
+            ...seg,
+            startTime: formatTime(timeToSeconds(seg.startTime) + start),
+            endTime: formatTime(timeToSeconds(seg.endTime) + start),
+          }))
+        ); // Adjust time to global
+
         // ===== STEP 4: TRANSLATION =====
         let finalChunkSubs: SubtitleItem[] = [];
         if (refinedSegments.length > 0) {
@@ -744,6 +859,18 @@ export const generateSubtitles = async (
           }));
         }
 
+        // DEBUG: Save Translation Artifact
+        if (settings.debug?.saveIntermediateArtifacts && window.electronAPI?.saveDebugArtifact) {
+          window.electronAPI
+            .saveDebugArtifact(
+              `chunk_${index}_translation.json`,
+              JSON.stringify(finalChunkSubs, null, 2)
+            )
+            .catch((e) => logger.warn(`Failed to save chunk ${index} translation artifact`, e));
+        }
+        // Collect intermediate result
+        translatedChunksMap.set(index, finalChunkSubs);
+
         chunkResults[i] = finalChunkSubs;
 
         // Update Intermediate Result
@@ -792,6 +919,57 @@ export const generateSubtitles = async (
   reportLog += `Grand Total Tokens: ${grandTotal.toLocaleString()}\n`;
   reportLog += `Total Est. Cost: $${totalCost.toFixed(6)}\n`;
   logger.info(reportLog);
+
+  // Save Full Intermediate SRTs
+  if (settings.debug?.saveIntermediateArtifacts && window.electronAPI?.saveDebugArtifact) {
+    try {
+      const getSortedSegments = (map: Map<number, SubtitleItem[]>) => {
+        return Array.from(map.entries())
+          .sort((a, b) => a[0] - b[0])
+          .flatMap(([, items]) => items);
+      };
+
+      const allWhisper = getSortedSegments(whisperChunksMap);
+      const allRefined = getSortedSegments(refinedChunksMap);
+      const allTranslated = getSortedSegments(translatedChunksMap);
+
+      if (allWhisper.length > 0) {
+        await window.electronAPI.saveDebugArtifact(
+          'full_whisper.srt',
+          // Force use original text as "translated" for single-language output
+          generateSrtContent(
+            allWhisper.map((s) => ({ ...s, translated: s.original })),
+            false,
+            false
+          )
+        );
+      }
+
+      if (allRefined.length > 0) {
+        await window.electronAPI.saveDebugArtifact(
+          'full_refinement.srt',
+          // Force use original text as "translated" for single-language output
+          generateSrtContent(
+            allRefined.map((s) => ({ ...s, translated: s.original })),
+            false,
+            settings.enableDiarization
+          )
+        );
+      }
+
+      if (allTranslated.length > 0) {
+        await window.electronAPI.saveDebugArtifact(
+          'full_translation.srt',
+          // Translated is bilingual, and definitely check for speakers
+          generateSrtContent(allTranslated, true, settings.enableDiarization)
+        );
+      }
+
+      logger.info('Saved full intermediate SRT artifacts.');
+    } catch (e) {
+      logger.warn('Failed to save full intermediate SRTs', e);
+    }
+  }
 
   return { subtitles: finalSubtitles, glossaryResults: extractedGlossaryResults };
 };

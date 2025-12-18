@@ -383,16 +383,14 @@ export async function generateContentWithRetry(
 
       return result;
     } catch (e: any) {
-      // Check for 429 (Resource Exhausted) or 503 (Service Unavailable)
-      const isRateLimit =
-        e.status === 429 || e.message?.includes('429') || e.response?.status === 429;
-      const isServerOverload = e.status === 503 || e.message?.includes('503');
-
-      if ((isRateLimit || isServerOverload) && i < retries - 1) {
+      // Use comprehensive retry check (covers timeout, 429, 503, 500, network errors, JSON errors)
+      if (isRetryableError(e) && i < retries - 1) {
         const delay = Math.pow(2, i) * 2000 + Math.random() * 1000; // 2s, 4s, 8s + jitter
-        logger.warn(`Gemini API Busy (${e.status}). Retrying in ${Math.round(delay)}ms...`, {
+        logger.warn(`Gemini API Error (retryable). Retrying in ${Math.round(delay)}ms...`, {
           attempt: i + 1,
+          maxRetries: retries,
           error: e.message,
+          status: e.status,
         });
         await new Promise((r) => setTimeout(r, delay));
       } else {

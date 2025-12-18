@@ -4,7 +4,8 @@
 
 // Base model definitions
 export const MODELS = {
-  FLASH: 'gemini-3-flash-preview',
+  FLASH: 'gemini-2.5-flash',
+  FLASH_NEW: 'gemini-3-flash-preview',
   PRO: 'gemini-3-pro-preview',
 } as const;
 
@@ -14,10 +15,12 @@ export type ModelName = (typeof MODELS)[keyof typeof MODELS];
 // Change these values to switch models for specific steps
 export const STEP_MODELS = {
   // Refinement: Audio -> Timestamp correction + transcript polish
+  // ⚠️ Gemini 3 Flash 存在时间戳压缩 Bug (2024-12-16)
+  // 使用 2.5 Flash 直到问题修复
   refinement: MODELS.FLASH,
 
   // Translation: Text translation
-  translation: MODELS.FLASH,
+  translation: MODELS.FLASH_NEW,
 
   // Glossary Extraction: Extract terminology from audio
   glossaryExtraction: MODELS.PRO,
@@ -53,7 +56,7 @@ export interface StepConfig {
 export const STEP_CONFIGS: Record<StepName, StepConfig> = {
   refinement: {
     thinkingLevel: 'high',
-    useSearch: true,
+    useSearch: false,
     maxOutputTokens: 65536,
   },
 
@@ -83,7 +86,7 @@ export const STEP_CONFIGS: Record<StepName, StepConfig> = {
 
   batchFixTimestamps: {
     thinkingLevel: 'high',
-    useSearch: true,
+    useSearch: false,
     maxOutputTokens: 65536,
   },
 };

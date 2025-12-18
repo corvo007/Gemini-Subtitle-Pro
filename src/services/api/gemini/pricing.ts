@@ -26,9 +26,17 @@ export interface ModelPricing {
 const HIGH_CONTEXT_THRESHOLD = 200_000;
 
 export const GEMINI_PRICING: Record<string, ModelPricing> = {
-  // Gemini Flash series model - Standard Tier
+  // Gemini Flash 2.5 model - Standard Tier
   // Text/Image/Video: $0.30, Audio: $1.00, Output: $2.50
   // Cache: Text $0.03, Audio $0.10
+  'gemini-2.5-flash': {
+    textInput: 0.3,
+    audioInput: 1.0,
+    output: 2.5,
+    cacheText: 0.03,
+    cacheAudio: 0.1,
+  },
+
   'gemini-3-flash-preview': {
     textInput: 0.5,
     audioInput: 1.0,
