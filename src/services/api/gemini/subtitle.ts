@@ -29,6 +29,7 @@ import { parseGeminiResponse, cleanNonSpeechAnnotations } from '@/services/subti
 import {
   withPostCheck,
   postProcessRefinement,
+  postProcessTranslation,
   applyIssueMarkers,
 } from '@/services/subtitle/postCheck';
 import { validateTimeline } from '@/services/subtitle/timelineValidator';
@@ -903,6 +904,10 @@ export const generateSubtitles = async (
             translated: item.translated,
             ...(chunkSettings.enableDiarization && item.speaker ? { speaker: item.speaker } : {}),
           }));
+
+          // ===== POST-CHECK: Translation (placeholder for future validation) =====
+          const { result: checkedSubs } = postProcessTranslation(finalChunkSubs);
+          finalChunkSubs = checkedSubs;
         }
 
         // DEBUG: Save Translation Artifact

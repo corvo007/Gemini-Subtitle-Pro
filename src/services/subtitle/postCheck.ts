@@ -93,6 +93,31 @@ export function applyIssueMarkers(
   return result;
 }
 
+// ===== Translation Post-Processing (Placeholder) =====
+
+/**
+ * Post-process translation output (placeholder for future implementation)
+ *
+ * Potential checks:
+ * - Missing translations
+ * - Translation length vs original
+ * - Timeline validation (optional)
+ */
+export function postProcessTranslation(
+  segments: SubtitleItem[]
+): PostProcessOutput<SubtitleItem[]> {
+  // TODO: Implement translation-specific validation
+  // For now, pass through without validation
+  return {
+    result: segments,
+    checkResult: {
+      isValid: true,
+      issues: [],
+      retryable: false,
+    },
+  };
+}
+
 // ===== Retry Wrapper =====
 
 /**
