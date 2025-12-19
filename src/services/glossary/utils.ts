@@ -6,6 +6,12 @@ import { GlossaryItem } from '@/types/glossary';
  * This is the canonical way to get glossary terms from settings
  */
 export function getActiveGlossaryTerms(settings: AppSettings): GlossaryItem[] {
+  // 1. Check runtime override first (e.g. from End-to-End mode or temp settings)
+  if (settings.glossary && settings.glossary.length > 0) {
+    return settings.glossary;
+  }
+
+  // 2. Fallback to active glossary ID lookup
   if (!settings.glossaries || !settings.activeGlossaryId) {
     return [];
   }
