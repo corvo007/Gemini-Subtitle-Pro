@@ -1,4 +1,4 @@
-import { Glossary } from '@/types/glossary';
+import { GlossaryItem, Glossary } from '@/types/glossary';
 
 export const GENRE_PRESETS = ['general', 'anime', 'movie', 'news', 'tech'];
 export type Genre = 'general' | 'anime' | 'movie' | 'news' | 'tech';
@@ -39,6 +39,12 @@ export interface AppSettings {
   concurrencyPro: number;
 
   useSmartSplit?: boolean;
+  /**
+   * Runtime-only: Active glossary terms for current operation.
+   * NOT persisted - use glossaries + activeGlossaryId instead.
+   * This field is populated at runtime when passing settings through the pipeline.
+   */
+  glossary?: GlossaryItem[];
   glossaries?: Glossary[];
   activeGlossaryId?: string | null;
   // Glossary Extraction Settings

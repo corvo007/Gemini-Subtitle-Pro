@@ -216,17 +216,15 @@ export function useEndToEndSubtitleGeneration({
           useSpeakerStyledTranslation:
             config.useSpeakerStyledTranslation ?? currentSettings.useSpeakerStyledTranslation,
           includeSpeakerInExport: config.includeSpeaker ?? currentSettings.includeSpeakerInExport,
-          // Use the selected glossary if available, set as active
+          // Use the selected glossary terms if available, otherwise get from active glossary
+          glossary:
+            selectedGlossaryTerms.length > 0
+              ? selectedGlossaryTerms
+              : getActiveGlossaryTerms(currentSettings),
           activeGlossaryId: config.selectedGlossaryId ?? currentSettings.activeGlossaryId,
           // For end-to-end mode, always auto-confirm glossary
           glossaryAutoConfirm: true,
         };
-
-        // Resolve glossary terms for this run
-        const runtimeGlossaryTerms =
-          selectedGlossaryTerms.length > 0
-            ? selectedGlossaryTerms
-            : getActiveGlossaryTerms(currentSettings);
 
         // Generate subtitles
         const { subtitles } = await generateSubtitles(
@@ -246,7 +244,7 @@ export function useEndToEndSubtitleGeneration({
               settings: settingsRef.current,
               updateSetting: updateSettingRef.current,
               targetGlossaryId: config.selectedGlossaryId,
-              fallbackTerms: runtimeGlossaryTerms,
+              fallbackTerms: mergedSettings.glossary || [],
               logPrefix: '[EndToEnd]',
             });
 
