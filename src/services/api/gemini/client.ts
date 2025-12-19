@@ -217,8 +217,16 @@ export function isRetryableError(error: any): boolean {
     return true;
   }
 
-  // Network errors (fetch failed)
-  if (msg.includes('fetch failed') || msg.includes('network') || msg.includes('ECONNREFUSED')) {
+  // Network errors (fetch failed, network changed, connection reset, etc.)
+  const msgLower = msg.toLowerCase();
+  if (
+    msgLower.includes('fetch failed') ||
+    msgLower.includes('failed to fetch') ||
+    msgLower.includes('network') ||
+    msgLower.includes('econnrefused') ||
+    msgLower.includes('econnreset') ||
+    msgLower.includes('err_network')
+  ) {
     return true;
   }
 

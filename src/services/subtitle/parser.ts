@@ -13,6 +13,7 @@ const NON_SPEECH_KEYWORDS = [
   'laughter',
   'laughing',
   'laugh',
+  'laughts',
   'music',
   'music playing',
   'applause',
@@ -29,6 +30,11 @@ const NON_SPEECH_KEYWORDS = [
   'unintelligible',
   'background noise',
   'static',
+  'ending',
+  'ending song',
+  'opening',
+  'opening song',
+  'theme song',
   // Japanese
   '笑',
   '笑い',
@@ -39,19 +45,25 @@ const NON_SPEECH_KEYWORDS = [
   '咳',
   '咳払い',
   'ため息',
+  'エンディング',
+  'オープニング',
+  'テーマ曲',
   // Chinese
   '笑声',
   '掌声',
   '音乐',
+  '片尾曲',
+  '片头曲',
+  '主题曲',
 ];
 
 // Build regex pattern from keywords
 const keywordPattern = NON_SPEECH_KEYWORDS.map((k) =>
   k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 ).join('|');
-// Match: [keyword], (keyword), *keyword* - case insensitive
+// Match: [keyword], (keyword), *keyword*, ♪keyword♪ - case insensitive
 const NON_SPEECH_PATTERN = new RegExp(
-  `\\s*(?:\\[[^\\]]*(?:${keywordPattern})[^\\]]*\\]|\\([^)]*(?:${keywordPattern})[^)]*\\)|\\*[^*]*(?:${keywordPattern})[^*]*\\*)\\s*`,
+  `\\s*(?:\\[[^\\]]*(?:${keywordPattern})[^\\]]*\\]|\\([^)]*(?:${keywordPattern})[^)]*\\)|\\*[^*]*(?:${keywordPattern})[^*]*\\*|♪[^♪]*(?:${keywordPattern})[^♪]*♪)\\s*`,
   'gi'
 );
 

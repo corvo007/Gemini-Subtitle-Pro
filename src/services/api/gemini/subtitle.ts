@@ -24,8 +24,14 @@ import {
   getSystemInstruction,
   getSystemInstructionWithDiarization,
   getRefinementPrompt,
+  getTimelineCorrectionPrompt,
 } from '@/services/api/gemini/prompts';
 import { parseGeminiResponse, cleanNonSpeechAnnotations } from '@/services/subtitle/parser';
+import {
+  validateTimeline,
+  markRegressionIssues,
+  markCorruptedRange,
+} from '@/services/subtitle/timelineValidator';
 import { generateSrtContent } from '@/services/subtitle/generator';
 import { mapInParallel, Semaphore } from '@/services/utils/concurrency';
 import { logger } from '@/services/utils/logger';
@@ -744,6 +750,131 @@ export const generateSubtitles = async (
             );
 
             refinedSegments = parseGeminiResponse(refineResponse.text, chunkDuration);
+
+            // Clean non-speech annotations again after refinement (Gemini might have re-introduced them)
+            refinedSegments = refinedSegments
+              .map((seg) => ({
+                ...seg,
+                original: cleanNonSpeechAnnotations(seg.original),
+              }))
+              .filter((seg) => seg.original.length > 0);
+
+            // ===== TIMELINE VALIDATION =====
+            const validation = validateTimeline(refinedSegments);
+
+            if (!validation.isValid) {
+              // Log independent anomalies (no retry)
+              if (validation.independentAnomalies.length > 0) {
+                logger.warn(
+                  `[Chunk ${index}] Timeline anomalies detected:`,
+                  validation.independentAnomalies
+                );
+                // Mark regression issues for frontend
+                refinedSegments = markRegressionIssues(
+                  refinedSegments,
+                  validation.independentAnomalies
+                );
+              }
+
+              // Handle corrupted ranges (retry once)
+              if (validation.corruptedRanges.length > 0) {
+                const range = validation.corruptedRanges[0]; // Handle first corrupted range
+                logger.warn(`[Chunk ${index}] Corrupted timeline range detected:`, {
+                  startId: range.startId,
+                  endId: range.endId,
+                  affectedCount: range.affectedCount,
+                });
+
+                // Prepare whisper reference for the affected range
+                const whisperRef = rawSegments
+                  .slice(
+                    Math.max(0, range.startIndex - 2),
+                    Math.min(rawSegments.length, range.endIndex + 3)
+                  )
+                  .map((s) => ({ start: s.startTime, end: s.endTime, text: s.original }));
+
+                // Generate correction prompt
+                const correctionPrompt = getTimelineCorrectionPrompt({
+                  corruptedRange: range,
+                  segments: refinedSegments.map((s) => ({
+                    start: s.startTime,
+                    end: s.endTime,
+                    text: s.original,
+                    speaker: s.speaker,
+                  })),
+                  whisperSegments: whisperRef,
+                  enableDiarization: chunkSettings.enableDiarization,
+                });
+
+                try {
+                  logger.info(`[Chunk ${index}] Attempting timeline correction...`);
+                  const correctionResponse = await generateContentWithRetry(
+                    ai,
+                    {
+                      model: STEP_MODELS.refinement,
+                      contents: {
+                        parts: [
+                          { inlineData: { mimeType: 'audio/wav', data: base64Audio } },
+                          { text: correctionPrompt },
+                        ],
+                      },
+                      config: {
+                        responseMimeType: 'application/json',
+                        responseSchema: chunkSettings.enableDiarization
+                          ? REFINEMENT_WITH_DIARIZATION_SCHEMA
+                          : REFINEMENT_SCHEMA,
+                        systemInstruction: refineSystemInstruction,
+                        safetySettings: SAFETY_SETTINGS,
+                        ...buildStepConfig('refinement'),
+                      },
+                    },
+                    2, // fewer retries for correction
+                    signal,
+                    trackUsage,
+                    (settings.requestTimeout || 600) * 1000
+                  );
+
+                  const correctedSegments = parseGeminiResponse(
+                    correctionResponse.text,
+                    chunkDuration
+                  );
+                  const revalidation = validateTimeline(correctedSegments);
+
+                  if (revalidation.corruptedRanges.length === 0) {
+                    logger.info(`[Chunk ${index}] Timeline corrected successfully`);
+                    refinedSegments = correctedSegments
+                      .map((seg) => ({
+                        ...seg,
+                        original: cleanNonSpeechAnnotations(seg.original),
+                      }))
+                      .filter((seg) => seg.original.length > 0);
+                    // Mark any remaining independent anomalies
+                    if (revalidation.independentAnomalies.length > 0) {
+                      refinedSegments = markRegressionIssues(
+                        refinedSegments,
+                        revalidation.independentAnomalies
+                      );
+                    }
+                  } else {
+                    // Correction failed, mark the corrupted range
+                    logger.warn(
+                      `[Chunk ${index}] Timeline correction failed, marking corrupted range`
+                    );
+                    refinedSegments = markCorruptedRange(
+                      refinedSegments,
+                      validation.corruptedRanges
+                    );
+                  }
+                } catch (correctionError) {
+                  logger.error(
+                    `[Chunk ${index}] Timeline correction request failed:`,
+                    formatGeminiError(correctionError)
+                  );
+                  // Mark the corrupted range for frontend display
+                  refinedSegments = markCorruptedRange(refinedSegments, validation.corruptedRanges);
+                }
+              }
+            }
           }
 
           if (refinedSegments.length === 0) {

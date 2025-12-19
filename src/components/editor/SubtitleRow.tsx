@@ -11,7 +11,10 @@ import {
   Plus,
   MoreVertical,
   ChevronRight,
+  Rewind,
+  AlertOctagon,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 import { SubtitleItem } from '@/types';
 import { SpeakerUIProfile } from '@/types/speaker';
 import { SpeakerSelect } from '@/components/editor/SpeakerSelect';
@@ -140,13 +143,20 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
     const [showAddSubmenu, setShowAddSubmenu] = React.useState(false);
     const [menuDropUp, setMenuDropUp] = React.useState(false);
     const [submenuDropLeft, setSubmenuDropLeft] = React.useState(false);
+    const [menuStyle, setMenuStyle] = React.useState<React.CSSProperties>({});
     const { ref: addMenuRef, getDirection } = useDropdownDirection<HTMLDivElement>();
+    const menuRef = React.useRef<HTMLDivElement>(null);
 
     // Close add menu when clicking outside
     React.useEffect(() => {
       if (!showAddMenu) return;
       const handleClickOutside = (e: MouseEvent) => {
-        if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+        if (
+          addMenuRef.current &&
+          !addMenuRef.current.contains(e.target as Node) &&
+          menuRef.current &&
+          !menuRef.current.contains(e.target as Node)
+        ) {
           setShowAddMenu(false);
         }
       };
@@ -164,6 +174,31 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
         const { dropUp, dropLeft } = getDirection();
         setMenuDropUp(dropUp);
         setSubmenuDropLeft(dropLeft);
+
+        // Calculate fixed position
+        if (addMenuRef.current) {
+          const rect = addMenuRef.current.getBoundingClientRect();
+          const style: React.CSSProperties = {
+            position: 'fixed',
+            zIndex: 9999, // Ensure it's above everything
+            minWidth: '130px',
+          };
+
+          // Vertical positioning
+          if (dropUp) {
+            style.bottom = window.innerHeight - rect.top + 4;
+            style.top = 'auto';
+          } else {
+            style.top = rect.bottom + 4;
+            style.bottom = 'auto';
+          }
+
+          // Horizontal positioning (Align Right)
+          style.right = window.innerWidth - rect.right;
+          style.left = 'auto';
+
+          setMenuStyle(style);
+        }
       }
       setShowAddMenu(!showAddMenu);
     };
@@ -186,10 +221,20 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
       validation.hasDurationIssue,
       validation.hasLengthIssue,
       validation.hasOverlapIssue,
+      sub.hasRegressionIssue,
+      sub.hasCorruptedRangeIssue,
     ].filter(Boolean).length;
 
     // Determine background color based on validation issues
     const getRowBackgroundClass = (): string => {
+      // Timeline corruption takes highest priority (red)
+      if (sub.hasCorruptedRangeIssue) {
+        return 'bg-red-900/30 border-l-2 border-red-500';
+      }
+      // Timeline regression (pink)
+      if (sub.hasRegressionIssue) {
+        return 'bg-pink-900/30 border-l-2 border-pink-500';
+      }
       if (issueCount >= 2) {
         // Multiple issues: purple/violet background
         return 'bg-violet-900/30 border-l-2 border-violet-500';
@@ -335,8 +380,28 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
           {!editing &&
             (validation.hasDurationIssue ||
               validation.hasLengthIssue ||
-              validation.hasOverlapIssue) && (
+              validation.hasOverlapIssue ||
+              sub.hasRegressionIssue ||
+              sub.hasCorruptedRangeIssue) && (
               <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                {sub.hasCorruptedRangeIssue && (
+                  <span
+                    className="flex items-center gap-0.5 text-[10px] text-red-400"
+                    title="时间轴损坏区间"
+                  >
+                    <AlertOctagon className="w-3 h-3" />
+                    <span>损坏</span>
+                  </span>
+                )}
+                {sub.hasRegressionIssue && (
+                  <span
+                    className="flex items-center gap-0.5 text-[10px] text-pink-400"
+                    title="时间回退"
+                  >
+                    <Rewind className="w-3 h-3" />
+                    <span>回退</span>
+                  </span>
+                )}
                 {validation.hasOverlapIssue && (
                   <span
                     className="flex items-center gap-0.5 text-[10px] text-orange-400"
@@ -443,94 +508,98 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
               <MoreVertical className="w-6 h-6" />
             </button>
             {showAddMenu && (
-              <div
-                className={cn(
-                  'absolute right-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 min-w-[130px]',
-                  menuDropUp ? 'bottom-full mb-1' : 'top-full mt-1'
-                )}
-              >
-                {/* 1. 编辑行 */}
-                <button
-                  onClick={() => {
-                    handleStartEdit();
-                    setShowAddMenu(false);
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-indigo-400 transition-colors flex items-center gap-2"
+              <Portal>
+                <div
+                  ref={menuRef}
+                  style={menuStyle}
+                  className={cn(
+                    'bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 animate-fade-in',
+                    menuDropUp ? 'origin-bottom-right' : 'origin-top-right'
+                  )}
                 >
-                  <Pencil className="w-3.5 h-3.5" />
-                  编辑行
-                </button>
-                {/* 2. 添加新行 (submenu) */}
-                {addSubtitle && (
-                  <div
-                    className="relative"
-                    onMouseEnter={handleSubmenuEnter}
-                    onMouseLeave={() => setShowAddSubmenu(false)}
+                  {/* 1. 编辑行 */}
+                  <button
+                    onClick={() => {
+                      handleStartEdit();
+                      setShowAddMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-indigo-400 transition-colors flex items-center gap-2"
                   >
-                    <button className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-emerald-400 transition-colors flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <Plus className="w-3.5 h-3.5" />
-                        添加新行
-                      </span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                    {showAddSubmenu && (
-                      <div
-                        className={cn(
-                          'absolute top-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 min-w-[110px]',
-                          submenuDropLeft ? 'right-full mr-1' : 'left-full ml-1'
-                        )}
-                      >
-                        <button
-                          onClick={() => {
-                            addSubtitle(sub.id, 'before', sub.startTime);
-                            setShowAddMenu(false);
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-emerald-400 transition-colors"
-                        >
-                          在前面添加
-                        </button>
-                        <button
-                          onClick={() => {
-                            addSubtitle(sub.id, 'after', sub.endTime);
-                            setShowAddMenu(false);
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-emerald-400 transition-colors"
-                        >
-                          在后面添加
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* 3. 添加评论 */}
-                <button
-                  onClick={() => {
-                    setEditingCommentId(sub.id);
-                    setShowAddMenu(false);
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-amber-400 transition-colors flex items-center gap-2"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  添加评论
-                </button>
-                {/* 4. 删除行 (red) */}
-                {deleteSubtitle && (
-                  <>
-                    <div className="border-t border-slate-700 my-1" />
-                    <button
-                      onClick={() => {
-                        deleteSubtitle(sub.id);
-                        setShowAddMenu(false);
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-slate-700 hover:text-red-300 transition-colors flex items-center gap-2"
+                    <Pencil className="w-3.5 h-3.5" />
+                    编辑行
+                  </button>
+                  {/* 2. 添加新行 (submenu) */}
+                  {addSubtitle && (
+                    <div
+                      className="relative"
+                      onMouseEnter={handleSubmenuEnter}
+                      onMouseLeave={() => setShowAddSubmenu(false)}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      删除行
-                    </button>
-                  </>
-                )}
-              </div>
+                      <button className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-emerald-400 transition-colors flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                          <Plus className="w-3.5 h-3.5" />
+                          添加新行
+                        </span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                      {showAddSubmenu && (
+                        <div
+                          className={cn(
+                            'absolute top-0 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 py-1 min-w-[110px]',
+                            submenuDropLeft ? 'right-full mr-1' : 'left-full ml-1'
+                          )}
+                        >
+                          <button
+                            onClick={() => {
+                              addSubtitle(sub.id, 'before', sub.startTime);
+                              setShowAddMenu(false);
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-emerald-400 transition-colors"
+                          >
+                            在前面添加
+                          </button>
+                          <button
+                            onClick={() => {
+                              addSubtitle(sub.id, 'after', sub.endTime);
+                              setShowAddMenu(false);
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-emerald-400 transition-colors"
+                          >
+                            在后面添加
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* 3. 添加评论 */}
+                  <button
+                    onClick={() => {
+                      setEditingCommentId(sub.id);
+                      setShowAddMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-amber-400 transition-colors flex items-center gap-2"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    添加评论
+                  </button>
+                  {/* 4. 删除行 (red) */}
+                  {deleteSubtitle && (
+                    <>
+                      <div className="border-t border-slate-700 my-1" />
+                      <button
+                        onClick={() => {
+                          deleteSubtitle(sub.id);
+                          setShowAddMenu(false);
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-slate-700 hover:text-red-300 transition-colors flex items-center gap-2"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        删除行
+                      </button>
+                    </>
+                  )}
+                </div>
+              </Portal>
             )}
           </div>
         </div>
