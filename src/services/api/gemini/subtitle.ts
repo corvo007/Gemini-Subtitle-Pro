@@ -1,8 +1,10 @@
 import { GoogleGenAI } from '@google/genai';
+import { MockFactory } from '@/services/api/gemini/debug/mockFactory';
+import { ArtifactSaver } from '@/services/api/gemini/debug/artifactSaver';
+import { UsageReporter } from '@/services/api/gemini/pipeline/usageReporter';
 import { SubtitleItem } from '@/types/subtitle';
-import { generateSubtitleId } from '@/services/utils/id';
 import { AppSettings } from '@/types/settings';
-import { ChunkStatus, TokenUsage } from '@/types/api';
+import { ChunkStatus } from '@/types/api';
 import {
   GlossaryItem,
   GlossaryExtractionResult,
@@ -31,10 +33,8 @@ import {
   postProcessRefinement,
   postProcessTranslation,
 } from '@/services/subtitle/postCheck';
-import { generateSrtContent } from '@/services/subtitle/generator';
 import { mapInParallel, Semaphore } from '@/services/utils/concurrency';
 import { logger } from '@/services/utils/logger';
-import { calculateDetailedCost } from '@/services/api/gemini/pricing';
 import {
   REFINEMENT_SCHEMA,
   REFINEMENT_WITH_DIARIZATION_SCHEMA,
@@ -71,37 +71,9 @@ export const generateSubtitles = async (
     },
   });
 
-  // Token Usage Tracking with modality breakdown
-  const usageReport: Record<
-    string,
-    {
-      prompt: number;
-      output: number;
-      total: number;
-      textInput: number;
-      audioInput: number;
-      thoughts: number;
-    }
-  > = {};
-  const trackUsage = (usage: TokenUsage) => {
-    const model = usage.modelName;
-    if (!usageReport[model]) {
-      usageReport[model] = {
-        prompt: 0,
-        output: 0,
-        total: 0,
-        textInput: 0,
-        audioInput: 0,
-        thoughts: 0,
-      };
-    }
-    usageReport[model].prompt += usage.promptTokens;
-    usageReport[model].output += usage.candidatesTokens;
-    usageReport[model].total += usage.totalTokens;
-    usageReport[model].textInput += usage.textInputTokens || 0;
-    usageReport[model].audioInput += usage.audioInputTokens || 0;
-    usageReport[model].thoughts += usage.thoughtsTokens || 0;
-  };
+  // Token Usage Tracking
+  const usageReporter = new UsageReporter();
+  const trackUsage = usageReporter.getTracker();
 
   // 1. Decode Audio
   onProgress?.({ id: 'decoding', total: 1, status: 'processing', message: '正在解码音频...' });
@@ -211,22 +183,8 @@ export const generateSubtitles = async (
   const isDebug = window.electronAPI?.isDebug;
 
   if (isDebug && settings.debug?.mockGemini) {
-    const mockGlossary = [
-      {
-        chunkIndex: 0,
-        terms: [
-          {
-            term: 'Mock Term',
-            translation: '模拟术语',
-            notes: 'Mock notes for validation',
-          } as any,
-        ],
-        confidence: 'high',
-        source: 'chunk',
-      },
-    ];
-    logger.info('⚠️ [MOCK] Glossary Extraction ENABLED. Returning mock data:', mockGlossary);
-    glossaryPromise = Promise.resolve(mockGlossary as any);
+    logger.info('⚠️ [MOCK] Glossary Extraction ENABLED. Using MockFactory.');
+    glossaryPromise = MockFactory.getMockGlossary(0);
   } else if (settings.enableAutoGlossary !== false) {
     const sampleMinutes = settings.glossarySampleMinutes || 'all';
     glossaryChunks = selectChunksByDuration(chunksParams, sampleMinutes, chunkDuration);
@@ -359,20 +317,7 @@ export const generateSubtitles = async (
   // DEBUG: Save Glossary Artifact
   if (settings.debug?.saveIntermediateArtifacts && window.electronAPI?.saveDebugArtifact) {
     glossaryHandlingPromise.then(async (glossary) => {
-      try {
-        await window.electronAPI.saveDebugArtifact(
-          'glossary_final.json',
-          JSON.stringify(glossary, null, 2)
-        );
-        if (extractedGlossaryResults) {
-          await window.electronAPI.saveDebugArtifact(
-            'glossary_extraction_raw.json',
-            JSON.stringify(extractedGlossaryResults, null, 2)
-          );
-        }
-      } catch (e) {
-        logger.warn('Failed to save glossary artifact', e);
-      }
+      await ArtifactSaver.saveGlossary(glossary, extractedGlossaryResults, settings);
     });
   }
 
@@ -396,39 +341,7 @@ export const generateSubtitles = async (
       try {
         const isDebug = window.electronAPI?.isDebug;
         if (isDebug && settings.debug?.mockGemini) {
-          logger.info('⚠️ [MOCK] Speaker Profile Analysis ENABLED. Returning mock profiles.');
-          // Mock delay
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-
-          const mockProfiles: SpeakerProfile[] = [
-            {
-              id: 'Mock Speaker 1',
-              characteristics: {
-                name: 'Mock Speaker 1',
-                gender: 'male',
-                pitch: 'medium',
-                speed: 'normal',
-                accent: 'standard',
-                tone: 'neutral',
-              },
-              sampleQuotes: ['This is a mock quote for speaker 1.'],
-              confidence: 0.95,
-            },
-            {
-              id: 'Mock Speaker 2',
-              characteristics: {
-                name: 'Mock Speaker 2',
-                gender: 'female',
-                pitch: 'high',
-                speed: 'fast',
-                accent: 'standard',
-                tone: 'energetic',
-              },
-              sampleQuotes: ['This is a mock quote for speaker 2.'],
-              confidence: 0.88,
-            },
-          ];
-          return mockProfiles;
+          return MockFactory.getMockSpeakerProfiles();
         }
 
         // 1. Intelligent Sampling (returns blob and duration)
@@ -486,16 +399,7 @@ export const generateSubtitles = async (
     window.electronAPI?.saveDebugArtifact &&
     speakerProfilePromise
   ) {
-    speakerProfilePromise.then(async (profiles) => {
-      try {
-        await window.electronAPI.saveDebugArtifact(
-          'speaker_profiles.json',
-          JSON.stringify(profiles, null, 2)
-        );
-      } catch (e) {
-        logger.warn('Failed to save speaker profile artifact', e);
-      }
-    });
+    speakerProfilePromise.then((profiles) => ArtifactSaver.saveSpeakerProfiles(profiles, settings));
   }
 
   // --- UNIFIED PARALLEL PIPELINE: Transcription → Wait for Glossary/Profiles → Refine & Translate ---
@@ -546,21 +450,7 @@ export const generateSubtitles = async (
             : settings.debug?.mockOpenAI);
 
         if (shouldMockTranscription) {
-          const mockTranscription = [
-            {
-              id: generateSubtitleId(),
-              startTime: '00:00:00,000',
-              endTime: formatTime(end - start),
-              original: `[Mock] Transcription for Chunk ${index}`,
-              translated: '',
-            },
-          ];
-          logger.info(
-            `⚠️ [MOCK] Transcription ENABLED for Chunk ${index}. Returning mock data:`,
-            mockTranscription
-          );
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          rawSegments = mockTranscription;
+          rawSegments = await MockFactory.getMockTranscription(index, start, end);
         } else {
           const wavBlob = await sliceAudioBuffer(audioBuffer, start, end);
           rawSegments = await transcribeAudio(
@@ -590,12 +480,7 @@ export const generateSubtitles = async (
         }))
         .filter((seg) => seg.original.length > 0);
 
-      // DEBUG: Save Transcription Artifact
-      if (settings.debug?.saveIntermediateArtifacts && window.electronAPI?.saveDebugArtifact) {
-        window.electronAPI
-          .saveDebugArtifact(`chunk_${index}_whisper.json`, JSON.stringify(rawSegments, null, 2))
-          .catch((e) => logger.warn(`Failed to save chunk ${index} whisper artifact`, e));
-      }
+      ArtifactSaver.saveChunkArtifact(index, 'whisper', rawSegments, settings);
       // Collect intermediate result
       whisperChunksMap.set(
         index,
@@ -716,11 +601,7 @@ export const generateSubtitles = async (
 
         try {
           if (isDebug && settings.debug?.mockGemini) {
-            logger.info(
-              `⚠️ [MOCK] Refinement ENABLED for Chunk ${index}. Returning raw segments as refined.`
-            );
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            refinedSegments = [...rawSegments];
+            refinedSegments = await MockFactory.getMockRefinement(index, rawSegments);
           } else {
             // ===== POST-CHECK PIPELINE (Generate + Validate + Retry if needed) =====
             const { result: processedSegments, checkResult } = await withPostCheck(
@@ -775,15 +656,7 @@ export const generateSubtitles = async (
           refinedSegments = [...rawSegments];
         }
 
-        // DEBUG: Save Refinement Artifact
-        if (settings.debug?.saveIntermediateArtifacts && window.electronAPI?.saveDebugArtifact) {
-          window.electronAPI
-            .saveDebugArtifact(
-              `chunk_${index}_refinement.json`,
-              JSON.stringify(refinedSegments, null, 2)
-            )
-            .catch((e) => logger.warn(`Failed to save chunk ${index} refinement artifact`, e));
-        }
+        ArtifactSaver.saveChunkArtifact(index, 'refinement', refinedSegments, settings);
         // Collect intermediate result
         refinedChunksMap.set(
           index,
@@ -828,15 +701,7 @@ export const generateSubtitles = async (
 
           let translatedItems: any[] = [];
           if (isDebug && settings.debug?.mockGemini) {
-            logger.info(
-              `⚠️ [MOCK] Translation ENABLED for Chunk ${index}. Generating mock translations.`
-            );
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            translatedItems = toTranslate.map((t) => ({
-              ...t,
-              translated: `[Mock] Translated: ${t.original}`,
-            }));
-            logger.info(`⚠️ [MOCK] Translation Result for Chunk ${index}:`, translatedItems);
+            translatedItems = await MockFactory.getMockTranslation(index, toTranslate);
 
             finalChunkSubs = translatedItems.map((item) => ({
               id: item.id,
@@ -898,15 +763,7 @@ export const generateSubtitles = async (
           }
         }
 
-        // DEBUG: Save Translation Artifact
-        if (settings.debug?.saveIntermediateArtifacts && window.electronAPI?.saveDebugArtifact) {
-          window.electronAPI
-            .saveDebugArtifact(
-              `chunk_${index}_translation.json`,
-              JSON.stringify(finalChunkSubs, null, 2)
-            )
-            .catch((e) => logger.warn(`Failed to save chunk ${index} translation artifact`, e));
-        }
+        ArtifactSaver.saveChunkArtifact(index, 'translation', finalChunkSubs, settings);
         // Collect intermediate result
         translatedChunksMap.set(index, finalChunkSubs);
 
@@ -930,85 +787,14 @@ export const generateSubtitles = async (
 
   const finalSubtitles = chunkResults.flat();
 
-  // Log Token Usage Report
-  let reportLog = '\n📊 Token Usage Report:\n----------------------------------------\n';
-  let grandTotal = 0;
-  let totalCost = 0;
+  usageReporter.logReport();
 
-  for (const [model, usage] of Object.entries(usageReport)) {
-    const cost = calculateDetailedCost({
-      textInputTokens: usage.textInput,
-      audioInputTokens: usage.audioInput,
-      candidatesTokens: usage.output,
-      thoughtsTokens: usage.thoughts,
-      modelName: model,
-    });
-    totalCost += cost;
-
-    reportLog += `Model: ${model}\n`;
-    reportLog += `  - Text Input: ${usage.textInput.toLocaleString()}\n`;
-    reportLog += `  - Audio Input: ${usage.audioInput.toLocaleString()}\n`;
-    reportLog += `  - Output: ${usage.output.toLocaleString()}\n`;
-    reportLog += `  - Thoughts: ${usage.thoughts.toLocaleString()}\n`;
-    reportLog += `  - Total: ${usage.total.toLocaleString()}\n`;
-    reportLog += `  - Est. Cost: $${cost.toFixed(6)}\n`;
-    reportLog += `----------------------------------------\n`;
-    grandTotal += usage.total;
-  }
-  reportLog += `Grand Total Tokens: ${grandTotal.toLocaleString()}\n`;
-  reportLog += `Total Est. Cost: $${totalCost.toFixed(6)}\n`;
-  logger.info(reportLog);
-
-  // Save Full Intermediate SRTs
-  if (settings.debug?.saveIntermediateArtifacts && window.electronAPI?.saveDebugArtifact) {
-    try {
-      const getSortedSegments = (map: Map<number, SubtitleItem[]>) => {
-        return Array.from(map.entries())
-          .sort((a, b) => a[0] - b[0])
-          .flatMap(([, items]) => items);
-      };
-
-      const allWhisper = getSortedSegments(whisperChunksMap);
-      const allRefined = getSortedSegments(refinedChunksMap);
-      const allTranslated = getSortedSegments(translatedChunksMap);
-
-      if (allWhisper.length > 0) {
-        await window.electronAPI.saveDebugArtifact(
-          'full_whisper.srt',
-          // Force use original text as "translated" for single-language output
-          generateSrtContent(
-            allWhisper.map((s) => ({ ...s, translated: s.original })),
-            false,
-            false
-          )
-        );
-      }
-
-      if (allRefined.length > 0) {
-        await window.electronAPI.saveDebugArtifact(
-          'full_refinement.srt',
-          // Force use original text as "translated" for single-language output
-          generateSrtContent(
-            allRefined.map((s) => ({ ...s, translated: s.original })),
-            false,
-            settings.enableDiarization
-          )
-        );
-      }
-
-      if (allTranslated.length > 0) {
-        await window.electronAPI.saveDebugArtifact(
-          'full_translation.srt',
-          // Translated is bilingual, and definitely check for speakers
-          generateSrtContent(allTranslated, true, settings.enableDiarization)
-        );
-      }
-
-      logger.info('Saved full intermediate SRT artifacts.');
-    } catch (e) {
-      logger.warn('Failed to save full intermediate SRTs', e);
-    }
-  }
+  await ArtifactSaver.saveFullIntermediateSrts(
+    whisperChunksMap,
+    refinedChunksMap,
+    translatedChunksMap,
+    settings
+  );
 
   return { subtitles: finalSubtitles, glossaryResults: extractedGlossaryResults };
 };
