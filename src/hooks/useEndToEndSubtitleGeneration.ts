@@ -195,11 +195,17 @@ export function useEndToEndSubtitleGeneration({
           }
         };
 
-        // Lookup selected glossary terms if a glossary is selected in config
+        // Determine glossary terms based on user's explicit selection in E2E config
+        // - If user selected a specific glossary (config.selectedGlossaryId is set), use its terms (even if empty)
+        // - If user selected "(无)" (config.selectedGlossaryId is null/empty), use empty array (no global fallback)
+        // - If config.selectedGlossaryId is undefined (not set in UI), fall back to global activeGlossaryId
+        const hasExplicitGlossarySelection = config.selectedGlossaryId !== undefined;
         const selectedGlossary = config.selectedGlossaryId
           ? currentSettings.glossaries?.find((g) => g.id === config.selectedGlossaryId)
           : null;
-        const selectedGlossaryTerms = selectedGlossary?.terms || [];
+        const glossaryTerms = hasExplicitGlossarySelection
+          ? selectedGlossary?.terms || [] // Respect user choice (empty means empty)
+          : getActiveGlossaryTerms(currentSettings); // No explicit choice, use global
 
         // Merge config with settings, applying end-to-end specific overrides
         const mergedSettings: AppSettings = {
@@ -216,12 +222,11 @@ export function useEndToEndSubtitleGeneration({
           useSpeakerStyledTranslation:
             config.useSpeakerStyledTranslation ?? currentSettings.useSpeakerStyledTranslation,
           includeSpeakerInExport: config.includeSpeaker ?? currentSettings.includeSpeakerInExport,
-          // Use the selected glossary terms if available, otherwise get from active glossary
-          glossary:
-            selectedGlossaryTerms.length > 0
-              ? selectedGlossaryTerms
-              : getActiveGlossaryTerms(currentSettings),
-          activeGlossaryId: config.selectedGlossaryId ?? currentSettings.activeGlossaryId,
+          // Set glossary terms based on user's explicit choice
+          glossary: glossaryTerms,
+          activeGlossaryId: hasExplicitGlossarySelection
+            ? config.selectedGlossaryId || null // Explicit choice (null means none selected)
+            : currentSettings.activeGlossaryId, // No explicit choice, use global
           // For end-to-end mode, always auto-confirm glossary
           glossaryAutoConfirm: true,
         };
