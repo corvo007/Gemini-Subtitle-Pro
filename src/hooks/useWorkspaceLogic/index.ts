@@ -17,6 +17,7 @@ import { logger } from '@/services/utils/logger';
 import { autoConfirmGlossaryTerms } from '@/services/glossary/autoConfirm';
 import { generateSubtitles } from '@/services/api/gemini/subtitle';
 import { runBatchOperation } from '@/services/api/gemini/batch';
+import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { retryGlossaryExtraction } from '@/services/api/gemini/glossary';
 import { useFileParserWorker } from '@/hooks/useFileParserWorker';
 import { decodeAudioWithRetry } from '@/services/audio/decoder';
@@ -495,7 +496,7 @@ export const useWorkspaceLogic = ({
       const activeGlossary = settings.glossaries?.find((g) => g.id === settings.activeGlossaryId);
       const runtimeSettings = {
         ...settings,
-        glossary: activeGlossary?.terms || settings.glossary || [],
+        glossary: activeGlossary?.terms || getActiveGlossaryTerms(settings),
       };
 
       // Decode audio first to cache it for retries
@@ -590,7 +591,7 @@ export const useWorkspaceLogic = ({
                 const activeG = settings.glossaries.find((g) => g.id === settings.activeGlossaryId);
                 resolve(activeG?.terms || []);
               } else {
-                resolve(settings.glossary || []);
+                resolve(getActiveGlossaryTerms(settings));
               }
             }
           });
@@ -797,7 +798,7 @@ export const useWorkspaceLogic = ({
       } else {
         // Empty results, no failure
         if (glossaryFlow.glossaryConfirmCallback) {
-          glossaryFlow.glossaryConfirmCallback(settings.glossary || []);
+          glossaryFlow.glossaryConfirmCallback(getActiveGlossaryTerms(settings));
           glossaryFlow.setGlossaryConfirmCallback(null);
         }
         glossaryFlow.setShowGlossaryFailure(false);

@@ -16,6 +16,7 @@ import { ToastContainer, ProgressOverlay } from '@/components/ui';
 
 // Custom Hooks
 import { useSettings, useToast, useSnapshots, useGlossaryFlow, useWorkspaceLogic } from '@/hooks';
+import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { useEndToEndSubtitleGeneration } from '@/hooks/useEndToEndSubtitleGeneration';
 
 // Page Components
@@ -201,12 +202,11 @@ export default function App() {
         isOpen={glossaryFlow.showGlossaryFailure}
         isGeneratingGlossary={glossaryFlow.isGeneratingGlossary}
         glossaryConfirmCallback={glossaryFlow.glossaryConfirmCallback}
-        settings={settings}
         onRetry={workspace.handleRetryGlossary}
         onContinue={() => {
           glossaryFlow.setShowGlossaryFailure(false);
           if (glossaryFlow.glossaryConfirmCallback) {
-            glossaryFlow.glossaryConfirmCallback(settings.glossary || []);
+            glossaryFlow.glossaryConfirmCallback(getActiveGlossaryTerms(settings));
             glossaryFlow.setGlossaryConfirmCallback(null);
           }
         }}

@@ -6,7 +6,6 @@ interface GlossaryExtractionFailedDialogProps {
   isOpen: boolean;
   isGeneratingGlossary: boolean;
   glossaryConfirmCallback: ((glossary: any[]) => void) | null;
-  settings: { glossary?: any[] };
   onRetry: () => void;
   onContinue: () => void;
 }

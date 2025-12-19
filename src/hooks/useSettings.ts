@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { AppSettings } from '@/types/settings';
-import { migrateFromLegacyGlossary } from '@/services/glossary/migrator';
 import { logger } from '@/services/utils/logger';
 
 const SETTINGS_KEY = 'gemini_subtitle_settings';
@@ -107,18 +106,6 @@ export const useSettings = () => {
           // However, we should ensure we are merging with DEFAULT_SETTINGS correctly.
 
           let newSettings = { ...DEFAULT_SETTINGS, ...storedSettings };
-
-          // Migration: Legacy glossary to Multi-Glossary
-          if (
-            storedSettings.glossary &&
-            storedSettings.glossary.length > 0 &&
-            (!storedSettings.glossaries || storedSettings.glossaries.length === 0)
-          ) {
-            const defaultGlossary = migrateFromLegacyGlossary(storedSettings.glossary);
-            newSettings.glossaries = [defaultGlossary];
-            newSettings.activeGlossaryId = defaultGlossary.id;
-            logger.info('Migrated legacy glossary to new format');
-          }
 
           // Ensure glossaries array exists and fix malformed data
           if (!newSettings.glossaries) {

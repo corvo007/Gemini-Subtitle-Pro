@@ -14,6 +14,7 @@ import { SmartSegmenter } from '@/services/audio/segmenter';
 import { selectChunksByDuration } from '@/services/glossary/selector';
 import { extractGlossaryFromAudio } from '@/services/api/gemini/glossary';
 import { GlossaryState } from '@/services/api/gemini/glossary-state';
+import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { sliceAudioBuffer } from '@/services/audio/processor';
 import { transcribeAudio } from '@/services/api/openai/transcribe';
 import { blobToBase64 } from '@/services/audio/converter';
@@ -267,7 +268,7 @@ export const generateSubtitles = async (
 
   if (glossaryPromise) {
     glossaryHandlingPromise = (async () => {
-      let finalGlossary = settings.glossary || [];
+      let finalGlossary = getActiveGlossaryTerms(settings);
 
       try {
         logger.info('Waiting for glossary extraction...');
@@ -347,7 +348,7 @@ export const generateSubtitles = async (
     })();
   } else {
     // No glossary extraction configured
-    glossaryHandlingPromise = Promise.resolve(settings.glossary || []);
+    glossaryHandlingPromise = Promise.resolve(getActiveGlossaryTerms(settings));
   }
 
   // DEBUG: Save Glossary Artifact

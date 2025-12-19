@@ -8,6 +8,7 @@ import { generateSubtitles } from '@/services/api/gemini/subtitle';
 import { generateAssContent, generateSrtContent } from '@/services/subtitle/generator';
 import { decodeAudioWithRetry } from '@/services/audio/decoder';
 import { autoConfirmGlossaryTerms } from '@/services/glossary/autoConfirm';
+import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { logger } from '@/services/utils/logger';
 import type { AppSettings } from '@/types/settings';
 import type { SubtitleItem } from '@/types/subtitle';
@@ -215,13 +216,17 @@ export function useEndToEndSubtitleGeneration({
           useSpeakerStyledTranslation:
             config.useSpeakerStyledTranslation ?? currentSettings.useSpeakerStyledTranslation,
           includeSpeakerInExport: config.includeSpeaker ?? currentSettings.includeSpeakerInExport,
-          // Use the selected glossary terms if available, otherwise fall back to currentSettings.glossary
-          glossary:
-            selectedGlossaryTerms.length > 0 ? selectedGlossaryTerms : currentSettings.glossary,
+          // Use the selected glossary if available, set as active
           activeGlossaryId: config.selectedGlossaryId ?? currentSettings.activeGlossaryId,
           // For end-to-end mode, always auto-confirm glossary
           glossaryAutoConfirm: true,
         };
+
+        // Resolve glossary terms for this run
+        const runtimeGlossaryTerms =
+          selectedGlossaryTerms.length > 0
+            ? selectedGlossaryTerms
+            : getActiveGlossaryTerms(currentSettings);
 
         // Generate subtitles
         const { subtitles } = await generateSubtitles(
@@ -241,7 +246,7 @@ export function useEndToEndSubtitleGeneration({
               settings: settingsRef.current,
               updateSetting: updateSettingRef.current,
               targetGlossaryId: config.selectedGlossaryId,
-              fallbackTerms: mergedSettings.glossary || [],
+              fallbackTerms: runtimeGlossaryTerms,
               logPrefix: '[EndToEnd]',
             });
 

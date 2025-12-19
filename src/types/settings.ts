@@ -1,4 +1,4 @@
-import { GlossaryItem, Glossary } from '@/types/glossary';
+import { Glossary } from '@/types/glossary';
 
 export const GENRE_PRESETS = ['general', 'anime', 'movie', 'news', 'tech'];
 export type Genre = 'general' | 'anime' | 'movie' | 'news' | 'tech';
@@ -39,9 +39,8 @@ export interface AppSettings {
   concurrencyPro: number;
 
   useSmartSplit?: boolean;
-  glossary?: GlossaryItem[]; // Deprecated, used for migration
   glossaries?: Glossary[];
-  activeGlossaryId?: string;
+  activeGlossaryId?: string | null;
   // Glossary Extraction Settings
   enableAutoGlossary?: boolean; // Default: true
   glossarySampleMinutes?: number | 'all'; // Default: 'all', or max minutes to analyze

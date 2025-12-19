@@ -4,6 +4,7 @@ import { GlossaryItem, GlossaryExtractionResult, AppSettings } from '@/types';
 import { mergeGlossaryResults } from '@/services/glossary/merger';
 import { CustomSelect } from '@/components/settings';
 import { createGlossary } from '@/services/glossary/manager';
+import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { cn } from '@/lib/cn';
 
 interface GlossaryConfirmationModalProps {
@@ -73,7 +74,7 @@ export const GlossaryConfirmationModal: React.FC<GlossaryConfirmationModalProps>
   const activeTerms =
     targetGlossaryId === 'temporary'
       ? []
-      : activeGlossary?.terms || (activeGlossary as any)?.items || settings.glossary || [];
+      : activeGlossary?.terms || (activeGlossary as any)?.items || getActiveGlossaryTerms(settings);
 
   // Memoize mergeGlossaryResults to prevent re-computing on every render
   const { unique, conflicts } = useMemo(
@@ -136,12 +137,13 @@ export const GlossaryConfirmationModal: React.FC<GlossaryConfirmationModalProps>
       const updatedActive = updatedGlossaries.find((g) => g.id === targetGlossaryId);
       onConfirm(updatedActive?.terms || []);
     } else {
-      const finalGlossary = [...(settings.glossary || []), ...newTerms];
+      const finalGlossary = [...getActiveGlossaryTerms(settings), ...newTerms];
       const uniqueMap = new Map<string, GlossaryItem>();
       finalGlossary.forEach((item) => uniqueMap.set(item.term.toLowerCase(), item));
       const deduplicated = Array.from(uniqueMap.values());
 
-      onUpdateSetting('glossary', deduplicated);
+      // Note: This branch should ideally not be reached since we always have glossaries array now
+      // But we keep it for backwards compatibility
       onConfirm(deduplicated);
     }
 
@@ -245,7 +247,7 @@ export const GlossaryConfirmationModal: React.FC<GlossaryConfirmationModalProps>
               <div className="grid gap-4">
                 {conflicts.map((conflict, idx) => {
                   const existingOption = conflict.options.find((o) =>
-                    settings.glossary?.some(
+                    getActiveGlossaryTerms(settings)?.some(
                       (g) => g.term === o.term && g.translation === o.translation
                     )
                   );

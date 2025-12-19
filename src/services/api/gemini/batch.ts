@@ -17,6 +17,7 @@ import {
   getProofreadPrompt,
 } from '@/services/api/gemini/prompts';
 import { SpeakerProfile } from '@/services/api/gemini/speakerProfile';
+import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import {
   TRANSLATION_SCHEMA,
   TRANSLATION_WITH_DIARIZATION_SCHEMA,
@@ -358,13 +359,14 @@ async function processBatch(
   // Case 4: No Comments -> Default behavior (prompt below covers it)
 
   // Construct Glossary Context
+  const glossaryTerms = getActiveGlossaryTerms(settings);
   let glossaryContext = '';
-  if (settings.glossary && settings.glossary.length > 0) {
+  if (glossaryTerms.length > 0) {
     glossaryContext = `
     GLOSSARY (Strictly adhere to these terms):
-    ${settings.glossary.map((g) => `- ${g.term}: ${g.translation} ${g.notes ? `(${g.notes})` : ''}`).join('\n')}
+    ${glossaryTerms.map((g) => `- ${g.term}: ${g.translation} ${g.notes ? `(${g.notes})` : ''}`).join('\n')}
     `;
-    logger.info(`[Batch ${batchLabel}] Using glossary with ${settings.glossary.length} terms.`);
+    logger.info(`[Batch ${batchLabel}] Using glossary with ${glossaryTerms.length} terms.`);
   }
 
   if (mode === 'fix_timestamps') {
@@ -501,7 +503,7 @@ export const runBatchOperation = async (
     settings.genre,
     mode === 'proofread' ? settings.customProofreadingPrompt : settings.customTranslationPrompt,
     mode,
-    settings.glossary,
+    getActiveGlossaryTerms(settings),
     settings.enableDiarization, // Pass diarization flag
     speakerProfiles,
     settings.minSpeakers,
