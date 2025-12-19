@@ -19,10 +19,7 @@ export const transcribeWithLocalWhisper = async (
   language: string = 'auto',
   threads: number = 4,
   signal?: AbortSignal,
-  customBinaryPath?: string,
-  _port: number = 8080, // Deprecated
-  _timeout: number = 300000, // Deprecated (handled by main process if needed)
-  _maxRetries: number = 2 // Deprecated
+  customBinaryPath?: string
 ): Promise<SubtitleItem[]> => {
   logger.info(
     `[LocalWhisper] Processing request - blob size: ${(audioBlob.size / 1024 / 1024).toFixed(2)}MB, Threads: ${threads}`

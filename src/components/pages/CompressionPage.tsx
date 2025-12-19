@@ -13,7 +13,8 @@ import { useHardwareAcceleration } from '@/hooks/useHardwareAcceleration';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { DirectorySelector } from '@/components/ui/DirectorySelector';
-import { generateOutputPath, getPathSeparator, removeExtension } from '@/services/utils/path';
+import { generateOutputPath, removeExtension } from '@/services/utils/path';
+import { join } from 'pathe';
 import { formatDuration } from '@/services/subtitle/time';
 import { cn } from '@/lib/cn';
 
@@ -159,9 +160,8 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
     try {
       const result = await window.electronAPI.download.selectDir();
       if (result.success && result.path && file) {
-        const sep = getPathSeparator();
         const name = removeExtension(file.name);
-        setOutputPath(`${result.path}${sep}${name}_compressed.mp4`);
+        setOutputPath(join(result.path, `${name}_compressed.mp4`));
       }
     } catch (err) {
       console.error('Failed to select directory', err);

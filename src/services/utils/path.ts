@@ -35,10 +35,3 @@ export const generateOutputPath = (
   }
   return name + suffix;
 };
-
-// Legacy exports for backward compatibility (deprecated)
-/** @deprecated Use pathe directly - this function is no longer needed */
-export const isWindows = (): boolean => navigator.userAgent.includes('Win');
-
-/** @deprecated Use pathe directly - this function is no longer needed */
-export const getPathSeparator = (): string => (isWindows() ? '\\' : '/');
