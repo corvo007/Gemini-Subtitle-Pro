@@ -243,7 +243,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                       <p className="text-xs text-slate-500 mt-1">
                         翻译使用 <strong>Gemini Flash 系列模型</strong>，术语提取和润色使用{' '}
-                        <strong>Gemini 3 Pro</strong>。
+                        <strong>Gemini Pro 系列模型</strong>。
                       </p>
                       <EnvKeyHint envKey={envGeminiKey} userKey={settings.geminiKey} />
                     </div>
@@ -488,7 +488,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       className="w-full"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      应用于 <strong>Gemini 3 Pro</strong> 术语提取和润色翻译。请根据账户限额调整。
+                      应用于 <strong>Gemini Pro 系列模型</strong>{' '}
+                      术语提取和润色翻译。请根据账户限额调整。
                     </p>
                   </div>
                   <div>
