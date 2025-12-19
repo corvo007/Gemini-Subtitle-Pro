@@ -50,9 +50,9 @@ flowchart TB
         direction TB
 
         subgraph GOOGLE["Google AI"]
-            GEMINI_SDK["@google/genai 1.30<br/>Gemini SDK"]
-            FLASH["Gemini 3 Flash<br/>翻译/校对"]
-            PRO["Gemini 3 Pro<br/>术语/说话人"]
+            GEMINI_SDK["@google/genai<br/>Gemini SDK"]
+            FLASH["Gemini 2.5/3 Flash<br/>翻译/校对"]
+            PRO["Gemini 3 Pro<br/>术语/说话人/校对"]
         end
 
         subgraph OPENAI_SVC["OpenAI"]
@@ -87,8 +87,8 @@ flowchart TB
 |              | Vite               | 6.2    | 构建工具        |
 |              | TypeScript         | 5.8    | 类型系统        |
 |              | Electron           | 39     | 桌面容器        |
-| **AI SDK**   | @google/genai      | 1.30   | Gemini API      |
-|              | openai             | 6.9    | Whisper API     |
+| **AI SDK**   | @google/genai      | Latest | Gemini API      |
+|              | openai             | Latest | Whisper API     |
 |              | onnxruntime-web    | 1.23   | VAD 推理        |
 | **音频处理** | @ricky0123/vad-web | 0.0.30 | Silero VAD 封装 |
 |              | fluent-ffmpeg      | 2.1    | FFmpeg 控制     |
@@ -326,7 +326,8 @@ Gemini-Subtitle-Pro/
 │   │   ├── 📂 common/               # 通用业务组件 (Header, PageHeader 等)
 │   │   ├── 📂 editor/               # 字幕编辑器组件 (SubtitleRow, Batch 等)
 │   │   ├── 📂 pages/                # 页面级组件 (HomePage, WorkspacePage 等)
-│   │   ├── 📂 ui/                   # 基础 UI 组件库 (Button, Input, Modal, Select)
+│   │   ├── 📂 ui/                   # 基础 UI 组件库 (Modal, Toggle, TextInput...)
+│   │   ├── 📂 settings/             # 设置相关组件 (SettingsModal, SettingsPanel 等)
 │   │   ├── 📂 layout/               # 布局容器
 │   │   ├── 📂 modals/               # 业务弹窗 (SettingsModal 等)
 │   │   ├── 📂 endToEnd/             # 端到端向导组件
@@ -349,8 +350,13 @@ Gemini-Subtitle-Pro/
 │   │   ├── 📂 download/             # 下载服务逻辑
 │   │   └── 📂 utils/                # 通用服务工具 (Logger, URL 验证)
 │   │
+│   ├── 📂 config/                   # 配置模块
+│   │   ├── 📄 index.ts              # 配置导出入口
+│   │   └── 📄 models.ts             # 模型配置 (步骤→模型映射)
+│   │
 │   ├── 📂 lib/                      # 通用库
-│   │   └── 📄 cn.ts                 # Tailwind 类名合并工具
+│   │   ├── 📄 cn.ts                 # Tailwind 类名合并工具
+│   │   └── 📄 text.ts               # 文本处理工具
 │   │
 │   ├── 📂 types/                    # TypeScript 类型定义
 │   └── 📂 workers/                  # Web Workers
@@ -774,18 +780,18 @@ sequenceDiagram
 
 ### 1. Gemini API 模块 (`src/services/api/gemini/`)
 
-| 文件                | 功能描述                                                  |
-| ------------------- | --------------------------------------------------------- |
-| `client.ts`         | Gemini API 客户端，包含重试逻辑、错误处理、Token 用量追踪 |
-| `subtitle.ts`       | 字幕生成主逻辑，协调各阶段处理流程                        |
-| `batch.ts`          | 批量翻译/校对处理，支持并发控制                           |
-| `prompts.ts`        | 所有 AI Prompt 模板，包含翻译、校对、术语提取等           |
-| `schemas.ts`        | JSON Schema 定义，用于结构化输出                          |
-| `glossary.ts`       | 术语表提取，使用 Search Grounding 功能                    |
-| `glossary-state.ts` | 术语表状态管理，非阻塞 Promise 包装器                     |
-| `speakerProfile.ts` | 说话人档案提取与识别                                      |
-| `pricing.ts`        | API 费用计算                                              |
-| `usage.ts`          | Token 用量追踪与统计                                      |
+| 文件                | 功能描述                                                   |
+| ------------------- | ---------------------------------------------------------- |
+| `client.ts`         | Gemini API 客户端，包含重试逻辑、错误处理、Token 用量追踪  |
+| `subtitle.ts`       | 字幕生成主逻辑，协调各阶段处理流程                         |
+| `batch.ts`          | 批量翻译/校对处理，支持并发控制                            |
+| `prompts.ts`        | 所有 AI Prompt 模板，包含翻译、校对、术语提取等 (动态注入) |
+| `schemas.ts`        | JSON Schema 定义，用于结构化输出                           |
+| `glossary.ts`       | 术语表提取，使用 Search Grounding 功能                     |
+| `glossary-state.ts` | 术语表状态管理，非阻塞 Promise 包装器                      |
+| `speakerProfile.ts` | 说话人档案提取与识别                                       |
+| `pricing.ts`        | API 费用计算 (支持 Gemini 2.5/3 系列)                      |
+| `usage.ts`          | Token 用量追踪与统计                                       |
 
 ### 2. 音频处理模块 (`src/services/audio/`)
 
@@ -844,10 +850,22 @@ await mapInParallel(chunks, async (chunk) => {
 
 ### 模型选择策略
 
-| 模型           | 用途                | 并发数 | 特点                     |
-| -------------- | ------------------- | ------ | ------------------------ |
-| Gemini 3 Flash | 翻译/校对           | 5      | 快速、低成本             |
-| Gemini 3 Pro   | 术语提取/说话人识别 | 2      | 多模态、Search Grounding |
+模型配置集中在 `src/config/models.ts`，支持按处理步骤选择不同模型：
+
+| 处理步骤             | 默认模型               | 特点                             |
+| -------------------- | ---------------------- | -------------------------------- |
+| `refinement`         | Gemini 2.5 Flash       | 时间轴校正 (规避 3.0 时间戳 Bug) |
+| `translation`        | Gemini 3 Flash Preview | 翻译、Search Grounding           |
+| `glossaryExtraction` | Gemini 3 Pro Preview   | 多模态、术语提取                 |
+| `speakerProfile`     | Gemini 3 Pro Preview   | 说话人分析                       |
+| `batchProofread`     | Gemini 3 Pro Preview   | 高质量校对、Search Grounding     |
+| `batchFixTimestamps` | Gemini 2.5 Flash       | 时间轴修复                       |
+
+每个步骤可独立配置：
+
+- `thinkingLevel`: 思考深度 (`none`/`low`/`medium`/`high`)
+- `useSearch`: 是否启用 Google Search
+- `maxOutputTokens`: 最大输出 Token 数
 
 ### 重试机制
 
