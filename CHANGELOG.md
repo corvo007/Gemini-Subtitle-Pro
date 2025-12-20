@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.14] - 2025-12-20
+
+### Documentation
+
+- **Architecture**: Updated architecture documentation to reflect recent refactoring, including the new Generation Service, centralized timers, and component structure.
+
 ## [2.9.13] - 2025-12-20
 
 ### Features
