@@ -147,7 +147,11 @@ flowchart TB
         direction LR
 
         subgraph CORE_HOOKS["核心 Hooks"]
-            USE_WORKSPACE["useWorkspaceLogic<br/>工作区核心逻辑 (33KB)"]
+            USE_WORKSPACE["useWorkspaceLogic<br/>工作区逻辑入口"]
+            USE_AUTO_SAVE["useAutoSave"]
+            USE_FILE_OPS["useFileOperations"]
+            USE_GENERATION["useGeneration"]
+            USE_BATCH["useBatchActions"]
             USE_SETTINGS["useSettings<br/>设置持久化"]
         end
 
@@ -780,18 +784,23 @@ sequenceDiagram
 
 ### 1. Gemini API 模块 (`src/services/api/gemini/`)
 
-| 文件                | 功能描述                                                   |
-| ------------------- | ---------------------------------------------------------- |
-| `client.ts`         | Gemini API 客户端，包含重试逻辑、错误处理、Token 用量追踪  |
-| `subtitle.ts`       | 字幕生成主逻辑，协调各阶段处理流程                         |
-| `batch.ts`          | 批量翻译/校对处理，支持并发控制                            |
-| `prompts.ts`        | 所有 AI Prompt 模板，包含翻译、校对、术语提取等 (动态注入) |
-| `schemas.ts`        | JSON Schema 定义，用于结构化输出                           |
-| `glossary.ts`       | 术语表提取，使用 Search Grounding 功能                     |
-| `glossary-state.ts` | 术语表状态管理，非阻塞 Promise 包装器                      |
-| `speakerProfile.ts` | 说话人档案提取与识别                                       |
-| `pricing.ts`        | API 费用计算 (支持 Gemini 2.5/3 系列)                      |
-| `usage.ts`          | Token 用量追踪与统计                                       |
+| 文件                   | 功能描述                                                                      |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| `client.ts`            | Gemini API 客户端，包含重试逻辑、错误处理、Token 用量追踪                     |
+| `subtitle.ts`          | 字幕生成主逻辑，编排 Preprocessor, GlossaryHandler, ChunkProcessor 等模块工作 |
+| `batch.ts`             | 批量翻译/校对处理，支持并发控制                                               |
+| `prompts.ts`           | 所有 AI Prompt 模板，包含翻译、校对、术语提取等 (动态注入)                    |
+| `schemas.ts`           | JSON Schema 定义，用于结构化输出                                              |
+| `glossary.ts`          | 术语表提取，使用 Search Grounding 功能                                        |
+| `glossary-state.ts`    | 术语表状态管理，非阻塞 Promise 包装器                                         |
+| `speakerProfile.ts`    | 说话人档案提取与识别                                                          |
+| `pricing.ts`           | API 费用计算 (支持 Gemini 2.5/3 系列)                                         |
+| `pipeline/`            | **[NEW]** 流水线子模块目录                                                    |
+| ↳ `preprocessor.ts`    | 音频预处理与切分 (Extract & Segment)                                          |
+| ↳ `chunkProcessor.ts`  | 单个 Chunk 的完整处理流程 (Whisper -> Refine -> Translate)                    |
+| ↳ `glossaryHandler.ts` | 术语提取流程的封装与协调                                                      |
+| ↳ `speakerAnalyzer.ts` | 说话人分析流程的封装                                                          |
+| ↳ `usageReporter.ts`   | Token 用量追踪与日志报告                                                      |
 
 ### 2. 音频处理模块 (`src/services/audio/`)
 
