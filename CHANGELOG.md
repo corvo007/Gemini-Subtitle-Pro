@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.13] - 2025-12-20
+
+### Features
+
+- **Timeline**: Added robust timeline validation with retry mechanisms and visual UI markers to identify and correct subtitle overlap or timing issues.
+
+### Refactor
+
+- **Workspace**: Refactored `useWorkspaceLogic` by extracting hooks into separate, focused modules to improve code maintainability and readability.
+- **Translation**: Integrated timeline validation logic directly into the translation flow for better reliability.
+
+### Style
+
+- **Linting**: Fixed various linting issues and verified ESLint configuration to ensure code quality standards.
+
 ## [2.9.12] - 2025-12-19
 
 ### Fixes
