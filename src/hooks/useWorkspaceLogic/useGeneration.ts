@@ -7,7 +7,7 @@ import { type GlossaryItem, type GlossaryExtractionMetadata } from '@/types/glos
 import { GenerationStatus, type ChunkStatus } from '@/types/api';
 import { logger } from '@/services/utils/logger';
 import { autoConfirmGlossaryTerms } from '@/services/glossary/autoConfirm';
-import { generateSubtitles } from '@/services/api/gemini/pipeline';
+import { generateSubtitles } from '@/services/generation/pipeline';
 import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { decodeAudioWithRetry } from '@/services/audio/decoder';
 import { ENV } from '@/config';

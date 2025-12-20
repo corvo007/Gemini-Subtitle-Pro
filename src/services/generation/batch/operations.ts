@@ -14,7 +14,7 @@ import {
   getFixTimestampsPrompt,
   getProofreadPrompt,
 } from '@/services/api/gemini/core/prompts';
-import { type SpeakerProfile } from '@/services/api/gemini/extractors/speakerProfile';
+import { type SpeakerProfile } from '@/services/generation/extractors/speakerProfile';
 import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import {
   BATCH_SCHEMA,
@@ -23,12 +23,12 @@ import {
 } from '@/services/api/gemini/core/schemas';
 import { generateContentWithLongOutput } from '@/services/api/gemini/core/client';
 import { STEP_MODELS, STEP_CONFIGS } from '@/config';
-import { translateBatch } from '@/services/api/gemini/pipeline/translation';
-import { UsageReporter } from '@/services/api/gemini/pipeline/usageReporter';
+import { translateBatch } from '@/services/generation/pipeline/translation';
+import { UsageReporter } from '@/services/generation/pipeline/usageReporter';
 import {
   adjustTimestampOffset,
   preserveSpeakerInfo,
-} from '@/services/api/gemini/pipeline/resultTransformers';
+} from '@/services/generation/pipeline/resultTransformers';
 
 async function processBatch(
   ai: GoogleGenAI,

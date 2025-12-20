@@ -26,7 +26,7 @@ import { withPostCheck } from '@/services/subtitle/postCheck';
 import {
   createTranslationPostProcessor,
   type RawTranslationResult,
-} from '@/services/api/gemini/pipeline/postProcessors';
+} from '@/services/generation/pipeline/postProcessors';
 
 /**
  * Process a translation batch with post-check validation.

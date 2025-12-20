@@ -1,6 +1,6 @@
 import { type SubtitleItem } from '@/types/subtitle';
 import { type GlossaryExtractionResult, type GlossaryItem } from '@/types/glossary';
-import { type SpeakerProfile } from '@/services/api/gemini/extractors/speakerProfile';
+import { type SpeakerProfile } from '@/services/generation/extractors/speakerProfile';
 import { generateSrtContent } from '@/services/subtitle/generator';
 import { logger } from '@/services/utils/logger';
 import { type AppSettings } from '@/types/settings';

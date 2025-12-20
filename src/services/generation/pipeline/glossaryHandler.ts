@@ -6,7 +6,7 @@ import {
 import { type PipelineContext } from './types';
 import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { getActionableErrorMessage } from '@/services/api/gemini/core/client';
-import { ArtifactSaver } from '@/services/api/gemini/debug/artifactSaver';
+import { ArtifactSaver } from '@/services/generation/debug/artifactSaver';
 import { logger } from '@/services/utils/logger';
 
 export class GlossaryHandler {

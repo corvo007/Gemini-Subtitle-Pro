@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import { generateSubtitles } from '@/services/api/gemini/pipeline';
+import { generateSubtitles } from '@/services/generation/pipeline';
 import { generateAssContent, generateSrtContent } from '@/services/subtitle/generator';
 import { decodeAudioWithRetry } from '@/services/audio/decoder';
 import { autoConfirmGlossaryTerms } from '@/services/glossary/autoConfirm';

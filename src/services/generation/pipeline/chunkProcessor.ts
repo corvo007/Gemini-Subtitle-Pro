@@ -1,9 +1,9 @@
 import { type Semaphore } from '@/services/utils/concurrency';
 import { type ChunkParams } from './preprocessor';
 import { type PipelineContext, type SubtitleItem, type SpeakerProfile } from './types';
-import { type GlossaryState } from '@/services/api/gemini/extractors/glossary-state';
-import { ArtifactSaver } from '@/services/api/gemini/debug/artifactSaver';
-import { MockFactory } from '@/services/api/gemini/debug/mockFactory';
+import { type GlossaryState } from '@/services/generation/extractors/glossary-state';
+import { ArtifactSaver } from '@/services/generation/debug/artifactSaver';
+import { MockFactory } from '@/services/generation/debug/mockFactory';
 import { logger } from '@/services/utils/logger';
 import { sliceAudioBuffer } from '@/services/audio/processor';
 import { transcribeAudio } from '@/services/api/openai/transcribe';
@@ -25,11 +25,11 @@ import {
   formatGeminiError,
   getActionableErrorMessage,
 } from '@/services/api/gemini/core/client';
-import { translateBatch } from '@/services/api/gemini/pipeline/translation';
+import { translateBatch } from '@/services/generation/pipeline/translation';
 import { STEP_MODELS, buildStepConfig } from '@/config';
 import { parseGeminiResponse } from '@/services/subtitle/parser';
 import { withPostCheck } from '@/services/subtitle/postCheck';
-import { createRefinementPostProcessor } from '@/services/api/gemini/pipeline/postProcessors';
+import { createRefinementPostProcessor } from '@/services/generation/pipeline/postProcessors';
 
 export interface ChunkDependencies {
   glossaryState: GlossaryState;

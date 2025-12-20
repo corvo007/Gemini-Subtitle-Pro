@@ -1,8 +1,8 @@
-import { type SpeakerProfile } from '@/services/api/gemini/extractors/speakerProfile';
+import { type SpeakerProfile } from '@/services/generation/extractors/speakerProfile';
 import { type PipelineContext } from './types';
-import { MockFactory } from '@/services/api/gemini/debug/mockFactory';
+import { MockFactory } from '@/services/generation/debug/mockFactory';
 import { intelligentAudioSampling } from '@/services/audio/sampler';
-import { extractSpeakerProfiles } from '@/services/api/gemini/extractors/speakerProfile';
+import { extractSpeakerProfiles } from '@/services/generation/extractors/speakerProfile';
 import { getActionableErrorMessage } from '@/services/api/gemini/core/client';
 import { logger } from '@/services/utils/logger';
 

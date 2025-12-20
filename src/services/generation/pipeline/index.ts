@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
-import { MockFactory } from '@/services/api/gemini/debug/mockFactory';
-import { ArtifactSaver } from '@/services/api/gemini/debug/artifactSaver';
+import { MockFactory } from '@/services/generation/debug/mockFactory';
+import { ArtifactSaver } from '@/services/generation/debug/artifactSaver';
 import { UsageReporter } from './usageReporter';
 import { preprocessAudio } from './preprocessor';
 import { SpeakerAnalyzer } from './speakerAnalyzer';
@@ -15,9 +15,9 @@ import {
   type GlossaryExtractionMetadata,
 } from '@/types/glossary';
 import { selectChunksByDuration } from '@/services/glossary/selector';
-import { extractGlossaryFromAudio } from '@/services/api/gemini/extractors/glossary';
-import { GlossaryState } from '@/services/api/gemini/extractors/glossary-state';
-import { type SpeakerProfile } from '@/services/api/gemini/extractors/speakerProfile';
+import { extractGlossaryFromAudio } from '@/services/generation/extractors/glossary';
+import { GlossaryState } from '@/services/generation/extractors/glossary-state';
+import { type SpeakerProfile } from '@/services/generation/extractors/speakerProfile';
 import { mapInParallel, Semaphore } from '@/services/utils/concurrency';
 import { logger } from '@/services/utils/logger';
 import { ChunkProcessor } from './chunkProcessor';
