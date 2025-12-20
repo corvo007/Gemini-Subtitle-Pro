@@ -2,10 +2,9 @@ import { type GoogleGenAI } from '@google/genai';
 import { blobToBase64 } from '@/services/audio/converter';
 import { logger } from '@/services/utils/logger';
 import { type TokenUsage } from '@/types/api';
-import { SPEAKER_PROFILE_SCHEMA } from '@/services/api/gemini/schemas';
-import { getSpeakerProfileExtractionPrompt } from '@/services/api/gemini/prompts';
-import { generateContentWithRetry, formatGeminiError } from '@/services/api/gemini/client';
-import { extractJsonObject } from '@/services/subtitle/parser';
+import { SPEAKER_PROFILE_SCHEMA } from '@/services/api/gemini/core/schemas';
+import { getSpeakerProfileExtractionPrompt } from '@/services/api/gemini/core/prompts';
+import { generateContentWithRetry, formatGeminiError } from '@/services/api/gemini/core/client';
 import { STEP_MODELS, buildStepConfig } from '@/config';
 
 export interface SpeakerProfile {
@@ -71,7 +70,7 @@ export async function extractSpeakerProfiles(
   });
 
   try {
-    const response = await generateContentWithRetry(
+    const data = await generateContentWithRetry<{ profiles?: SpeakerProfile[] }>(
       ai,
       {
         model: STEP_MODELS.speakerProfile,
@@ -95,35 +94,11 @@ export async function extractSpeakerProfiles(
       3, // retries
       signal,
       onUsage,
-      timeoutMs // Pass timeout to the API call
+      timeoutMs, // Pass timeout to the API call
+      'object' // Parse JSON as object
     );
 
-    const text = response.text || '{}';
-    logger.debug('Speaker Profile Response:', text);
-
-    let data;
-    try {
-      // Clean markdown code blocks first
-      const cleanText = text
-        .replace(/```json/g, '')
-        .replace(/```/g, '')
-        .trim();
-
-      // Extract JSON object using state machine
-      const extracted = extractJsonObject(cleanText);
-      if (extracted) {
-        data = JSON.parse(extracted);
-      } else {
-        // Fallback to direct parse
-        data = JSON.parse(cleanText);
-      }
-    } catch (e) {
-      logger.error('Failed to parse speaker profile JSON', {
-        error: e,
-        responseText: text.slice(0, 500),
-      });
-      data = { profiles: [] };
-    }
+    logger.debug('Speaker Profile Response:', data);
 
     return {
       profiles: data.profiles || [],

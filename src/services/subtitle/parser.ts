@@ -431,27 +431,60 @@ export const extractJsonObject = (text: string): string | null => {
   return null;
 };
 
+/**
+ * Clean markdown code blocks from JSON response text.
+ * Removes ```json and ``` markers.
+ */
+export function cleanJsonMarkdown(text: string): string {
+  return text
+    .replace(/```json/g, '')
+    .replace(/```/g, '')
+    .trim();
+}
+
+/**
+ * Parse a JSON array from text that may contain markdown code blocks.
+ * Handles common response formats: raw array, {items: []}, {subtitles: []}.
+ * Throws on parse failure.
+ */
+export function parseJsonArrayStrict<T = any>(text: string): T[] {
+  const clean = cleanJsonMarkdown(text);
+  const extracted = extractJsonArray(clean);
+  const toParse = extracted || clean;
+
+  const parsed = JSON.parse(toParse);
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed?.items && Array.isArray(parsed.items)) return parsed.items;
+  if (parsed?.subtitles && Array.isArray(parsed.subtitles)) return parsed.subtitles;
+  return [];
+}
+
+/**
+ * Parse a JSON object from text that may contain markdown code blocks.
+ * Uses state machine extraction for robustness.
+ * Throws on parse failure.
+ */
+export function parseJsonObjectStrict<T = any>(text: string): T {
+  const clean = cleanJsonMarkdown(text);
+  const extracted = extractJsonObject(clean);
+  const toParse = extracted || clean;
+  return JSON.parse(toParse);
+}
+
 export const parseGeminiResponse = (
   jsonResponse: string | null | undefined,
   maxDuration?: number
 ): SubtitleItem[] => {
   if (!jsonResponse) return [];
   try {
-    const cleanJson = jsonResponse
-      .replace(/```json/g, '')
-      .replace(/```/g, '')
-      .trim();
+    const cleanJson = cleanJsonMarkdown(jsonResponse);
 
     // Robust extraction using state machine
     let jsonToParse = extractJsonArray(cleanJson);
 
     // Fallback to original behavior if extraction fails
     if (!jsonToParse) {
-      if (cleanJson.startsWith('{')) {
-        jsonToParse = cleanJson;
-      } else {
-        jsonToParse = cleanJson;
-      }
+      jsonToParse = cleanJson;
     }
 
     let items: GeminiSubtitleSchema[] = [];
@@ -459,9 +492,9 @@ export const parseGeminiResponse = (
 
     if (Array.isArray(parsed)) {
       items = parsed;
-    } else if (parsed && parsed.subtitles && Array.isArray(parsed.subtitles)) {
+    } else if (parsed?.subtitles && Array.isArray(parsed.subtitles)) {
       items = parsed.subtitles;
-    } else if (parsed && parsed.items && Array.isArray(parsed.items)) {
+    } else if (parsed?.items && Array.isArray(parsed.items)) {
       items = parsed.items;
     }
 

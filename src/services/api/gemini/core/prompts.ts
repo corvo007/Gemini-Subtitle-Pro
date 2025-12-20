@@ -1,5 +1,5 @@
 import { type GlossaryItem } from '@/types/glossary';
-import { type SpeakerProfile } from '@/services/api/gemini/speakerProfile';
+import { type SpeakerProfile } from '@/services/api/gemini/extractors/speakerProfile';
 import { formatTime } from '@/services/subtitle/time';
 import { STEP_CONFIGS, type StepName } from '@/config/models';
 

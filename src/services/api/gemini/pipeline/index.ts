@@ -1,11 +1,11 @@
 import { GoogleGenAI } from '@google/genai';
 import { MockFactory } from '@/services/api/gemini/debug/mockFactory';
 import { ArtifactSaver } from '@/services/api/gemini/debug/artifactSaver';
-import { UsageReporter } from '@/services/api/gemini/pipeline/usageReporter';
-import { preprocessAudio } from '@/services/api/gemini/pipeline/preprocessor';
-import { SpeakerAnalyzer } from '@/services/api/gemini/pipeline/speakerAnalyzer';
-import { GlossaryHandler } from '@/services/api/gemini/pipeline/glossaryHandler';
-import { type PipelineContext } from '@/services/api/gemini/pipeline/types';
+import { UsageReporter } from './usageReporter';
+import { preprocessAudio } from './preprocessor';
+import { SpeakerAnalyzer } from './speakerAnalyzer';
+import { GlossaryHandler } from './glossaryHandler';
+import { type PipelineContext } from './types';
 import { type SubtitleItem } from '@/types/subtitle';
 import { type AppSettings } from '@/types/settings';
 import { type ChunkStatus } from '@/types/api';
@@ -15,12 +15,12 @@ import {
   type GlossaryExtractionMetadata,
 } from '@/types/glossary';
 import { selectChunksByDuration } from '@/services/glossary/selector';
-import { extractGlossaryFromAudio } from '@/services/api/gemini/glossary';
-import { GlossaryState } from '@/services/api/gemini/glossary-state';
-import { type SpeakerProfile } from '@/services/api/gemini/speakerProfile';
+import { extractGlossaryFromAudio } from '@/services/api/gemini/extractors/glossary';
+import { GlossaryState } from '@/services/api/gemini/extractors/glossary-state';
+import { type SpeakerProfile } from '@/services/api/gemini/extractors/speakerProfile';
 import { mapInParallel, Semaphore } from '@/services/utils/concurrency';
 import { logger } from '@/services/utils/logger';
-import { ChunkProcessor } from '@/services/api/gemini/pipeline/chunkProcessor';
+import { ChunkProcessor } from './chunkProcessor';
 import { ENV } from '@/config';
 
 export const generateSubtitles = async (

@@ -44,7 +44,13 @@ export interface WithPostCheckOptions {
 }
 
 // Post-process function signature - receives isFinalAttempt to know if markers should be applied
-export type PostProcessFn<T> = (result: T, isFinalAttempt: boolean) => PostProcessOutput<T>;
+// Supports both sync and async post-processors
+// TInput: type of raw result from generate()
+// TOutput: type of processed result
+export type PostProcessFn<TInput, TOutput = TInput> = (
+  result: TInput,
+  isFinalAttempt: boolean
+) => PostProcessOutput<TOutput> | Promise<PostProcessOutput<TOutput>>;
 
 // ===== Refinement Post-Processing =====
 
@@ -120,18 +126,21 @@ export function postProcessTranslation(
 /**
  * Execute a generator function with post-check and retry logic
  *
- * @param generate - Async function that produces the result
+ * @param generate - Async function that produces the raw result
  * @param postProcess - Function to post-process and validate the result
  * @param options - Retry configuration
  * @returns Final result with check status
+ *
+ * TInput: type of raw result from generate()
+ * TOutput: type of processed result (defaults to TInput for same-type transforms)
  */
-export async function withPostCheck<T>(
-  generate: () => Promise<T>,
-  postProcess: PostProcessFn<T>,
+export async function withPostCheck<TInput, TOutput = TInput>(
+  generate: () => Promise<TInput>,
+  postProcess: PostProcessFn<TInput, TOutput>,
   options: WithPostCheckOptions
-): Promise<PostProcessOutput<T>> {
+): Promise<PostProcessOutput<TOutput>> {
   const { maxRetries, stepName = '' } = options;
-  let lastOutput: PostProcessOutput<T> | null = null;
+  let lastOutput: PostProcessOutput<TOutput> | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const isFinalAttempt = attempt === maxRetries;
@@ -140,7 +149,8 @@ export async function withPostCheck<T>(
     const rawResult = await generate();
 
     // Post-process and validate (pass isFinalAttempt to apply markers on final pass)
-    const output = postProcess(rawResult, isFinalAttempt);
+    // Supports both sync and async post-processors
+    const output = await postProcess(rawResult, isFinalAttempt);
     lastOutput = output;
 
     // Check if valid or not retryable

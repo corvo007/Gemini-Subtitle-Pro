@@ -1,18 +1,21 @@
 import { GoogleGenAI } from '@google/genai';
-import { type GlossaryExtractionResult, type GlossaryExtractionMetadata } from '@/types/glossary';
+import {
+  type GlossaryExtractionResult,
+  type GlossaryExtractionMetadata,
+  type GlossaryItem,
+} from '@/types/glossary';
 import { type TokenUsage } from '@/types/api';
 import { blobToBase64 } from '@/services/audio/converter';
 import { sliceAudioBuffer } from '@/services/audio/processor';
 import { mapInParallel } from '@/services/utils/concurrency';
 import { logger } from '@/services/utils/logger';
-import { GLOSSARY_SCHEMA, SAFETY_SETTINGS } from '@/services/api/gemini/schemas';
+import { GLOSSARY_SCHEMA, SAFETY_SETTINGS } from '@/services/api/gemini/core/schemas';
 import {
   generateContentWithRetry,
   isRetryableError,
   getActionableErrorMessage,
-} from '@/services/api/gemini/client';
-import { GLOSSARY_EXTRACTION_PROMPT } from '@/services/api/gemini/prompts';
-import { extractJsonArray } from '@/services/subtitle/parser';
+} from '@/services/api/gemini/core/client';
+import { GLOSSARY_EXTRACTION_PROMPT } from '@/services/api/gemini/core/prompts';
 import { STEP_MODELS, buildStepConfig } from '@/config';
 
 export const extractGlossaryFromAudio = async (
@@ -44,7 +47,7 @@ export const extractGlossaryFromAudio = async (
       const base64Audio = await blobToBase64(wavBlob);
       const prompt = GLOSSARY_EXTRACTION_PROMPT(genre);
 
-      const response = await generateContentWithRetry(
+      const terms = await generateContentWithRetry<GlossaryItem[]>(
         ai,
         {
           model: STEP_MODELS.glossaryExtraction,
@@ -61,32 +64,15 @@ export const extractGlossaryFromAudio = async (
         3,
         signal,
         onUsage,
-        timeoutMs
+        timeoutMs,
+        'array' // Parse JSON as array
       );
 
-      const text = response.text || '[]';
-      const clean = text
-        .replace(/```json/g, '')
-        .replace(/```/g, '')
-        .trim();
-      const extracted = extractJsonArray(clean);
-      const textToParse = extracted || clean;
-      let terms;
-      try {
-        terms = JSON.parse(textToParse);
-      } catch (e) {
-        logger.warn(`Glossary JSON parse failed (Attempt ${attemptNumber})`, {
-          error: e,
-          responseText: text.slice(0, 1000),
-        });
-        throw e;
-      }
-
-      const termCount = Array.isArray(terms) ? terms.length : 0;
+      const termCount = terms.length;
       logger.info(`[Chunk ${index}] Extracted ${termCount} terms (Attempt ${attemptNumber})`);
 
       return {
-        terms: Array.isArray(terms) ? terms : [],
+        terms: terms,
         source: 'chunk',
         chunkIndex: index,
         confidence: 'high',

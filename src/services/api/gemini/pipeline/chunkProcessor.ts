@@ -1,9 +1,9 @@
 import { type Semaphore } from '@/services/utils/concurrency';
 import { type ChunkParams } from './preprocessor';
 import { type PipelineContext, type SubtitleItem, type SpeakerProfile } from './types';
-import { type GlossaryState } from '../glossary-state';
-import { ArtifactSaver } from '../debug/artifactSaver';
-import { MockFactory } from '../debug/mockFactory';
+import { type GlossaryState } from '@/services/api/gemini/extractors/glossary-state';
+import { ArtifactSaver } from '@/services/api/gemini/debug/artifactSaver';
+import { MockFactory } from '@/services/api/gemini/debug/mockFactory';
 import { logger } from '@/services/utils/logger';
 import { sliceAudioBuffer } from '@/services/audio/processor';
 import { transcribeAudio } from '@/services/api/openai/transcribe';
@@ -14,10 +14,18 @@ import {
   getSystemInstruction,
   getSystemInstructionWithDiarization,
   getRefinementPrompt,
-} from '../prompts';
-import { REFINEMENT_SCHEMA, REFINEMENT_WITH_DIARIZATION_SCHEMA, SAFETY_SETTINGS } from '../schemas';
-import { generateContentWithRetry, formatGeminiError, getActionableErrorMessage } from '../client';
-import { translateBatch } from '../batch';
+} from '@/services/api/gemini/core/prompts';
+import {
+  REFINEMENT_SCHEMA,
+  REFINEMENT_WITH_DIARIZATION_SCHEMA,
+  SAFETY_SETTINGS,
+} from '@/services/api/gemini/core/schemas';
+import {
+  generateContentWithRetry,
+  formatGeminiError,
+  getActionableErrorMessage,
+} from '@/services/api/gemini/core/client';
+import { translateBatch } from '@/services/api/gemini/batch/operations';
 import { STEP_MODELS, buildStepConfig } from '@/config';
 import { parseGeminiResponse } from '@/services/subtitle/parser';
 import {

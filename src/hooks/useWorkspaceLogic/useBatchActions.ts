@@ -7,9 +7,9 @@ import { GenerationStatus, type ChunkStatus } from '@/types/api';
 import { generateSrtContent, generateAssContent } from '@/services/subtitle/generator';
 import { downloadFile } from '@/services/subtitle/downloader';
 import { logger } from '@/services/utils/logger';
-import { runBatchOperation } from '@/services/api/gemini/batch';
+import { runBatchOperation } from '@/services/api/gemini/batch/operations';
 import { getActiveGlossaryTerms } from '@/services/glossary/utils';
-import { retryGlossaryExtraction } from '@/services/api/gemini/glossary';
+import { retryGlossaryExtraction } from '@/services/api/gemini/extractors/glossary';
 import { ENV } from '@/config';
 import { type GlossaryFlowProps, type SnapshotsValuesProps, type ProgressHandler } from './types';
 

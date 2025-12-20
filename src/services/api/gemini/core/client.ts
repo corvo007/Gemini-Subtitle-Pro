@@ -1,7 +1,12 @@
 import { type GoogleGenAI, type Part, type Content } from '@google/genai';
 import { logger } from '@/services/utils/logger';
-import { SAFETY_SETTINGS } from '@/services/api/gemini/schemas';
-import { extractJsonArray } from '@/services/subtitle/parser';
+import { SAFETY_SETTINGS } from '@/services/api/gemini/core/schemas';
+import {
+  extractJsonArray,
+  cleanJsonMarkdown,
+  parseJsonArrayStrict,
+  parseJsonObjectStrict,
+} from '@/services/subtitle/parser';
 import { type TokenUsage } from '@/types/api';
 
 /**
@@ -238,14 +243,15 @@ export function isRetryableError(error: any): boolean {
   return false;
 }
 
-export async function generateContentWithRetry(
+export async function generateContentWithRetry<T = any>(
   ai: GoogleGenAI,
   params: any,
   retries = 3,
   signal?: AbortSignal,
   onUsage?: (usage: TokenUsage) => void,
-  timeoutMs?: number // Custom timeout in milliseconds
-) {
+  timeoutMs?: number, // Custom timeout in milliseconds
+  parseJson?: 'array' | 'object' | false // Optional JSON parsing mode
+): Promise<T> {
   for (let i = 0; i < retries; i++) {
     // Check cancellation before request
     if (signal?.aborted) {
@@ -389,7 +395,25 @@ export async function generateContentWithRetry(
         logger.warn('⚠️ Search Grounding was configured but NOT used in this response');
       }
 
-      return result;
+      // Parse JSON if requested
+      if (parseJson) {
+        const text = result.text || (parseJson === 'array' ? '[]' : '{}');
+        try {
+          if (parseJson === 'array') {
+            return parseJsonArrayStrict(text) as T;
+          } else {
+            return parseJsonObjectStrict(text) as T;
+          }
+        } catch (parseError) {
+          logger.warn('JSON parse failed in generateContentWithRetry', {
+            error: parseError,
+            textPreview: text.slice(0, 500),
+          });
+          throw parseError;
+        }
+      }
+
+      return result as T;
     } catch (e: any) {
       // Use comprehensive retry check (covers timeout, 429, 503, 500, network errors, JSON errors)
       if (isRetryableError(e) && i < retries - 1) {
@@ -473,10 +497,7 @@ export async function generateContentWithLongOutput(
         try {
           // Try to parse the current full text
           // We remove markdown code blocks first just in case
-          const clean = fullText
-            .replace(/```json/g, '')
-            .replace(/```/g, '')
-            .trim();
+          const clean = cleanJsonMarkdown(fullText);
 
           // Use robust extractor to handle extra brackets/garbage
           const extracted = extractJsonArray(clean);
@@ -538,10 +559,7 @@ export async function generateContentWithLongOutput(
 
     // Final validation after all continuation attempts
     try {
-      const clean = fullText
-        .replace(/```json/g, '')
-        .replace(/```/g, '')
-        .trim();
+      const clean = cleanJsonMarkdown(fullText);
       const extracted = extractJsonArray(clean);
       const textToParse = extracted || clean;
 
