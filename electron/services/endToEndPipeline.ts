@@ -8,7 +8,7 @@
  * - 通过 IPC 事件协调两个进程
  */
 
-import { BrowserWindow, ipcMain } from 'electron';
+import { type BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { ytDlpService, classifyError } from './ytdlp.ts';
@@ -352,12 +352,19 @@ export class EndToEndPipeline {
             crf: config.compressionCrf || 23,
             subtitlePath: this.outputs.subtitlePath,
             hwAccel: config.useHardwareAccel ? 'auto' : 'off',
+            width: (() => {
+              const res = config.compressionResolution;
+              if (!res || res === 'original') return undefined;
+              if (res === 'custom') return config.compressionWidth;
+              const presets: Record<string, number> = { '1080p': 1920, '720p': 1280, '480p': 854 };
+              return presets[res];
+            })(),
             height: (() => {
               const res = config.compressionResolution;
               if (!res || res === 'original') return undefined;
-              const h = parseInt(String(res));
-              console.log(`[DEBUG] [Pipeline] Compression resolution: ${res} -> ${h}`);
-              return isNaN(h) ? undefined : h;
+              if (res === 'custom') return config.compressionHeight;
+              const presets: Record<string, number> = { '1080p': 1080, '720p': 720, '480p': 480 };
+              return presets[res];
             })(),
           },
           (progress) => {
