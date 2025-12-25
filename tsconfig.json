@@ -6,6 +6,7 @@
     "module": "ESNext",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
+    "resolveJsonModule": true,
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",

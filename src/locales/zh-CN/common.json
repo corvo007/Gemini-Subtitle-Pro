@@ -1,0 +1,22 @@
+{
+  "confirm": "确认",
+  "cancel": "取消",
+  "save": "保存",
+  "delete": "删除",
+  "edit": "编辑",
+  "close": "关闭",
+  "loading": "加载中...",
+  "error": "错误",
+  "success": "成功",
+  "warning": "警告",
+  "settings": "设置",
+  "logs": "日志",
+  "glossary": "术语表",
+  "genre": {
+    "general": "通用",
+    "anime": "动漫",
+    "movie": "电影/剧集",
+    "news": "新闻",
+    "tech": "科技"
+  }
+}
