@@ -1,0 +1,129 @@
+{
+  "title": "Settings",
+  "tabs": {
+    "general": "General",
+    "services": "Services",
+    "performance": "Performance",
+    "glossary": "Glossary",
+    "debug": "Debug"
+  },
+  "general": {
+    "display": {
+      "title": "Display Settings",
+      "zoomLevel": "Interface Zoom",
+      "zoomHint": "Adjust the size of interface elements. If you're using a high-resolution screen with system scaling and the interface looks too narrow, try a lower value (e.g. 80%).",
+      "zoomOptions": {
+        "50": "50% (Tiny)",
+        "67": "67% (Small)",
+        "75": "75% (Smaller)",
+        "80": "80% (Medium)",
+        "90": "90%",
+        "100": "100% (Default)",
+        "110": "110%",
+        "125": "125% (Larger)",
+        "150": "150% (Extra Large)"
+      }
+    },
+    "output": {
+      "title": "Output Settings",
+      "exportMode": "Export Mode",
+      "bilingual": "Bilingual Subtitles",
+      "targetOnly": "Translation Only",
+      "bilingualHint": "Bilingual mode displays both original and translated text in subtitles."
+    },
+    "speaker": {
+      "enableDiarization": "Enable Speaker Diarization",
+      "enableDiarizationDesc": "Identify different speakers in audio/video and label them",
+      "enablePreAnalysis": "Enable Speaker Pre-analysis (Experimental)",
+      "enablePreAnalysisDesc": "Pre-analyze audio before subtitle generation to identify speaker count and voice characteristics, improving diarization accuracy but increasing processing time",
+      "includeSpeakerInExport": "Include Speaker Names in Export",
+      "includeSpeakerInExportDesc": "Display speaker names in subtitle files (e.g., Speaker A: dialogue content)",
+      "useSpeakerColors": "Use Speaker Colors (ASS)",
+      "useSpeakerColorsDesc": "Assign different colors to different speakers (ASS format only)",
+      "styledTranslation": "Character-styled Translation",
+      "styledTranslationDesc": "Adjust translation tone based on speaker characteristics (formal/casual)",
+      "styledTranslationDisabledDesc": "Requires 'Speaker Pre-analysis' to be enabled"
+    }
+  },
+  "services": {
+    "translation": {
+      "title": "Translation and Proofreading Services",
+      "geminiKey": "Gemini API Key",
+      "geminiKeyPlaceholder": "Enter Gemini API Key",
+      "geminiKeyHint": "Translation uses <strong>Gemini Flash models</strong>; glossary extraction and proofreading use <strong>Gemini Pro models</strong>.",
+      "geminiEndpoint": "Gemini Endpoint (Optional)",
+      "geminiEndpointPlaceholder": "https://generativelanguage.googleapis.com",
+      "geminiEndpointHint": "Custom API endpoint for proxy or third-party gateway."
+    },
+    "transcription": {
+      "title": "Speech Recognition",
+      "openaiApi": "OpenAI API",
+      "localWhisper": "Local Whisper",
+      "openaiKey": "OpenAI API Key",
+      "openaiKeyPlaceholder": "Enter OpenAI API Key",
+      "openaiKeyHint": "Uses OpenAI's <strong>Whisper</strong> model for high-accuracy speech-to-text.",
+      "openaiEndpoint": "OpenAI Endpoint (Optional)",
+      "openaiEndpointPlaceholder": "https://api.openai.com/v1",
+      "openaiEndpointHint": "Custom API endpoint for local models, proxy, or third-party gateway."
+    }
+  },
+  "performance": {
+    "localWhisper": {
+      "title": "Local Whisper Settings",
+      "cpuThreads": "CPU Threads",
+      "cpuThreadsHint": "Number of CPU threads per transcription task (1-16)",
+      "concurrency": "Max Concurrency",
+      "concurrencyHint": "Number of simultaneous transcription tasks (1-4)"
+    },
+    "batch": {
+      "proofreadBatchSize": "Proofreading Batch Size",
+      "proofreadBatchSizeHint": "Number of subtitles per proofreading batch. Larger values provide better context and quality but consume more tokens.",
+      "translationBatchSize": "Translation Batch Size",
+      "translationBatchSizeHint": "Number of subtitles per translation batch. Larger values provide better context and quality but consume more tokens.",
+      "chunkDuration": "Chunk Duration (seconds)",
+      "chunkDurationHint": "Target length of audio segments (seconds), affects parallel transcription efficiency."
+    },
+    "concurrency": {
+      "concurrencyFlash": "Concurrency (Flash)",
+      "concurrencyFlashHint": "Applied to <strong>Gemini Flash models</strong> for translation/optimization and <strong>Whisper API</strong> transcription. Adjust based on account limits.",
+      "concurrencyPro": "Concurrency (Pro)",
+      "concurrencyProHint": "Applied to <strong>Gemini Pro models</strong> for glossary extraction and proofreading. Adjust based on account limits.",
+      "requestTimeout": "Request Timeout (seconds)",
+      "requestTimeoutHint": "Maximum wait time for a single API request. Increase for slow networks or large batches."
+    },
+    "smartSplit": "Smart Segmentation",
+    "smartSplitDesc": "Use AI voice detection to split audio at natural pauses, improving transcription accuracy (recommended)"
+  },
+  "glossary": {
+    "enableAutoGlossary": "Enable Auto Glossary",
+    "enableAutoGlossaryDesc": "Automatically identify and extract professional terms to improve translation accuracy and consistency",
+    "sampleDuration": "Glossary Sample Duration",
+    "sampleDurationHint": "Use the first N minutes of audio for term extraction. 'Full audio' provides more comprehensive terms but takes longer.",
+    "sampleOptions": {
+      "5": "First 5 minutes",
+      "15": "First 15 minutes",
+      "30": "First 30 minutes",
+      "all": "Full audio (slower)"
+    },
+    "autoConfirm": "Auto-confirm Glossary",
+    "autoConfirmDesc": "Apply extracted terms directly without manual confirmation. New terms will be merged into the currently active glossary (if none exists, a new one will be created).",
+    "manageGlossary": "Manage Glossary"
+  },
+  "debug": {
+    "title": "Debug Mode",
+    "description": "Enable Mock mode to skip actual API requests and return simulated data. Useful for testing workflows or saving API quota.",
+    "mockGemini": "Mock Gemini API",
+    "mockGeminiDesc": "Skip glossary extraction, proofreading, and translation requests",
+    "mockOpenAI": "Mock OpenAI API",
+    "mockOpenAIDesc": "Skip OpenAI Whisper transcription requests",
+    "mockLocalWhisper": "Mock Local Whisper",
+    "mockLocalWhisperDesc": "Skip local Whisper transcription",
+    "saveIntermediateArtifacts": "Save Intermediate Results",
+    "saveIntermediateArtifactsDesc": "Save Whisper raw results, proofreading results, translation results and other intermediate files in the log directory for debugging",
+    "customPaths": "Custom Paths",
+    "ffmpegPath": "Custom ffmpeg.exe Path",
+    "ffprobePath": "Custom ffprobe.exe Path",
+    "whisperPath": "Custom whisper-cli.exe Path",
+    "defaultAutoDetected": "Default (Auto-detected)"
+  }
+}

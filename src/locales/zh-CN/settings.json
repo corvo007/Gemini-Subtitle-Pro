@@ -1,0 +1,129 @@
+{
+  "title": "设置",
+  "tabs": {
+    "general": "常规",
+    "services": "服务",
+    "performance": "性能",
+    "glossary": "术语表",
+    "debug": "调试"
+  },
+  "general": {
+    "display": {
+      "title": "显示设置",
+      "zoomLevel": "界面缩放",
+      "zoomHint": "调整界面元素的大小。如果您使用的是高分辨率屏幕且设置了系统缩放，界面看起来太窄，可以尝试调低此数值（如 80%）。",
+      "zoomOptions": {
+        "50": "50% (极小)",
+        "67": "67% (小)",
+        "75": "75% (较小)",
+        "80": "80% (适中)",
+        "90": "90%",
+        "100": "100% (默认)",
+        "110": "110%",
+        "125": "125% (较大)",
+        "150": "150% (极大)"
+      }
+    },
+    "output": {
+      "title": "输出设置",
+      "exportMode": "导出模式",
+      "bilingual": "双语字幕",
+      "targetOnly": "仅译文",
+      "bilingualHint": "双语模式会在字幕中同时显示原文和译文。"
+    },
+    "speaker": {
+      "enableDiarization": "启用说话人区分",
+      "enableDiarizationDesc": "识别音频或视频中的不同说话人，并打上标签",
+      "enablePreAnalysis": "启用说话人预分析 (实验性)",
+      "enablePreAnalysisDesc": "在生成字幕前预先分析音频以识别说话人数量和声音特征，可提高区分准确度，但会增加耗时",
+      "includeSpeakerInExport": "导出时包含说话人名称",
+      "includeSpeakerInExportDesc": "在字幕文件中显示说话人（如：羊宫妃那：对话内容）",
+      "useSpeakerColors": "使用说话人颜色 (ASS)",
+      "useSpeakerColorsDesc": "为不同说话人分配不同颜色（仅 ASS 格式有效）",
+      "styledTranslation": "角色风格化翻译",
+      "styledTranslationDesc": "根据说话人特征调整翻译语气（正式/口语）",
+      "styledTranslationDisabledDesc": "需要启用「说话人预分析」才能使用此功能"
+    }
+  },
+  "services": {
+    "translation": {
+      "title": "翻译和润色服务",
+      "geminiKey": "Gemini API 密钥",
+      "geminiKeyPlaceholder": "请输入 Gemini API 密钥",
+      "geminiKeyHint": "翻译使用 <strong>Gemini Flash 系列模型</strong>，术语提取和润色使用 <strong>Gemini Pro 系列模型</strong>。",
+      "geminiEndpoint": "Gemini 端点 (可选)",
+      "geminiEndpointPlaceholder": "https://generativelanguage.googleapis.com",
+      "geminiEndpointHint": "自定义 API 端点，支持使用代理或第三方网关。"
+    },
+    "transcription": {
+      "title": "语音识别",
+      "openaiApi": "OpenAI API",
+      "localWhisper": "本地 Whisper",
+      "openaiKey": "OpenAI API 密钥",
+      "openaiKeyPlaceholder": "输入 OpenAI API 密钥",
+      "openaiKeyHint": "使用 OpenAI 的 <strong>Whisper</strong> 模型进行高精度语音转文字。",
+      "openaiEndpoint": "OpenAI 端点 (可选)",
+      "openaiEndpointPlaceholder": "https://api.openai.com/v1",
+      "openaiEndpointHint": "自定义 API 端点，支持使用本地模型、代理或第三方网关。"
+    }
+  },
+  "performance": {
+    "localWhisper": {
+      "title": "本地 Whisper 设置",
+      "cpuThreads": "CPU 线程数",
+      "cpuThreadsHint": "每个转录任务使用的 CPU 线程数，范围 1-16",
+      "concurrency": "最大并发数",
+      "concurrencyHint": "同时处理的转录任务数，范围 1-4"
+    },
+    "batch": {
+      "proofreadBatchSize": "润色翻译批次大小",
+      "proofreadBatchSizeHint": "每次润色翻译的字幕条数。数值越大上下文越完整、质量越高，但会消耗更多 Token。",
+      "translationBatchSize": "翻译批次大小",
+      "translationBatchSizeHint": "每次翻译的字幕条数。数值越大上下文越完整、质量越高，但会消耗更多 Token。",
+      "chunkDuration": "分块时长 (秒)",
+      "chunkDurationHint": "音频分段的目标长度（秒），影响转录的并行处理效率。"
+    },
+    "concurrency": {
+      "concurrencyFlash": "并发数 (Flash)",
+      "concurrencyFlashHint": "应用于 <strong>Gemini Flash 系列模型</strong> 翻译、优化和 <strong>Whisper API</strong> 转录。请根据账户限额调整。",
+      "concurrencyPro": "并发数 (Pro)",
+      "concurrencyProHint": "应用于 <strong>Gemini Pro 系列模型</strong> 术语提取和润色翻译。请根据账户限额调整。",
+      "requestTimeout": "请求超时 (秒)",
+      "requestTimeoutHint": "单个 API 请求的最长等待时间。网络较慢或处理大批量时可适当增加。"
+    },
+    "smartSplit": "智能分段",
+    "smartSplitDesc": "使用 AI 语音检测在自然停顿处切分音频，提升转录准确度（推荐）"
+  },
+  "glossary": {
+    "enableAutoGlossary": "启用自动术语表",
+    "enableAutoGlossaryDesc": "自动识别并提取专业术语，提升翻译准确性和一致性",
+    "sampleDuration": "术语提取音频长度",
+    "sampleDurationHint": "使用音频的前 N 分钟提取术语。选择「完整音频」可获得更全面的术语，但处理时间更长。",
+    "sampleOptions": {
+      "5": "前 5 分钟",
+      "15": "前 15 分钟",
+      "30": "前 30 分钟",
+      "all": "完整音频 (较慢)"
+    },
+    "autoConfirm": "自动确认术语表",
+    "autoConfirmDesc": "提取术语后直接应用，无需人工确认。新术语将自动合并至当前激活的术语表（如当前无术语表，则自动新建）。",
+    "manageGlossary": "管理术语表"
+  },
+  "debug": {
+    "title": "调试模式",
+    "description": "启用 Mock 模式可以跳过实际 API 请求，直接返回模拟数据。用于测试流程或节省 API 额度。",
+    "mockGemini": "Mock Gemini API",
+    "mockGeminiDesc": "跳过术语提取、润色和翻译请求",
+    "mockOpenAI": "Mock OpenAI API",
+    "mockOpenAIDesc": "跳过 OpenAI Whisper 转录请求",
+    "mockLocalWhisper": "Mock Local Whisper",
+    "mockLocalWhisperDesc": "跳过本地 Whisper 转录",
+    "saveIntermediateArtifacts": "保存中间结果",
+    "saveIntermediateArtifactsDesc": "在日志目录下保存 Whisper 原始结果、润色结果、翻译结果等中间文件，用于调试分析",
+    "customPaths": "Custom Paths",
+    "ffmpegPath": "Custom ffmpeg.exe Path",
+    "ffprobePath": "Custom ffprobe.exe Path",
+    "whisperPath": "Custom whisper-cli.exe Path",
+    "defaultAutoDetected": "Default (Auto-detected)"
+  }
+}
