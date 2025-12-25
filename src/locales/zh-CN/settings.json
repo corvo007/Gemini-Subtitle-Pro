@@ -66,7 +66,18 @@
       "openaiKeyHint": "使用 OpenAI 的 <strong>Whisper</strong> 模型进行高精度语音转文字。",
       "openaiEndpoint": "OpenAI 端点 (可选)",
       "openaiEndpointPlaceholder": "https://api.openai.com/v1",
-      "openaiEndpointHint": "自定义 API 端点，支持使用本地模型、代理或第三方网关。"
+      "openaiEndpointHint": "自定义 API 端点，支持使用本地模型、代理或第三方网关。",
+      "localWhisperSettings": {
+        "modelPathTitle": "模型文件路径",
+        "modelPathDesc": "使用本地 Whisper 模型（GGML 格式）进行语音转录，完全离线运行。",
+        "modelPathPlaceholder": "选择模型文件...",
+        "browseButton": "📁 浏览",
+        "instructionsTitle": "💡 说明：",
+        "instructionGgml": "需要 <strong>GGML 格式</strong> 的 .bin 模型文件",
+        "instructionModel": "仅支持 ",
+        "instructionModelLink": "whisper.cpp 官方模型",
+        "instructionModelSuffix": "，不支持 Faster-whisper 模型。"
+      }
     }
   },
   "performance": {

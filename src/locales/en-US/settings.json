@@ -66,7 +66,18 @@
       "openaiKeyHint": "Uses OpenAI's <strong>Whisper</strong> model for high-accuracy speech-to-text.",
       "openaiEndpoint": "OpenAI Endpoint (Optional)",
       "openaiEndpointPlaceholder": "https://api.openai.com/v1",
-      "openaiEndpointHint": "Custom API endpoint for local models, proxy, or third-party gateway."
+      "openaiEndpointHint": "Custom API endpoint for local models, proxy, or third-party gateway.",
+      "localWhisperSettings": {
+        "modelPathTitle": "Model File Path",
+        "modelPathDesc": "Use local Whisper model (GGML format) for speech transcription, runs completely offline.",
+        "modelPathPlaceholder": "Select model file...",
+        "browseButton": "📁 Browse",
+        "instructionsTitle": "💡 Instructions:",
+        "instructionGgml": "Requires <strong>GGML format</strong> .bin model files",
+        "instructionModel": "Only supports ",
+        "instructionModelLink": "whisper.cpp official models",
+        "instructionModelSuffix": ", Faster-whisper models are not supported."
+      }
     }
   },
   "performance": {
