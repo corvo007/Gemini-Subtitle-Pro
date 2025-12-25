@@ -4,8 +4,16 @@
  */
 
 import i18n from 'i18next';
-import zhCN from './locales/zh-CN.json';
-import enUS from './locales/en-US.json';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load locale files synchronously
+const zhCN = JSON.parse(fs.readFileSync(path.join(__dirname, 'locales', 'zh-CN.json'), 'utf-8'));
+const enUS = JSON.parse(fs.readFileSync(path.join(__dirname, 'locales', 'en-US.json'), 'utf-8'));
 
 i18n.init({
   resources: {

@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.10.1] - 2025-12-25
+
+### Features
+
+- **Settings**: Language preference is now stored in unified app settings for persistence across sessions.
+- **i18n Sync**: Added language synchronization between renderer and main process for consistent localization.
+- **Electron**: Added i18n support for main process dialogs and native UI elements.
+
+### Fixes
+
+- **i18n**: Fixed language initialization to occur at app startup instead of waiting for settings modal, ensuring correct language from first render.
+
+### Refactor
+
+- **LanguageSwitcher**: Simplified current value logic for cleaner implementation.
+
+### Documentation
+
+- **i18n**: Added infrastructure documentation for the v2.10.0 internationalization system.
+
 ## [2.10.0] - 2025-12-25 🎄
 
 ### Features
