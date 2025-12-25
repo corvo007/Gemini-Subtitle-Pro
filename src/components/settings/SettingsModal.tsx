@@ -391,12 +391,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-4 mb-4">
                     <h3 className="text-sm font-semibold text-indigo-300 mb-3 flex items-center">
                       <span className="w-2 h-2 rounded-full bg-indigo-400 mr-2"></span>
-                      本地 Whisper 设置
+                      {t('performance.localWhisper.title')}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          CPU 线程数
+                          {t('performance.localWhisper.cpuThreads')}
                         </label>
                         <NumberInput
                           value={settings.whisperThreads}
@@ -408,12 +408,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="w-full"
                         />
                         <p className="text-xs text-slate-500 mt-1">
-                          每个转录任务使用的 CPU 线程数，范围 1-16
+                          {t('performance.localWhisper.cpuThreadsHint')}
                         </p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          最大并发数
+                          {t('performance.localWhisper.concurrency')}
                         </label>
                         <NumberInput
                           value={settings.whisperConcurrency}
@@ -425,7 +425,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="w-full"
                         />
                         <p className="text-xs text-slate-500 mt-1">
-                          同时处理的转录任务数，范围 1-4
+                          {t('performance.localWhisper.concurrencyHint')}
                         </p>
                       </div>
                     </div>
@@ -435,7 +435,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      润色翻译批次大小
+                      {t('performance.batch.proofreadBatchSize')}
                     </label>
                     <NumberInput
                       value={settings.proofreadBatchSize || undefined}
@@ -444,12 +444,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       className="w-full"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      每次润色翻译的字幕条数。数值越大上下文越完整、质量越高，但会消耗更多 Token。
+                      {t('performance.batch.proofreadBatchSizeHint')}
                     </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      翻译批次大小
+                      {t('performance.batch.translationBatchSize')}
                     </label>
                     <NumberInput
                       value={settings.translationBatchSize || undefined}
@@ -458,12 +458,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       className="w-full"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      每次翻译的字幕条数。数值越大上下文越完整、质量越高，但会消耗更多 Token。
+                      {t('performance.batch.translationBatchSizeHint')}
                     </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      分块时长 (秒)
+                      {t('performance.batch.chunkDuration')}
                     </label>
                     <NumberInput
                       value={settings.chunkDuration || undefined}
@@ -472,12 +472,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       className="w-full"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      音频分段的目标长度（秒），影响转录的并行处理效率。
+                      {t('performance.batch.chunkDurationHint')}
                     </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      并发数 (Flash)
+                      {t('performance.concurrency.concurrencyFlash')}
                     </label>
                     <NumberInput
                       value={settings.concurrencyFlash || undefined}
@@ -485,14 +485,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       min={0}
                       className="w-full"
                     />
-                    <p className="text-xs text-slate-500 mt-1">
-                      应用于 <strong>Gemini Flash 系列模型</strong> 翻译、优化和{' '}
-                      <strong>Whisper API</strong> 转录。请根据账户限额调整。
-                    </p>
+                    <p
+                      className="text-xs text-slate-500 mt-1"
+                      dangerouslySetInnerHTML={{
+                        __html: t('performance.concurrency.concurrencyFlashHint'),
+                      }}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      并发数 (Pro)
+                      {t('performance.concurrency.concurrencyPro')}
                     </label>
                     <NumberInput
                       value={settings.concurrencyPro || undefined}
@@ -500,14 +502,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       min={0}
                       className="w-full"
                     />
-                    <p className="text-xs text-slate-500 mt-1">
-                      应用于 <strong>Gemini Pro 系列模型</strong>{' '}
-                      术语提取和润色翻译。请根据账户限额调整。
-                    </p>
+                    <p
+                      className="text-xs text-slate-500 mt-1"
+                      dangerouslySetInnerHTML={{
+                        __html: t('performance.concurrency.concurrencyProHint'),
+                      }}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      请求超时 (秒)
+                      {t('performance.concurrency.requestTimeout')}
                     </label>
                     <NumberInput
                       value={settings.requestTimeout || undefined}
@@ -517,15 +521,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       className="w-full"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      单个 API 请求的最长等待时间。网络较慢或处理大批量时可适当增加。
+                      {t('performance.concurrency.requestTimeoutHint')}
                     </p>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t border-slate-800">
                   <SettingRow
-                    label="智能分段"
-                    description="使用 AI 语音检测在自然停顿处切分音频，提升转录准确度（推荐）"
+                    label={t('performance.smartSplit')}
+                    description={t('performance.smartSplitDesc')}
                   >
                     <Toggle
                       checked={settings.useSmartSplit !== false}
@@ -539,8 +543,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {activeTab === 'glossary' && (
               <div className="space-y-3 animate-fade-in">
                 <SettingRow
-                  label="启用自动术语表"
-                  description="自动识别并提取专业术语，提升翻译准确性和一致性"
+                  label={t('glossary.enableAutoGlossary')}
+                  description={t('glossary.enableAutoGlossaryDesc')}
                 >
                   <Toggle
                     checked={settings.enableAutoGlossary !== false}
@@ -552,7 +556,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="space-y-4 animate-fade-in">
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        术语提取音频长度
+                        {t('glossary.sampleDuration')}
                       </label>
                       <CustomSelect
                         value={
@@ -565,22 +569,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           else updateSetting('glossarySampleMinutes', parseInt(val));
                         }}
                         options={[
-                          { value: '5', label: '前 5 分钟' },
-                          { value: '15', label: '前 15 分钟' },
-                          { value: '30', label: '前 30 分钟' },
-                          { value: 'all', label: '完整音频 (较慢)' },
+                          { value: '5', label: t('glossary.sampleOptions.5') },
+                          { value: '15', label: t('glossary.sampleOptions.15') },
+                          { value: '30', label: t('glossary.sampleOptions.30') },
+                          { value: 'all', label: t('glossary.sampleOptions.all') },
                         ]}
                         icon={<Clock className="w-4 h-4" />}
                       />
                       <p className="text-xs text-slate-500 mt-1">
-                        使用音频的前 N
-                        分钟提取术语。选择“完整音频”可获得更全面的术语，但处理时间更长。
+                        {t('glossary.sampleDurationHint')}
                       </p>
                     </div>
 
                     <SettingRow
-                      label="自动确认术语表"
-                      description="提取术语后直接应用，无需人工确认。新术语将自动合并至当前激活的术语表（如当前无术语表，则自动新建）。"
+                      label={t('glossary.autoConfirm')}
+                      description={t('glossary.autoConfirmDesc')}
                     >
                       <Toggle
                         checked={settings.glossaryAutoConfirm || false}
@@ -598,7 +601,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     }}
                     className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors flex items-center justify-center text-sm font-medium"
                   >
-                    <Book className="w-4 h-4 mr-2" /> 管理术语表
+                    <Book className="w-4 h-4 mr-2" /> {t('glossary.manageGlossary')}
                   </button>
                 </div>
               </div>
@@ -608,15 +611,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-3 animate-fade-in">
                 <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4 mb-4">
                   <h3 className="text-sm font-semibold text-amber-300 mb-2 flex items-center">
-                    <Bug className="w-4 h-4 mr-2" /> 调试模式
+                    <Bug className="w-4 h-4 mr-2" /> {t('debug.title')}
                   </h3>
-                  <p className="text-xs text-slate-400 mb-4">
-                    启用 Mock 模式可以跳过实际 API 请求，直接返回模拟数据。用于测试流程或节省 API
-                    额度。
-                  </p>
+                  <p className="text-xs text-slate-400 mb-4">{t('debug.description')}</p>
 
                   <div className="space-y-4">
-                    <SettingRow label="Mock Gemini API" description="跳过术语提取、润色和翻译请求">
+                    <SettingRow
+                      label={t('debug.mockGemini')}
+                      description={t('debug.mockGeminiDesc')}
+                    >
                       <Toggle
                         checked={settings.debug?.mockGemini || false}
                         onChange={(v) =>
@@ -629,7 +632,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       />
                     </SettingRow>
 
-                    <SettingRow label="Mock OpenAI API" description="跳过 OpenAI Whisper 转录请求">
+                    <SettingRow
+                      label={t('debug.mockOpenAI')}
+                      description={t('debug.mockOpenAIDesc')}
+                    >
                       <Toggle
                         checked={settings.debug?.mockOpenAI || false}
                         onChange={(v) =>
@@ -642,7 +648,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       />
                     </SettingRow>
 
-                    <SettingRow label="Mock Local Whisper" description="跳过本地 Whisper 转录">
+                    <SettingRow
+                      label={t('debug.mockLocalWhisper')}
+                      description={t('debug.mockLocalWhisperDesc')}
+                    >
                       <Toggle
                         checked={settings.debug?.mockLocalWhisper || false}
                         onChange={(v) =>
@@ -656,8 +665,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </SettingRow>
 
                     <SettingRow
-                      label="保存中间结果"
-                      description="在日志目录下保存 Whisper 原始结果、润色结果、翻译结果等中间文件，用于调试分析"
+                      label={t('debug.saveIntermediateArtifacts')}
+                      description={t('debug.saveIntermediateArtifactsDesc')}
                     >
                       <Toggle
                         checked={settings.debug?.saveIntermediateArtifacts || false}
@@ -673,13 +682,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                     <div className="pt-4 border-t border-slate-700">
                       <h4 className="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider">
-                        Custom Paths
+                        {t('debug.customPaths')}
                       </h4>
 
                       <div className="space-y-3">
                         <div>
                           <label className="block text-xs text-slate-400 mb-1">
-                            Custom ffmpeg.exe Path
+                            {t('debug.ffmpegPath')}
                           </label>
                           <input
                             type="text"
@@ -690,13 +699,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 ffmpegPath: e.target.value,
                               })
                             }
-                            placeholder="Default (Auto-detected)"
+                            placeholder={t('debug.defaultAutoDetected')}
                             className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                           />
                         </div>
                         <div>
                           <label className="block text-xs text-slate-400 mb-1">
-                            Custom ffprobe.exe Path
+                            {t('debug.ffprobePath')}
                           </label>
                           <input
                             type="text"
@@ -707,13 +716,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 ffprobePath: e.target.value,
                               })
                             }
-                            placeholder="Default (Auto-detected)"
+                            placeholder={t('debug.defaultAutoDetected')}
                             className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                           />
                         </div>
                         <div>
                           <label className="block text-xs text-slate-400 mb-1">
-                            Custom whisper-cli.exe Path
+                            {t('debug.whisperPath')}
                           </label>
                           <input
                             type="text"
@@ -724,7 +733,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 whisperPath: e.target.value,
                               })
                             }
-                            placeholder="Default (Auto-detected)"
+                            placeholder={t('debug.defaultAutoDetected')}
                             className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                           />
                         </div>
