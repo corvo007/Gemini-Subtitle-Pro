@@ -3,6 +3,7 @@ import { Settings, X, Languages, Type, Clock, Book, Bug } from 'lucide-react';
 import { type AppSettings } from '@/types/settings';
 import { CustomSelect } from '@/components/settings/CustomSelect';
 import { LocalWhisperSettings } from '@/components/settings/LocalWhisperSettings';
+import { LanguageSwitcher } from '@/components/settings/LanguageSwitcher';
 import { Toggle } from '@/components/ui/Toggle';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -113,6 +114,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <p className="text-xs text-slate-500 mt-2">
                       调整界面元素的大小。如果您使用的是高分辨率屏幕且设置了系统缩放，界面看起来太窄，可以尝试调低此数值（如
                       80%）。
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                      界面语言
+                    </label>
+                    <LanguageSwitcher />
+                    <p className="text-xs text-slate-500 mt-2">
+                      切换应用程序界面语言。更改后立即生效。
                     </p>
                   </div>
                 </div>

@@ -12,6 +12,8 @@
       "title": "Display Settings",
       "zoomLevel": "Interface Zoom",
       "zoomHint": "Adjust the size of interface elements. If you're using a high-resolution screen with system scaling and the interface looks too narrow, try a lower value (e.g. 80%).",
+      "language": "Interface Language",
+      "languageHint": "Change the application interface language. Changes take effect immediately.",
       "zoomOptions": {
         "50": "50% (Tiny)",
         "67": "67% (Small)",
