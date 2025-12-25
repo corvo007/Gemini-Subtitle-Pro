@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Sparkles, CheckCircle, FileText, StopCircle } from 'lucide-react';
 import { GenerationStatus, type ChunkStatus } from '@/types/api';
 import { TimeTracker } from '@/components/ui/TimeTracker';
@@ -21,6 +22,7 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
   onShowLogs,
   onCancel,
 }) => {
+  const { t } = useTranslation('progress');
   if (!isProcessing) return null;
 
   const chunks = (Object.values(chunkProgress) as ChunkStatus[]).sort((a, b) => {
@@ -63,17 +65,17 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
             {status === GenerationStatus.CANCELLED ? (
               <>
                 <StopCircle className="w-5 h-5 mr-2 text-orange-400" />
-                已终止
+                {t('status.cancelled')}
               </>
             ) : status === GenerationStatus.PROOFREADING ? (
               <>
                 <Sparkles className="w-5 h-5 mr-2 text-purple-400 animate-pulse" />
-                批量润色中...
+                {t('status.proofreading')}
               </>
             ) : (
               <>
                 <Loader2 className="w-5 h-5 mr-2 text-blue-400 animate-spin" />
-                正在生成字幕...
+                {t('status.generating')}
               </>
             )}
           </h3>
@@ -82,20 +84,20 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
               <button
                 onClick={onCancel}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/30 transition-colors"
-                title="终止操作"
+                title={t('tooltips.terminate')}
               >
                 <StopCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">终止</span>
+                <span className="text-sm font-medium">{t('actions.terminate')}</span>
               </button>
             )}
             {onShowLogs && (
               <button
                 onClick={onShowLogs}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-colors"
-                title="查看日志"
+                title={t('tooltips.viewLogs')}
               >
                 <FileText className="w-4 h-4" />
-                <span className="text-sm font-medium">日志</span>
+                <span className="text-sm font-medium">{t('actions.viewLogs')}</span>
               </button>
             )}
             <span className="text-2xl font-mono font-bold text-slate-200">{percent}%</span>
@@ -107,7 +109,9 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
         )}
 
         <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar bg-slate-950/50 p-4 rounded-lg border border-slate-800">
-          {chunks.length === 0 && <div className="text-center text-slate-500 py-8">准备中...</div>}
+          {chunks.length === 0 && (
+            <div className="text-center text-slate-500 py-8">{t('status.preparing')}</div>
+          )}
           {chunks.map((chunk) => (
             <div
               key={chunk.id}
@@ -126,15 +130,15 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
                 />
                 <span className="text-slate-300 text-sm font-medium">
                   {typeof chunk.id === 'number'
-                    ? `片段 ${chunk.id}`
+                    ? t('chunks.segment', { id: chunk.id })
                     : chunk.id === 'decoding'
-                      ? '解码音频'
+                      ? t('chunks.decoding')
                       : chunk.id === 'segmenting'
-                        ? '分段处理'
+                        ? t('chunks.segmenting')
                         : chunk.id === 'glossary'
-                          ? '提取术语'
+                          ? t('chunks.glossary')
                           : chunk.id === 'diarization'
-                            ? '说话人预分析'
+                            ? t('chunks.diarization')
                             : chunk.id}
                 </span>
               </div>
@@ -155,10 +159,8 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
 
         <div className="mt-6">
           <div className="flex justify-between text-xs text-slate-400 mb-2 font-medium">
-            <span>进度</span>
-            <span>
-              {completed}/{total} 已完成
-            </span>
+            <span>{t('footer.progress')}</span>
+            <span>{t('footer.completed', { completed, total })}</span>
           </div>
           <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700/50">
             <div

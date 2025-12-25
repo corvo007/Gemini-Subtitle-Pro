@@ -1,0 +1,27 @@
+{
+  "status": {
+    "cancelled": "Cancelled",
+    "proofreading": "Proofreading...",
+    "generating": "Generating subtitles...",
+    "preparing": "Preparing..."
+  },
+  "actions": {
+    "terminate": "Stop",
+    "viewLogs": "Logs"
+  },
+  "chunks": {
+    "segment": "Segment {{id}}",
+    "decoding": "Decoding audio",
+    "segmenting": "Segmenting",
+    "glossary": "Extracting terms",
+    "diarization": "Speaker pre-analysis"
+  },
+  "footer": {
+    "progress": "Progress",
+    "completed": "{{completed}}/{{total}} completed"
+  },
+  "tooltips": {
+    "terminate": "Terminate operation",
+    "viewLogs": "View logs"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "status": {
+    "cancelled": "已终止",
+    "proofreading": "批量润色中...",
+    "generating": "正在生成字幕...",
+    "preparing": "准备中..."
+  },
+  "actions": {
+    "terminate": "终止",
+    "viewLogs": "日志"
+  },
+  "chunks": {
+    "segment": "片段 {{id}}",
+    "decoding": "解码音频",
+    "segmenting": "分段处理",
+    "glossary": "提取术语",
+    "diarization": "说话人预分析"
+  },
+  "footer": {
+    "progress": "进度",
+    "completed": "{{completed}}/{{total}} 已完成"
+  },
+  "tooltips": {
+    "terminate": "终止操作",
+    "viewLogs": "查看日志"
+  }
+}

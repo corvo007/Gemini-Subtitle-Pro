@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { cn } from '@/lib/cn';
@@ -21,11 +22,14 @@ export const SimpleConfirmationModal: React.FC<SimpleConfirmationModalProps> = (
   onConfirm,
   title,
   message,
-  confirmText = '确认',
-  cancelText = '取消',
+  confirmText,
+  cancelText,
   type = 'info',
   hideCancelButton = false,
 }) => {
+  const { t } = useTranslation('common');
+  const actualConfirmText = confirmText ?? t('confirm');
+  const actualCancelText = cancelText ?? t('cancel');
   const getIcon = () => {
     switch (type) {
       case 'danger':
@@ -62,7 +66,7 @@ export const SimpleConfirmationModal: React.FC<SimpleConfirmationModalProps> = (
             onClick={onClose}
             className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium"
           >
-            {cancelText}
+            {actualCancelText}
           </button>
         )}
         <button
@@ -77,7 +81,7 @@ export const SimpleConfirmationModal: React.FC<SimpleConfirmationModalProps> = (
             type === 'info' && 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'
           )}
         >
-          {confirmText}
+          {actualConfirmText}
         </button>
       </div>
     </Modal>
