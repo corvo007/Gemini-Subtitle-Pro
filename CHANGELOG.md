@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.10.0] - 2025-12-25 🎄
+
+### Features
+
+- **Internationalization (i18n)**: Complete multi-language support implementation across the entire application.
+  - Setup i18n infrastructure with `react-i18next` (Phase 1).
+  - Transformed all major components: HomePage, SettingsModal, SubtitleEditor, WorkspacePage, DownloadPage, CompressionPage, Editor components, and EndToEndWizard (Phases 2-12).
+  - Added language switcher for users to change application language.
+  - Created comprehensive translation files for Settings, UI components, and all modals.
+  - Extracted Chinese strings with automated scripts for translation workflow.
+
+### Fixes
+
+- **Hooks**: Fixed race condition in native subtitle import error handling.
+- **Pipeline**: Correctly pass width and height parameters for video compression.
+
+### Documentation
+
+- **Bilingual Docs**: Added English versions of README and ARCHITECTURE documentation for international users.
+
 ## [2.9.14] - 2025-12-20
 
 ### Documentation
