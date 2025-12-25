@@ -25,4 +25,15 @@ i18n
     },
   });
 
+// Sync language changes to main process (Electron only)
+i18n.on('languageChanged', (lng) => {
+   
+  const electronAPI = (window as any).electronAPI;
+  if (electronAPI?.i18n?.changeLanguage) {
+    electronAPI.i18n.changeLanguage(lng).catch((err: Error) => {
+      console.warn('[i18n] Failed to sync language to main process:', err);
+    });
+  }
+});
+
 export default i18n;

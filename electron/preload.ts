@@ -60,6 +60,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setSettings: (settings: any) => ipcRenderer.invoke('storage-set', settings),
   },
 
+  // i18n - sync language to main process
+  i18n: {
+    changeLanguage: (lang: string) => ipcRenderer.invoke('i18n:change-language', lang),
+  },
+
   // Open external link
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
 
