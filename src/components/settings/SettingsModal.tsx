@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Settings, X, Languages, Type, Clock, Book, Bug } from 'lucide-react';
 import { type AppSettings } from '@/types/settings';
 import { CustomSelect } from '@/components/settings/CustomSelect';
@@ -37,6 +38,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   envOpenaiKey,
   onOpenGlossaryManager,
 }) => {
+  const { t } = useTranslation('settings');
   const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
 
   if (!isOpen) return null;
@@ -55,7 +57,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <X className="w-5 h-5" />
           </button>
           <h2 className="text-xl font-bold text-white mb-6 flex items-center">
-            <Settings className="w-5 h-5 mr-2 text-indigo-400" /> 设置
+            <Settings className="w-5 h-5 mr-2 text-indigo-400" /> {t('title')}
           </h2>
 
           <div className="flex space-x-1 border-b border-slate-700 mb-6 overflow-x-auto">
@@ -76,11 +78,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                 )}
               >
-                {tab === 'general' && '常规'}
-                {tab === 'services' && '服务'}
-                {tab === 'performance' && '性能'}
-                {tab === 'glossary' && '术语表'}
-                {tab === 'debug' && '调试'}
+                {t(`tabs.${tab}`)}
               </button>
             ))}
           </div>
@@ -90,49 +88,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-6 animate-fade-in">
                 {/* Interface Zoom Settings */}
                 <div className="space-y-3">
-                  <SectionHeader>显示设置</SectionHeader>
+                  <SectionHeader>{t('general.display.title')}</SectionHeader>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      界面缩放
+                      {t('general.display.zoomLevel')}
                     </label>
                     <CustomSelect
                       value={settings.zoomLevel?.toString() || '1'}
                       onChange={(val) => updateSetting('zoomLevel', parseFloat(val))}
                       options={[
-                        { value: '0.5', label: '50% (极小)' },
-                        { value: '0.67', label: '67% (小)' },
-                        { value: '0.75', label: '75% (较小)' },
-                        { value: '0.8', label: '80% (适中)' },
-                        { value: '0.9', label: '90%' },
-                        { value: '1', label: '100% (默认)' },
-                        { value: '1.1', label: '110%' },
-                        { value: '1.25', label: '125% (较大)' },
-                        { value: '1.5', label: '150% (极大)' },
+                        { value: '0.5', label: t('general.display.zoomOptions.50') },
+                        { value: '0.67', label: t('general.display.zoomOptions.67') },
+                        { value: '0.75', label: t('general.display.zoomOptions.75') },
+                        { value: '0.8', label: t('general.display.zoomOptions.80') },
+                        { value: '0.9', label: t('general.display.zoomOptions.90') },
+                        { value: '1', label: t('general.display.zoomOptions.100') },
+                        { value: '1.1', label: t('general.display.zoomOptions.110') },
+                        { value: '1.25', label: t('general.display.zoomOptions.125') },
+                        { value: '1.5', label: t('general.display.zoomOptions.150') },
                       ]}
                       icon={<Type className="w-4 h-4" />}
                     />
-                    <p className="text-xs text-slate-500 mt-2">
-                      调整界面元素的大小。如果您使用的是高分辨率屏幕且设置了系统缩放，界面看起来太窄，可以尝试调低此数值（如
-                      80%）。
-                    </p>
+                    <p className="text-xs text-slate-500 mt-2">{t('general.display.zoomHint')}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      界面语言
+                      {t('general.display.language')}
                     </label>
                     <LanguageSwitcher />
                     <p className="text-xs text-slate-500 mt-2">
-                      切换应用程序界面语言。更改后立即生效。
+                      {t('general.display.languageHint')}
                     </p>
                   </div>
                 </div>
 
                 {/* Output Settings */}
                 <div className="space-y-3">
-                  <SectionHeader>输出设置</SectionHeader>
+                  <SectionHeader>{t('general.output.title')}</SectionHeader>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      导出模式
+                      {t('general.output.exportMode')}
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                       <OptionButton
@@ -141,7 +136,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         size="md"
                       >
                         <Languages className="w-4 h-4" />
-                        <span>双语字幕</span>
+                        <span>{t('general.output.bilingual')}</span>
                       </OptionButton>
                       <OptionButton
                         selected={settings.outputMode === 'target_only'}
@@ -149,19 +144,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         size="md"
                       >
                         <Type className="w-4 h-4" />
-                        <span>仅译文</span>
+                        <span>{t('general.output.targetOnly')}</span>
                       </OptionButton>
                     </div>
                     <p className="text-xs text-slate-500 mt-2">
-                      双语模式会在字幕中同时显示原文和译文。
+                      {t('general.output.bilingualHint')}
                     </p>
                   </div>
 
                   {/* Speaker Diarization Settings */}
                   <div className="space-y-4 mt-4 pt-4 border-t border-slate-700/50">
                     <SettingRow
-                      label="启用说话人区分"
-                      description="识别音频或视频中的不同说话人，并打上标签"
+                      label={t('general.speaker.enableDiarization')}
+                      description={t('general.speaker.enableDiarizationDesc')}
                     >
                       <Toggle
                         checked={settings.enableDiarization || false}
@@ -171,8 +166,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                     {settings.enableDiarization && (
                       <SettingRow
-                        label="启用说话人预分析 (实验性)"
-                        description="在生成字幕前预先分析音频以识别说话人数量和声音特征，可提高区分准确度，但会增加耗时"
+                        label={t('general.speaker.enablePreAnalysis')}
+                        description={t('general.speaker.enablePreAnalysisDesc')}
                         indented
                       >
                         <Toggle
@@ -191,8 +186,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {settings.enableDiarization && (
                       <div className="space-y-3 animate-fade-in">
                         <SettingRow
-                          label="导出时包含说话人名称"
-                          description="在字幕文件中显示说话人（如：羊宫妃那：对话内容）"
+                          label={t('general.speaker.includeSpeakerInExport')}
+                          description={t('general.speaker.includeSpeakerInExportDesc')}
                           indented
                         >
                           <Toggle
@@ -201,8 +196,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           />
                         </SettingRow>
                         <SettingRow
-                          label="使用说话人颜色 (ASS)"
-                          description="为不同说话人分配不同颜色（仅 ASS 格式有效）"
+                          label={t('general.speaker.useSpeakerColors')}
+                          description={t('general.speaker.useSpeakerColorsDesc')}
                           indented
                         >
                           <Toggle
@@ -211,11 +206,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           />
                         </SettingRow>
                         <SettingRow
-                          label="角色风格化翻译"
+                          label={t('general.speaker.styledTranslation')}
                           description={
                             settings.enableSpeakerPreAnalysis
-                              ? '根据说话人特征调整翻译语气（正式/口语）'
-                              : '需要启用「说话人预分析」才能使用此功能'
+                              ? t('general.speaker.styledTranslationDesc')
+                              : t('general.speaker.styledTranslationDisabledDesc')
                           }
                           indented
                           disabled={!settings.enableSpeakerPreAnalysis}
@@ -237,38 +232,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-6 animate-fade-in">
                 {/* API Settings */}
                 <div className="space-y-3">
-                  <SectionHeader>翻译和润色服务</SectionHeader>
+                  <SectionHeader>{t('services.translation.title')}</SectionHeader>
                   <div className="space-y-4">
                     {/* Gemini */}
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Gemini API 密钥
+                        {t('services.translation.geminiKey')}
                       </label>
                       <div className="relative">
                         <PasswordInput
                           value={settings.geminiKey}
                           onChange={(e) => updateSetting('geminiKey', e.target.value.trim())}
-                          placeholder="请输入 Gemini API 密钥"
+                          placeholder={t('services.translation.geminiKeyPlaceholder')}
                         />
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        翻译使用 <strong>Gemini Flash 系列模型</strong>，术语提取和润色使用{' '}
-                        <strong>Gemini Pro 系列模型</strong>。
-                      </p>
+                      <p
+                        className="text-xs text-slate-500 mt-1"
+                        dangerouslySetInnerHTML={{
+                          __html: t('services.translation.geminiKeyHint'),
+                        }}
+                      />
                       <EnvKeyHint envKey={envGeminiKey} userKey={settings.geminiKey} />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Gemini 端点 (可选)
+                        {t('services.translation.geminiEndpoint')}
                       </label>
                       <InputWithReset
                         value={settings.geminiEndpoint || ''}
                         onChange={(val) => updateSetting('geminiEndpoint', val)}
                         onReset={() => updateSetting('geminiEndpoint', undefined)}
-                        placeholder="https://generativelanguage.googleapis.com"
+                        placeholder={t('services.translation.geminiEndpointPlaceholder')}
                       />
                       <p className="text-xs text-slate-500 mt-1">
-                        自定义 API 端点，支持使用代理或第三方网关。
+                        {t('services.translation.geminiEndpointHint')}
                       </p>
                     </div>
                   </div>
@@ -276,7 +273,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 {/* Transcription Provider Settings */}
                 <div className="space-y-3 pt-4 border-t border-slate-800">
-                  <SectionHeader>语音识别</SectionHeader>
+                  <SectionHeader>{t('services.transcription.title')}</SectionHeader>
 
                   {isElectron ? (
                     <div className="space-y-4">
@@ -286,14 +283,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           onClick={() => updateSetting('useLocalWhisper', false)}
                           size="md"
                         >
-                          <span>OpenAI API</span>
+                          <span>{t('services.transcription.openaiApi')}</span>
                         </OptionButton>
                         <OptionButton
                           selected={settings.useLocalWhisper || false}
                           onClick={() => updateSetting('useLocalWhisper', true)}
                           size="md"
                         >
-                          <span>本地 Whisper</span>
+                          <span>{t('services.transcription.localWhisper')}</span>
                         </OptionButton>
                       </div>
 
@@ -312,32 +309,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <div className="space-y-4 animate-fade-in">
                           <div>
                             <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                              OpenAI API 密钥
+                              {t('services.transcription.openaiKey')}
                             </label>
                             <div className="relative">
                               <PasswordInput
                                 value={settings.openaiKey}
                                 onChange={(e) => updateSetting('openaiKey', e.target.value.trim())}
-                                placeholder="输入 OpenAI API 密钥"
+                                placeholder={t('services.transcription.openaiKeyPlaceholder')}
                               />
                             </div>
-                            <p className="text-xs text-slate-500 mt-1">
-                              使用 OpenAI 的 <strong>Whisper</strong> 模型进行高精度语音转文字。
-                            </p>
+                            <p
+                              className="text-xs text-slate-500 mt-1"
+                              dangerouslySetInnerHTML={{
+                                __html: t('services.transcription.openaiKeyHint'),
+                              }}
+                            />
                             <EnvKeyHint envKey={envOpenaiKey} userKey={settings.openaiKey} />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                              OpenAI 端点 (可选)
+                              {t('services.transcription.openaiEndpoint')}
                             </label>
                             <InputWithReset
                               value={settings.openaiEndpoint || ''}
                               onChange={(val) => updateSetting('openaiEndpoint', val)}
                               onReset={() => updateSetting('openaiEndpoint', undefined)}
-                              placeholder="https://api.openai.com/v1"
+                              placeholder={t('services.transcription.openaiEndpointPlaceholder')}
                             />
                             <p className="text-xs text-slate-500 mt-1">
-                              自定义 API 端点，支持使用本地模型、代理或第三方网关。
+                              {t('services.transcription.openaiEndpointHint')}
                             </p>
                           </div>
                         </div>
@@ -347,32 +347,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          OpenAI API 密钥
+                          {t('services.transcription.openaiKey')}
                         </label>
                         <div className="relative">
                           <PasswordInput
                             value={settings.openaiKey}
                             onChange={(e) => updateSetting('openaiKey', e.target.value.trim())}
-                            placeholder="输入 OpenAI API 密钥"
+                            placeholder={t('services.transcription.openaiKeyPlaceholder')}
                           />
                         </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                          使用 OpenAI 的 <strong>Whisper</strong> 模型进行高精度语音转文字。
-                        </p>
+                        <p
+                          className="text-xs text-slate-500 mt-1"
+                          dangerouslySetInnerHTML={{
+                            __html: t('services.transcription.openaiKeyHint'),
+                          }}
+                        />
                         <EnvKeyHint envKey={envOpenaiKey} userKey={settings.openaiKey} />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          OpenAI 端点 (可选)
+                          {t('services.transcription.openaiEndpoint')}
                         </label>
                         <InputWithReset
                           value={settings.openaiEndpoint || ''}
                           onChange={(val) => updateSetting('openaiEndpoint', val)}
                           onReset={() => updateSetting('openaiEndpoint', undefined)}
-                          placeholder="https://api.openai.com/v1"
+                          placeholder={t('services.transcription.openaiEndpointPlaceholder')}
                         />
                         <p className="text-xs text-slate-500 mt-1">
-                          自定义 API 端点，支持使用本地模型、代理或第三方网关。
+                          {t('services.transcription.openaiEndpointHint')}
                         </p>
                       </div>
                     </div>
