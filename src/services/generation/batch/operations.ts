@@ -1,4 +1,5 @@
 import { GoogleGenAI, type Part } from '@google/genai';
+import i18n from '@/i18n';
 import { type SubtitleItem, type BatchOperationMode } from '@/types/subtitle';
 import { type AppSettings } from '@/types/settings';
 import { type ChunkStatus, type TokenUsage } from '@/types/api';
@@ -130,6 +131,7 @@ async function processBatch(
       glossaryContext,
       specificInstruction,
       conservativeMode: settings.conservativeBatchMode,
+      targetLanguage: settings.targetLanguage,
     });
   } else {
     // Proofread - Focus on TRANSLATION quality, may adjust timing when necessary
@@ -140,6 +142,7 @@ async function processBatch(
       payload,
       glossaryContext,
       specificInstruction,
+      targetLanguage: settings.targetLanguage,
     });
   }
 
@@ -210,7 +213,7 @@ export const runBatchOperation = async (
   speakerProfiles?: SpeakerProfile[]
 ): Promise<SubtitleItem[]> => {
   const geminiKey = ENV.GEMINI_API_KEY || settings.geminiKey?.trim();
-  if (!geminiKey) throw new Error('缺少 API 密钥。');
+  if (!geminiKey) throw new Error(i18n.t('services:pipeline.errors.missingGeminiKey'));
   const ai = new GoogleGenAI({
     apiKey: geminiKey,
     httpOptions: {
@@ -222,7 +225,12 @@ export const runBatchOperation = async (
   let audioBuffer: AudioBuffer | null = null;
   // Both Proofread and Fix Timestamps need audio context.
   if (file) {
-    onProgress?.({ id: 'init', total: 0, status: 'processing', message: '加载音频中...' });
+    onProgress?.({
+      id: 'init',
+      total: 0,
+      status: 'processing',
+      message: i18n.t('services:pipeline.status.loadingAudio'),
+    });
     try {
       audioBuffer = await decodeAudio(file);
     } catch (e) {
@@ -241,7 +249,8 @@ export const runBatchOperation = async (
     settings.enableDiarization, // Pass diarization flag
     speakerProfiles,
     settings.minSpeakers,
-    settings.maxSpeakers
+    settings.maxSpeakers,
+    settings.targetLanguage
   );
 
   const currentSubtitles = [...allSubtitles];
@@ -321,9 +330,10 @@ export const runBatchOperation = async (
       }
 
       let actionLabel = '';
-      if (mode === 'proofread') actionLabel = '润色中';
-      else if (mode === 'fix_timestamps') actionLabel = '校对时间轴中';
-      else actionLabel = '翻译中';
+      if (mode === 'proofread') actionLabel = i18n.t('services:pipeline.status.proofing');
+      else if (mode === 'fix_timestamps')
+        actionLabel = i18n.t('services:pipeline.status.fixingTimestamps');
+      else actionLabel = i18n.t('services:pipeline.status.translating');
 
       const groupLabel =
         group.length > 1
@@ -333,7 +343,7 @@ export const runBatchOperation = async (
         id: groupLabel,
         total: groups.length,
         status: 'processing',
-        message: `${actionLabel}...`,
+        message: actionLabel,
       });
       logger.debug(
         `[Batch ${groupLabel}] Starting ${mode} operation. Merged items: ${mergedBatch.length}`
@@ -393,11 +403,16 @@ export const runBatchOperation = async (
           id: groupLabel,
           total: groups.length,
           status: 'completed',
-          message: '完成',
+          message: i18n.t('services:pipeline.status.completed'),
         });
       } catch (e) {
         logger.error(`Group ${groupLabel} failed`, e);
-        onProgress?.({ id: groupLabel, total: groups.length, status: 'error', message: '失败' });
+        onProgress?.({
+          id: groupLabel,
+          total: groups.length,
+          status: 'error',
+          message: i18n.t('services:pipeline.status.failed'),
+        });
         throw e; // Re-throw to stop mapInParallel if needed, or handle cancellation
       }
     },
@@ -418,7 +433,9 @@ export const runBatchOperation = async (
         id: 'auto-translate',
         total: 1,
         status: 'processing',
-        message: `正在翻译 ${emptyTranslationItems.length} 条新增字幕...`,
+        message: i18n.t('services:pipeline.status.translatingNew', {
+          count: emptyTranslationItems.length,
+        }),
       });
 
       try {
@@ -435,7 +452,9 @@ export const runBatchOperation = async (
           undefined,
           signal,
           trackUsage,
-          (settings.requestTimeout || 600) * 1000
+          (settings.requestTimeout || 600) * 1000,
+          !!settings.enableDiarization,
+          settings.targetLanguage
         );
 
         // Create a map of translations
@@ -458,7 +477,7 @@ export const runBatchOperation = async (
           id: 'auto-translate',
           total: 1,
           status: 'completed',
-          message: '自动翻译完成',
+          message: i18n.t('services:pipeline.status.autoTranslationComplete'),
         });
       } catch (e) {
         logger.error('[Auto-Translate] Failed to translate new entries', e);
@@ -466,7 +485,7 @@ export const runBatchOperation = async (
           id: 'auto-translate',
           total: 1,
           status: 'error',
-          message: '自动翻译失败',
+          message: i18n.t('services:pipeline.status.autoTranslationFailed'),
         });
         // Don't throw - allow the operation to complete with untranslated entries
       }

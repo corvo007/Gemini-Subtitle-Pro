@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronDown, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { getSpeakerColor } from '@/services/utils/colors';
 import { cn } from '@/lib/cn';
@@ -18,6 +19,7 @@ export const SpeakerSelect: React.FC<SpeakerSelectProps> = ({
   onSelect,
   onManageSpeakers,
 }) => {
+  const { t } = useTranslation('modals');
   const [isOpen, setIsOpen] = React.useState(false);
   const [dropUp, setDropUp] = React.useState(false);
   const { ref: dropdownRef, getDirection } = useDropdownDirection<HTMLDivElement>({
@@ -56,7 +58,7 @@ export const SpeakerSelect: React.FC<SpeakerSelectProps> = ({
           border: `1px solid ${speakerColor}`,
         }}
       >
-        <span>{currentSpeaker || '选择说话人'}</span>
+        <span>{currentSpeaker || t('speakerManager.selectSpeaker')}</span>
         <ChevronDown className={cn('w-3 h-3 transition-transform', isOpen && 'rotate-180')} />
       </button>
 
@@ -68,7 +70,7 @@ export const SpeakerSelect: React.FC<SpeakerSelectProps> = ({
           )}
         >
           {speakerProfiles.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-slate-500">暂无说话人</div>
+            <div className="px-3 py-2 text-xs text-slate-500">{t('speakerManager.noSpeakers')}</div>
           ) : (
             speakerProfiles.map((profile) => (
               <button
@@ -102,7 +104,7 @@ export const SpeakerSelect: React.FC<SpeakerSelectProps> = ({
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
               >
                 <Users className="w-3 h-3" />
-                管理说话人
+                {t('speakerManager.manageSpeakers')}
               </button>
             </>
           )}

@@ -10,6 +10,7 @@ import editor from './editor.json';
 import ui from './ui.json';
 import endToEnd from './endToEnd.json';
 import modals from './modals.json';
+import services from './services.json';
 
 export default {
   common,
@@ -24,4 +25,5 @@ export default {
   ui,
   endToEnd,
   modals,
+  services,
 };

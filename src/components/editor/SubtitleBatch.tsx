@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckSquare, Square, Wand2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { type SubtitleItem } from '@/types';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { SubtitleRow } from '@/components/editor/SubtitleRow';
@@ -66,6 +67,7 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(
     // Add subtitle
     addSubtitle,
   }) => {
+    const { t } = useTranslation('workspace');
     const startTime = chunk[0].startTime.split(',')[0];
     const endTime = chunk[chunk.length - 1].endTime.split(',')[0];
 
@@ -108,7 +110,7 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(
                   isSelected ? 'text-indigo-300' : 'text-slate-300'
                 )}
               >
-                片段 {chunkIdx + 1}
+                {t('batch.segment', { id: chunkIdx + 1 })}
               </h3>
               <p className="text-xs text-slate-500 font-mono mt-0.5">
                 {startTime} - {endTime}
@@ -120,7 +122,7 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(
               type="text"
               value={batchComment}
               onChange={(e) => updateBatchComment(chunkIdx, e.target.value)}
-              placeholder="添加说明或注释..."
+              placeholder={t('batch.commentPlaceholder')}
               className="w-full bg-slate-900/50 border border-slate-700/50 rounded px-2 py-1 text-xs text-amber-200 placeholder-slate-600 focus:border-amber-500/50 focus:outline-none"
             />
           </div>
@@ -129,7 +131,7 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(
             <div className="flex items-center space-x-1">
               <button
                 onClick={() => handleBatchAction('proofread', chunkIdx)}
-                title="润色翻译"
+                title={t('batch.proofread')}
                 className="p-2 text-slate-500 hover:text-indigo-400 hover:bg-slate-700 rounded-lg transition-colors"
               >
                 <Wand2 className="w-4 h-4" />

@@ -1,5 +1,6 @@
 import React from 'react';
 import { RefreshCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 
 interface FileUploaderProps {
@@ -38,6 +39,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   error = false,
   useNativeDialog = false,
 }) => {
+  const { t } = useTranslation('ui');
   // Handle click for native dialog
   const handleNativeClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -96,7 +98,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
               'p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors ml-1',
               disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
             )}
-            title="更改文件"
+            title={t('upload.changeFile')}
             disabled={disabled}
           >
             <RefreshCcw className="w-3 h-3" />
@@ -107,7 +109,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
               'cursor-pointer p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors ml-1',
               disabled && 'opacity-50 cursor-not-allowed'
             )}
-            title="更改文件"
+            title={t('upload.changeFile')}
           >
             <RefreshCcw className="w-3 h-3" />
             <input

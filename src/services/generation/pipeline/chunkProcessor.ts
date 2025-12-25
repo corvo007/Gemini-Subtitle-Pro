@@ -1,4 +1,5 @@
 import { type Semaphore } from '@/services/utils/concurrency';
+import i18n from '@/i18n';
 import { type ChunkParams } from './preprocessor';
 import { type PipelineContext, type SubtitleItem, type SpeakerProfile } from './types';
 import { type GlossaryState } from '@/services/generation/extractors/glossary-state';
@@ -56,6 +57,7 @@ export class ChunkProcessor {
   ): Promise<ChunkResult> {
     const { index, start, end } = chunk;
     const { ai, settings, signal, trackUsage, onProgress, isDebug, openaiKey } = context;
+    const targetLanguage = settings.targetLanguage || 'Simplified Chinese';
     const {
       glossaryState,
       speakerProfilePromise,
@@ -73,7 +75,7 @@ export class ChunkProcessor {
         total: totalChunks,
         status: 'processing',
         stage: 'transcribing',
-        message: '等待转录...',
+        message: i18n.t('services:pipeline.status.waitingTranscription'),
       });
 
       let rawSegments: SubtitleItem[] = [];
@@ -81,14 +83,14 @@ export class ChunkProcessor {
       // Acquire Transcription Semaphore
       await transcriptionSemaphore.acquire();
       try {
-        if (signal?.aborted) throw new Error('操作已取消');
+        if (signal?.aborted) throw new Error(i18n.t('services:pipeline.errors.cancelled'));
 
         onProgress?.({
           id: index,
           total: totalChunks,
           status: 'processing',
           stage: 'transcribing',
-          message: '正在转录...',
+          message: i18n.t('services:pipeline.status.transcribing'),
         });
         logger.debug(`[Chunk ${index}] Starting transcription...`);
 
@@ -138,7 +140,7 @@ export class ChunkProcessor {
           id: index,
           total: totalChunks,
           status: 'completed',
-          message: '完成（无内容）',
+          message: i18n.t('services:pipeline.status.completeNoContent'),
         });
         return { whisper: [], refined: [], translated: [], final: [] };
       }
@@ -149,15 +151,15 @@ export class ChunkProcessor {
         total: totalChunks,
         status: 'processing',
         stage: 'waiting_glossary',
-        message: '等待术语表...',
+        message: i18n.t('services:pipeline.status.waitingGlossary'),
       });
 
-      if (signal?.aborted) throw new Error('操作已取消');
+      if (signal?.aborted) throw new Error(i18n.t('services:pipeline.errors.cancelled'));
 
       logger.debug(`[Chunk ${index}] Waiting for glossary confirmation...`);
       const finalGlossary = await glossaryState.get();
 
-      if (signal?.aborted) throw new Error('操作已取消');
+      if (signal?.aborted) throw new Error(i18n.t('services:pipeline.errors.cancelled'));
 
       const chunkSettings = { ...settings, glossary: finalGlossary };
 
@@ -173,7 +175,7 @@ export class ChunkProcessor {
           total: totalChunks,
           status: 'processing',
           stage: 'waiting_speakers',
-          message: '等待说话人预分析...',
+          message: i18n.t('services:pipeline.status.waitingSpeakerAnalysis'),
         });
         try {
           if (signal) {
@@ -189,7 +191,7 @@ export class ChunkProcessor {
             speakerProfiles = await speakerProfilePromise;
           }
         } catch (e) {
-          if (signal?.aborted) throw new Error('操作已取消');
+          if (signal?.aborted) throw new Error(i18n.t('services:pipeline.errors.cancelled'));
           logger.warn('Failed to get speaker profiles, proceeding without them', e);
         }
       }
@@ -200,7 +202,7 @@ export class ChunkProcessor {
       let finalChunkSubs: SubtitleItem[] = [];
 
       try {
-        if (signal?.aborted) throw new Error('操作已取消');
+        if (signal?.aborted) throw new Error(i18n.t('services:pipeline.errors.cancelled'));
 
         const refineWavBlob = await sliceAudioBuffer(audioBuffer, start, end);
         const base64Audio = await blobToBase64(refineWavBlob);
@@ -210,7 +212,7 @@ export class ChunkProcessor {
           total: totalChunks,
           status: 'processing',
           stage: 'refining',
-          message: '正在校对时间轴...',
+          message: i18n.t('services:pipeline.status.refining'),
         });
 
         const refineSystemInstruction = getSystemInstructionWithDiarization(
@@ -221,7 +223,8 @@ export class ChunkProcessor {
           chunkSettings.enableDiarization,
           speakerProfiles,
           chunkSettings.minSpeakers,
-          chunkSettings.maxSpeakers
+          chunkSettings.maxSpeakers,
+          targetLanguage
         );
 
         const glossaryInfo =
@@ -235,6 +238,7 @@ export class ChunkProcessor {
           glossaryInfo,
           glossaryCount: chunkSettings.glossary?.length,
           enableDiarization: chunkSettings.enableDiarization,
+          targetLanguage,
         });
 
         try {
@@ -286,7 +290,10 @@ export class ChunkProcessor {
             );
           }
         } catch (e) {
-          logger.error(`分段 ${index} 时间轴失败，将回退到原始结果。`, formatGeminiError(e));
+          logger.error(
+            i18n.t('services:pipeline.status.refinementFailed', { index }),
+            formatGeminiError(e)
+          );
           refinedSegments = [...rawSegments];
         }
 
@@ -300,7 +307,7 @@ export class ChunkProcessor {
               total: totalChunks,
               status: 'processing',
               stage: 'translating',
-              message: '正在翻译...',
+              message: i18n.t('services:pipeline.status.translating'),
             });
 
             const toTranslate = refinedSegments.map((seg) => ({
@@ -321,7 +328,8 @@ export class ChunkProcessor {
               chunkSettings.customTranslationPrompt,
               'translation',
               chunkSettings.glossary,
-              profilesForTranslation
+              profilesForTranslation,
+              targetLanguage
             );
 
             if (isDebug && settings.debug?.mockGemini) {
@@ -354,7 +362,8 @@ export class ChunkProcessor {
                 signal,
                 trackUsage,
                 (settings.requestTimeout || 600) * 1000,
-                !!chunkSettings.enableDiarization
+                !!chunkSettings.enableDiarization,
+                targetLanguage
               );
               logger.debug(`[Chunk ${index}] Translation complete. Items: ${items.length}`);
               if (items.length > 0 && chunkSettings.enableDiarization) {
@@ -376,14 +385,22 @@ export class ChunkProcessor {
 
             ArtifactSaver.saveChunkArtifact(index, 'translation', finalChunkSubs, settings);
 
-            onProgress?.({ id: index, total: totalChunks, status: 'completed', message: '完成' });
+            onProgress?.({
+              id: index,
+              total: totalChunks,
+              status: 'completed',
+              message: i18n.t('services:pipeline.status.completed'),
+            });
           } catch (e: any) {
-            logger.error(`分段 ${index} 翻译失败，保留润色结果。`, formatGeminiError(e));
+            logger.error(
+              i18n.t('services:pipeline.errors.translationFailedKeepRefined', { index }),
+              formatGeminiError(e)
+            );
             onProgress?.({
               id: index,
               total: totalChunks,
               status: 'processing', // Still 'processing' context, but we are done with this chunk basically
-              message: '翻译失败，使用原文',
+              message: i18n.t('services:pipeline.errors.translationFailedUseOriginal'),
             });
             // finalChunkSubs remains empty (or partially filled if we had better granular handling, but here empty)
             // The return statement will pick up refinedSegments as fallback.
@@ -418,7 +435,7 @@ export class ChunkProcessor {
     } catch (e: any) {
       logger.error(`Chunk ${index} failed`, e);
       const actionableMsg = getActionableErrorMessage(e);
-      const errorMsg = actionableMsg || '失败';
+      const errorMsg = actionableMsg || i18n.t('services:pipeline.status.failed');
       onProgress?.({ id: index, total: totalChunks, status: 'error', message: errorMsg });
 
       return { whisper: [], refined: [], translated: [], final: [] };

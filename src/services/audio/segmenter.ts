@@ -3,6 +3,7 @@
 // import * as ort from "onnxruntime-web";
 
 import { logger } from '@/services/utils/logger';
+import i18n from '@/i18n';
 
 export interface SegmentationOptions {
   minDurationMs?: number;
@@ -281,7 +282,8 @@ export class SmartSegmenter {
       // Run VAD via worker
       return new Promise((resolve, reject) => {
         if (!this.worker) return reject('Worker not available');
-        if (options.signal?.aborted) return reject(new Error('操作已取消'));
+        if (options.signal?.aborted)
+          return reject(new Error(i18n.t('services:pipeline.errors.cancelled')));
 
         const handleProcessMessage = (e: MessageEvent) => {
           const msg = e.data;
@@ -310,7 +312,7 @@ export class SmartSegmenter {
 
         const onAbort = () => {
           cleanup();
-          reject(new Error('操作已取消'));
+          reject(new Error(i18n.t('services:pipeline.errors.cancelled')));
         };
 
         const cleanup = () => {

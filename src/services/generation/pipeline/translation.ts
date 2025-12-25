@@ -27,6 +27,7 @@ import {
   createTranslationPostProcessor,
   type RawTranslationResult,
 } from '@/services/generation/pipeline/postProcessors';
+import i18n from '@/i18n';
 
 /**
  * Process a translation batch with post-check validation.
@@ -44,7 +45,8 @@ export async function processTranslationBatch(
   signal?: AbortSignal,
   onUsage?: (usage: TokenUsage) => void,
   timeoutMs?: number,
-  useDiarization: boolean = false
+  useDiarization: boolean = false,
+  targetLanguage?: string
 ): Promise<any[]> {
   const payload = batch.map((item) => ({
     id: item.id,
@@ -52,7 +54,7 @@ export async function processTranslationBatch(
     ...(useDiarization ? { speaker: item.speaker } : {}),
   }));
 
-  const prompt = getTranslationBatchPrompt(batch.length, payload);
+  const prompt = getTranslationBatchPrompt(batch.length, payload, targetLanguage);
 
   try {
     const { result } = await withPostCheck(
@@ -94,7 +96,8 @@ export async function processTranslationBatch(
         signal,
         onUsage,
         timeoutMs,
-        useDiarization
+        useDiarization,
+        targetLanguage
       ),
       { maxRetries: 1, stepName: 'Translation' }
     );
@@ -104,7 +107,9 @@ export async function processTranslationBatch(
     // API or parse error - log and fallback to original text
     logger.error('Translation batch failed', formatGeminiError(e));
     const actionableMsg = getActionableErrorMessage(e);
-    const errorMsg = actionableMsg ? `翻译失败：${actionableMsg}` : '翻译失败，将使用原文。';
+    const errorMsg = actionableMsg
+      ? i18n.t('services:pipeline.errors.translationFailed', { error: actionableMsg })
+      : i18n.t('services:pipeline.errors.translationFailedUseOriginal');
     onStatusUpdate?.({
       toast: {
         message: errorMsg,
@@ -131,7 +136,8 @@ export async function translateBatch(
   signal?: AbortSignal,
   onUsage?: (usage: TokenUsage) => void,
   timeoutMs?: number,
-  useDiarization: boolean = false
+  useDiarization: boolean = false,
+  targetLanguage?: string
 ): Promise<any[]> {
   const batches: any[][] = [];
   for (let i = 0; i < items.length; i += batchSize) {
@@ -150,7 +156,8 @@ export async function translateBatch(
         signal,
         onUsage,
         timeoutMs,
-        useDiarization
+        useDiarization,
+        targetLanguage
       );
     },
     signal

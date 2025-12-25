@@ -165,6 +165,56 @@
       "cancel": "取消",
       "start": "开始处理",
       "next": "下一步"
+    },
+    "inputStep": {
+      "title": "输入视频链接",
+      "description": "支持 YouTube 和 Bilibili 视频",
+      "placeholder": "粘贴 YouTube / Bilibili 视频链接...",
+      "unknownTitle": "未知标题",
+      "unknownAuthor": "未知作者",
+      "video": "视频",
+      "parsing": "正在解析...",
+      "parseButton": "解析视频"
+    },
+    "resultStep": {
+      "success": "处理完成",
+      "failure": "处理失败",
+      "duration": "耗时 {{minutes}} 分钟",
+      "unknownError": "发生未知错误",
+      "originalVideo": "原始视频",
+      "subtitleFile": "字幕文件",
+      "outputVideo": "压制视频",
+      "errorStage": "错误阶段: {{stage}}",
+      "processNew": "处理新视频",
+      "done": "完成"
     }
+  },
+  "errors": {
+    "desktopOnly": "此功能仅在桌面版可用",
+    "parseTimeout": "解析超时，请检查网络连接后重试",
+    "parseError": "解析视频链接失败",
+    "parseException": "解析视频链接时发生错误",
+    "enterUrl": "请输入视频链接",
+    "selectOutputDir": "请选择输出目录",
+    "executionFailed": "执行失败",
+    "busy": "已有任务在处理中",
+    "invalidPath": "无效的音频路径",
+    "missingGeminiKey": "缺少 Gemini API 密钥，请在设置中配置",
+    "missingOpenAIKey": "缺少 OpenAI API 密钥或未配置本地 Whisper",
+    "fileReadError": "无法读取音频文件: {{error}}",
+    "fileEmpty": "音频文件为空",
+    "fileCorrupt": "音频文件过小，可能已损坏",
+    "decodeError": "音频解码失败: {{error}}",
+    "audioTooShort": "音频时长过短（少于1秒）",
+    "audioTooLong": "音频时长过长（超过6小时）",
+    "cancelled": "操作已取消",
+    "noSpeech": "未生成任何字幕，音频可能无语音内容",
+    "apiKeyError": "API KEY 错误: {{error}}",
+    "rateLimited": "API 请求频率限制，请稍后重试",
+    "timeout": "请求超时，请检查网络连接",
+    "unknown": "字幕生成失败"
+  },
+  "status": {
+    "initializing": "正在初始化..."
   }
 }

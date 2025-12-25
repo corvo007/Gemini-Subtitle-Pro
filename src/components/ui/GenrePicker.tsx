@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { GENRE_PRESETS, GENRE_LABELS } from '@/types/settings';
+import { GENRE_PRESETS, GENRE_KEYS } from '@/types/settings';
 import { OptionButton } from '@/components/ui/OptionButton';
 import { TextInput } from '@/components/ui/TextInput';
 
@@ -63,7 +63,7 @@ export const GenrePicker: React.FC<GenrePickerProps> = ({
             onClick={() => handlePresetClick(genre)}
             color={color}
           >
-            {GENRE_LABELS[genre] || genre}
+            {t(GENRE_KEYS[genre], { ns: 'common', defaultValue: genre })}
           </OptionButton>
         ))}
         <OptionButton selected={showCustomInput} onClick={handleCustomClick} color={color}>

@@ -17,6 +17,7 @@ import {
   ChevronDown,
   FolderOpen,
   Users,
+  Languages,
 } from 'lucide-react';
 import {
   type SubtitleItem,
@@ -31,6 +32,7 @@ import { HistoryPanel } from '@/components/layout/HistoryPanel';
 import { FileUploader } from '@/components/upload/FileUploader';
 import { SubtitleEditor } from '@/components/editor/SubtitleEditor';
 import { CustomSelect } from '@/components/settings';
+import { TargetLanguageSelector } from '@/components/settings/TargetLanguageSelector';
 import { Modal } from '@/components/ui/Modal';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { formatDuration } from '@/services/subtitle/time';
@@ -501,6 +503,18 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                         ]}
                         className="w-full"
                         placeholder={t('sidebar.noGlossary')}
+                      />
+                    </div>
+
+                    <div className="flex flex-col space-y-1 pt-2 border-t border-slate-700/50">
+                      <span className="flex items-center text-slate-500 text-xs mb-1">
+                        <Languages className="w-3 h-3 mr-2" /> {t('sidebar.targetLanguage')}
+                      </span>
+                      <TargetLanguageSelector
+                        value={settings.targetLanguage}
+                        onChange={(val) => onUpdateSetting('targetLanguage', val)}
+                        variant="inline"
+                        className="w-full"
                       />
                     </div>
 

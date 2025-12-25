@@ -1,5 +1,6 @@
 import React from 'react';
 import { GitCommit, FileText, Book, Settings } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader, HeaderButton } from './PageHeader';
 
 interface WorkspaceHeaderProps {
@@ -27,6 +28,8 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   onShowGlossary,
   onShowSettings,
 }) => {
+  const { t } = useTranslation('ui');
+
   return (
     <PageHeader
       title={
@@ -44,28 +47,28 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
           <HeaderButton
             onClick={onToggleSnapshots}
             icon={<GitCommit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-            label="历史"
-            title="历史记录"
+            label={t('header.history')}
+            title={t('header.viewHistory')}
             highlighted={hasSnapshots}
           />
           <HeaderButton
             onClick={onShowLogs}
             icon={<FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-            label="日志"
-            title="查看日志"
+            label={t('header.logs')}
+            title={t('header.viewLogs')}
             hoverColor="blue"
           />
           <HeaderButton
             onClick={onShowGlossary}
             icon={<Book className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-            label="术语表"
-            title="术语表管理"
+            label={t('header.glossary')}
+            title={t('header.manageGlossary')}
             hoverColor="indigo"
           />
           <HeaderButton
             onClick={onShowSettings}
             icon={<Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-            label="设置"
+            label={t('header.settings')}
             hoverColor="emerald"
           />
         </>

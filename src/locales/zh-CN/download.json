@@ -16,5 +16,12 @@
   "thumbnail": "封面",
   "openOutputDir": "打开下载目录",
   "downloadNewVideo": "下载新视频",
-  "continueGenerating": "继续生成字幕"
+  "continueGenerating": "继续生成字幕",
+  "errors": {
+    "thumbnailFailed": "封面下载失败"
+  },
+  "urlPlaceholder": "粘贴 YouTube / Bilibili 视频链接...",
+  "parse": "解析",
+  "parsing": "解析中",
+  "qualityLabel": "画质选择"
 }

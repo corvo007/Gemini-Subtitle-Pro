@@ -16,6 +16,10 @@
     "startTranscription": "开始转录",
     "attachMedia": "附加媒体 (可选)",
     "subtitleFile": "字幕文件",
+    "selected": "已选择 {{count}} 条",
+    "segment": "片段 {{id}}",
+    "commentPlaceholder": "添加说明或注释...",
+    "proofread": "润色翻译",
     "rows": "{{count}} 行",
     "parsing": "解析中",
     "parsingSubtitles": "正在解析字幕...",
@@ -25,6 +29,7 @@
     "genre": "类型",
     "editGenre": "编辑类型 / 上下文",
     "glossary": "术语表",
+    "targetLanguage": "目标语言",
     "noGlossary": "(无)",
     "speakerCount": "说话人数量 (可选)",
     "speakerMin": "最少",
@@ -73,6 +78,53 @@
       "title": "批量删除",
       "message": "确定删除 {{count}} 条字幕吗？此操作无法撤销。",
       "confirm": "删除"
+    }
+  },
+  "hooks": {
+    "generation": {
+      "errors": {
+        "fileRequired": "请先上传媒体文件。",
+        "apiKeyMissing": "API 密钥未配置，请在设置中添加。",
+        "noSubtitles": "未生成任何字幕。"
+      },
+      "status": {
+        "success": "字幕生成成功！",
+        "cancelledPartial": "生成已终止，保留部分结果",
+        "cancelled": "生成已终止",
+        "failed": "生成失败：{{error}}"
+      }
+    },
+    "fileOperations": {
+      "confirm": {
+        "replaceFile": {
+          "title": "确认替换文件",
+          "message": "替换文件后将清空当前字幕。建议先导出字幕（SRT/ASS）再操作。是否继续？"
+        }
+      },
+      "errors": {
+        "processFailed": "文件处理失败",
+        "parseFailed": "字幕解析失败: {{error}}"
+      }
+    },
+    "batch": {
+      "errors": {
+        "fixTimestamps": {
+          "audioRequired": "校对时间轴需要源视频或音频文件。"
+        }
+      },
+      "actions": {
+        "fixTimestamps": "校对时间轴",
+        "refineTranslation": "润色翻译"
+      },
+      "snapshot": {
+        "backupSuffix": "{{action}}前备份"
+      },
+      "status": {
+        "completed": "批量操作 '{{action}}' 完成！",
+        "cancelledRestore": "操作已终止，已恢复原状态",
+        "cancelled": "操作已终止",
+        "failed": "操作失败：{{error}}"
+      }
     }
   }
 }

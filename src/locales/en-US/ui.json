@@ -54,6 +54,47 @@
   },
   "encoderSelector": {
     "h264Desc": "Best compatibility, suitable for most scenarios",
-    "hevcDesc": "High compression, smaller file size at same quality"
+    "hevcDesc": "High efficiency, smaller file size, but slower encoding",
+    "hevc_nvenc": "HEVC (NVENC) - High Efficiency Compression"
+  },
+  "header": {
+    "history": "History",
+    "viewHistory": "View History",
+    "logs": "Logs",
+    "viewLogs": "View Logs",
+    "glossary": "Glossary",
+    "manageGlossary": "Manage Glossary",
+    "settings": "Settings",
+    "subtitle": "AI Subtitle Generation & Translation Tool"
+  },
+  "upload": {
+    "changeFile": "Change File"
+  },
+  "history": {
+    "title": "Snapshot History",
+    "noSnapshots": "No snapshots available",
+    "searchPlaceholder": "Search filename or description...",
+    "unknownFile": "Unknown File",
+    "load": "Load",
+    "subtitleInfo": "{{count}} lines · {{timestamp}}",
+    "delete": "Delete"
+  },
+  "logs": {
+    "title": "Application Logs",
+    "filterAll": "All",
+    "export": "Export",
+    "exportAll": "Export All Logs",
+    "empty": "No logs",
+    "emptyLevel": "No logs for current level"
+  },
+  "download": {
+    "preparing": "Preparing download...",
+    "downloadingVideo": "Downloading video (1/2)...",
+    "downloadingAudio": "Downloading audio (2/2)...",
+    "merging": "Merging files...",
+    "downloading": "Downloading...",
+    "cancel": "Cancel",
+    "eta": "{{time}} remaining",
+    "connecting": "Connecting..."
   }
 }

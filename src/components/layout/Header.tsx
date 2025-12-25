@@ -1,5 +1,6 @@
 import React from 'react';
 import { Languages, FileText, Book, Settings } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader, HeaderButton } from './PageHeader';
 
 interface HeaderProps {
@@ -9,6 +10,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onShowLogs, onShowGlossary, onShowSettings }) => {
+  const { t } = useTranslation('ui');
   return (
     <PageHeader
       title={
@@ -16,7 +18,7 @@ export const Header: React.FC<HeaderProps> = ({ onShowLogs, onShowGlossary, onSh
           <span className="text-indigo-400">Gemini</span> Subtitle Pro
         </>
       }
-      subtitle="AI 字幕生成与翻译工具"
+      subtitle={t('header.subtitle')}
       icon={<Languages className="w-5 h-5 sm:w-6 sm:h-6 text-white" />}
       actions={
         <>
@@ -24,8 +26,8 @@ export const Header: React.FC<HeaderProps> = ({ onShowLogs, onShowGlossary, onSh
             <HeaderButton
               onClick={onShowLogs}
               icon={<FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              label="日志"
-              title="查看日志"
+              label={t('header.logs')}
+              title={t('header.viewLogs')}
               hoverColor="blue"
             />
           )}
@@ -33,8 +35,8 @@ export const Header: React.FC<HeaderProps> = ({ onShowLogs, onShowGlossary, onSh
             <HeaderButton
               onClick={onShowGlossary}
               icon={<Book className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              label="术语表"
-              title="术语表管理"
+              label={t('header.glossary')}
+              title={t('header.manageGlossary')}
               hoverColor="indigo"
             />
           )}
@@ -42,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({ onShowLogs, onShowGlossary, onSh
             <HeaderButton
               onClick={onShowSettings}
               icon={<Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-              label="设置"
+              label={t('header.settings')}
               hoverColor="emerald"
             />
           )}

@@ -33,7 +33,10 @@ const computeContentHash = (
  * Custom hook for managing subtitle snapshots (history)
  * Maintains up to 20 snapshots for version control
  */
+import { useTranslation } from 'react-i18next';
+
 export const useSnapshots = () => {
+  const { t } = useTranslation('services');
   const [snapshots, setSnapshots] = useState<SubtitleSnapshot[]>([]);
   const lastSnapshotHashRef = useRef<string>('');
 
@@ -85,7 +88,7 @@ export const useSnapshots = () => {
       const newSnapshot: SubtitleSnapshot = {
         id: Date.now().toString(),
         timestamp: new Date().toLocaleTimeString(),
-        description: '自动保存',
+        description: t('snapshots.autoSave'),
         subtitles: JSON.parse(JSON.stringify(subtitles)),
         batchComments: { ...batchComments },
         fileId,

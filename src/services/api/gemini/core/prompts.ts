@@ -51,11 +51,14 @@ function isSearchEnabled(step: StepName): boolean {
  * Returns sub-items to be appended under the translation quality rule
  * NOTE: Glossary terms have absolute priority - search is only for terms NOT in glossary
  */
-function getSearchEnhancedTranslationPrompt(step: StepName): string {
+function getSearchEnhancedTranslationPrompt(
+  step: StepName,
+  targetLanguage: string = 'Simplified Chinese'
+): string {
   if (!isSearchEnabled(step)) return '';
   return `
-    → **[SEARCH]** For terms NOT in glossary: use Google Search to verify standard Chinese translations for proper nouns, names, and places.
-    → **[SEARCH]** Search for cultural references, idioms, or slang to find natural Chinese equivalents (glossary terms always take priority).
+    → **[SEARCH]** For terms NOT in glossary: use Google Search to verify standard ${targetLanguage} translations for proper nouns, names, and places.
+    → **[SEARCH]** Search for cultural references, idioms, or slang to find natural ${targetLanguage} equivalents (glossary terms always take priority).
     → **[SEARCH]** When unsure about a translation AND it's not in the glossary, search for authoritative sources.`;
 }
 
@@ -64,10 +67,13 @@ function getSearchEnhancedTranslationPrompt(step: StepName): string {
  * Returns sub-items to be appended under the translation quality rule
  * NOTE: Glossary terms have absolute priority - search is only for terms NOT in glossary
  */
-function getSearchEnhancedProofreadPrompt(step: StepName): string {
+function getSearchEnhancedProofreadPrompt(
+  step: StepName,
+  targetLanguage: string = 'Simplified Chinese'
+): string {
   if (!isSearchEnabled(step)) return '';
   return `
-    → **[SEARCH]** For terms NOT in glossary: search to verify Chinese translations for names, places, and organizations.
+    → **[SEARCH]** For terms NOT in glossary: search to verify ${targetLanguage} translations for names, places, and organizations.
     → **[SEARCH]** Verify specialized terms not covered by glossary (glossary terms always take priority).
     → **[SEARCH]** If a non-glossary translation looks wrong, search to verify and correct it.`;
 }
@@ -89,9 +95,12 @@ function getSearchEnhancedRefinementPrompt(step: StepName): string {
  * Get standard segment splitting rule text for prompts
  */
 function getSegmentSplittingRule(
-  context: 'transcription' | 'translation' = 'transcription'
+  context: 'transcription' | 'translation' = 'transcription',
+  targetLanguage: string = 'Simplified Chinese'
 ): string {
-  const charType = context === 'translation' ? 'Chinese characters' : 'characters';
+  const isCJ = targetLanguage.includes('Chinese') || targetLanguage.includes('Japanese');
+  const charType = context === 'translation' && isCJ ? 'Chinese/Japanese characters' : 'characters';
+  // Adjust length for non-CJ languages if needed, but keeping simple for now
   return `SPLIT any segment longer than ${MAX_SEGMENT_DURATION_SECONDS} seconds OR >${MAX_SEGMENT_CHARACTERS} ${charType}`;
 }
 
@@ -179,11 +188,19 @@ export const getSystemInstructionWithDiarization = (
   enableDiarization?: boolean,
   speakerProfiles?: SpeakerProfile[],
   minSpeakers?: number,
-  maxSpeakers?: number
+  maxSpeakers?: number,
+  targetLanguage: string = 'Simplified Chinese'
 ): string => {
   // For non-supported modes or disabled diarization, delegate to original function
   if ((mode !== 'fix_timestamps' && mode !== 'refinement') || !enableDiarization) {
-    return getSystemInstruction(genre, customPrompt, mode, glossary);
+    return getSystemInstruction(
+      genre,
+      customPrompt,
+      mode,
+      glossary,
+      speakerProfiles,
+      targetLanguage
+    );
   }
 
   // For fix_timestamps with diarization, build custom prompt
@@ -359,7 +376,7 @@ TASK RULES (Priority Order):
 ${diarizationSection}
 
 [P3 - READABILITY] Segment Splitting
-→ ${getSegmentSplittingRule('translation')}
+→ ${getSegmentSplittingRule('translation', targetLanguage)}
 ${getTimestampSplittingInstructions()}
 
 [P4 - CONTENT ACCURACY] Audio Content Verification
@@ -396,7 +413,8 @@ export const getSystemInstruction = (
   customPrompt: string | undefined,
   mode: 'refinement' | 'translation' | 'proofread' | 'fix_timestamps' = 'translation',
   glossary?: GlossaryItem[],
-  speakerProfiles?: SpeakerProfile[]
+  speakerProfiles?: SpeakerProfile[],
+  targetLanguage: string = 'Simplified Chinese'
 ): string => {
   // Use helper function to format glossary
   const glossaryText = formatGlossaryForPrompt(glossary, mode);
@@ -452,7 +470,7 @@ export const getSystemInstruction = (
     }
 
     return `You are an expert Subtitle Translator specializing in ${genre} content.
-    Your GOAL is to provide fluent, natural Simplified Chinese (zh-CN) translations while strictly preserving the subtitle structure.
+    Your GOAL is to provide fluent, natural ${targetLanguage} translations while strictly preserving the subtitle structure.
 
     TASK RULES (Strict Priority):
 
@@ -472,7 +490,7 @@ export const getSystemInstruction = (
        - Understanding incomplete sentences split across lines
        - Maintaining consistent tone and terminology across related lines
     → **STRICT BOUNDARY RULE**: Use this context for **UNDERSTANDING** only. **NEVER** merge segments or move text between lines.
-    → **PARTIAL SENTENCES**: If a sentence is split across lines, translate ONLY the specific fragment in the current line. Do not "complete" it using text from the next line.${getSearchEnhancedTranslationPrompt('translation')}
+    → **PARTIAL SENTENCES**: If a sentence is split across lines, translate ONLY the specific fragment in the current line. Do not "complete" it using text from the next line.${getSearchEnhancedTranslationPrompt('translation', targetLanguage)}
 
     [P2 - CLEANUP & REFINEMENT]
     → **REMOVE FILLERS**: Ignore stuttering, hesitation, and meaningless fillers (e.g., "uh", "um", "ah", "eto", "ano", "呃", "那个").
@@ -485,13 +503,13 @@ export const getSystemInstruction = (
     OUTPUT REQUIREMENTS:
     ✓ Valid JSON matching input structure
     ✓ Output count MUST match input count exactly
-    ✓ All 'text_translated' fields must be Simplified Chinese
+    ✓ All 'text_translated' fields must be ${targetLanguage}
 
     FINAL QUALITY CHECK:
     Before returning, verify:
     ✓ Did I return the exact same number of items as the input?
     ✓ Are all IDs preserved?
-    ✓ Is the Chinese fluent and natural?
+    ✓ Is the ${targetLanguage} fluent and natural?
     ✓ Did I remove all filler words?
 
     ${genreContext}${customPrompt ? `\n    ${customPrompt}\n` : ''}${glossaryText}${
@@ -542,7 +560,7 @@ Speaker (formal): "すごいですね" → "真是令人印象深刻。"
       → **NEVER MERGE** multiple segments into one - only SPLIT long segments when needed
       
       [P2 - READABILITY] Segment Splitting
-      → ${getSegmentSplittingRule('translation')}
+      → ${getSegmentSplittingRule('translation', targetLanguage)}
       ${getTimestampSplittingInstructions()}
       
       [P3 - CONTENT ACCURACY] Audio Content Verification
@@ -573,7 +591,7 @@ Speaker (formal): "すごいですね" → "真是令人印象深刻。"
   }
 
   return `You are an expert Subtitle Translation Quality Specialist.
-    Your PRIMARY GOAL is to perfect the Chinese translation quality for ${genre} content.
+    Your PRIMARY GOAL is to perfect the ${targetLanguage} translation quality for ${genre} content.
     
     TASK RULES (Strict Priority):
     
@@ -583,10 +601,10 @@ Speaker (formal): "すごいですね" → "真是令人印象深刻。"
     
     [P1 - PRIMARY FOCUS] Translation Quality Improvement
     → Fix mistranslations and missed meanings
-    → Improve awkward or unnatural Chinese phrasing
-    → Ensure ALL 'text_translated' fields are Simplified Chinese (never English, Japanese, or other languages)
+    → Improve awkward or unnatural ${targetLanguage} phrasing
+    → Ensure ALL 'text_translated' fields are ${targetLanguage} (never English, Japanese, or other languages)
     → Apply glossary terms consistently
-    → Verify translation captures the full intent of 'text_original'${getSearchEnhancedProofreadPrompt('batchProofread')}
+    → Verify translation captures the full intent of 'text_original'${getSearchEnhancedProofreadPrompt('batchProofread', targetLanguage)}
 
     [P2 - CONTENT ACCURACY] Audio Verification
     → Listen to audio carefully
@@ -611,13 +629,16 @@ Speaker (formal): "すごいですね" → "真是令人印象深刻。"
     FINAL QUALITY CHECK:
     Before returning, verify:
     ✓ All user comments addressed
-    ✓ All 'text_translated' are fluent Simplified Chinese
+    ✓ All 'text_translated' are fluent ${targetLanguage}
     ✓ No missed speech from audio
     ✓ Translation quality significantly improved
     ${getGenreSpecificGuidance(genre)}${customPrompt ? `\n    ${customPrompt}\n` : ''}${glossaryText}`;
 };
 
-export const GLOSSARY_EXTRACTION_PROMPT = (genre: string) => `
+export const GLOSSARY_EXTRACTION_PROMPT = (
+  genre: string,
+  targetLanguage: string = 'Simplified Chinese'
+) => `
 TERMINOLOGY EXTRACTION TASK
 Genre Context: ${genre}
 
@@ -633,8 +654,8 @@ RULES (Priority Order):
   • If speaker says "釜山" (Busan), extract "釜山" NOT "Busan"
   • If speaker says "スカイスキャナー", extract "スカイスキャナー" NOT "Skyscanner"
 → Examples for English audio:
-  • If speaker says "Tokyo", extract "Tokyo" NOT "東京"
-  • If speaker says "Microsoft", extract "Microsoft" NOT "微软"
+  • If speaker says "Tokyo", extract "Tokyo" NOT "${targetLanguage === 'Simplified Chinese' ? '东京' : 'Translated Tokyo'}"
+  • If speaker says "Microsoft", extract "Microsoft" NOT "${targetLanguage === 'Simplified Chinese' ? '微软' : 'Translated Microsoft'}"
 → **CRITICAL**: Listen to what is ACTUALLY SAID, not what you think the translation equivalent is
 
 [P1 - EXTRACTION] Identify Key Terms in Audio Language
@@ -646,8 +667,8 @@ RULES (Priority Order):
 → ONLY include terms that ACTUALLY APPEAR in this audio segment
 
 [P2 - TRANSLATION] Provide Accurate Translations
-→ Translate all terms to Simplified Chinese
-→ For names: Use standard transliterations (e.g., "Alice" → "艾丽丝", "釜山" → "釜山")
+→ Translate all terms to ${targetLanguage}
+→ For names: Use standard transliterations (e.g., "Alice" → "${targetLanguage === 'Simplified Chinese' ? '艾丽丝' : 'Alice'}")
 → For technical terms: Use established industry translations
 → Use Google Search to verify standard translations when uncertain
 → Ensure translations are appropriate for ${genre} content
@@ -672,7 +693,7 @@ FINAL VERIFICATION:
 ✓ Detected audio language correctly
 ✓ All "term" values are in the SAME LANGUAGE as the audio (NOT English unless audio is English)
 ✓ All extracted terms actually appear in the audio AS SPOKEN
-✓ All translations are in Simplified Chinese
+✓ All translations are in ${targetLanguage}
 ✓ Translations verified with search when needed
 ✓ Only included terms that need consistent translation
 ✓ Notes added where helpful for consistency
@@ -819,10 +840,14 @@ export const getSpeakerProfileExtractionPrompt = (
 /**
  * Generate translation batch prompt
  */
-export const getTranslationBatchPrompt = (batchLength: number, payload: any[]): string => `
+export const getTranslationBatchPrompt = (
+  batchLength: number,
+  payload: any[],
+  targetLanguage: string = 'Simplified Chinese'
+): string => `
     TRANSLATION BATCH TASK
     
-    TASK: Translate ${batchLength} subtitle segments to Simplified Chinese.
+    TASK: Translate ${batchLength} subtitle segments to ${targetLanguage}.
     
     RULES (Priority Order):
     
@@ -840,18 +865,18 @@ export const getTranslationBatchPrompt = (batchLength: number, payload: any[]): 
     
     [P2 - QUALITY] Translation Excellence
     → ${getFillerWordsRule()} and stuttering
-    → Produce fluent, natural Simplified Chinese
+    → Produce fluent, natural ${targetLanguage}
     → Use terminology from system instruction if provided
-    → Maintain appropriate tone and style${getSearchEnhancedTranslationPrompt('translation')}
+    → Maintain appropriate tone and style${getSearchEnhancedTranslationPrompt('translation', targetLanguage)}
 
     [P3 - OUTPUT] Format Requirements
-    → 'text_translated' MUST BE in Simplified Chinese
+    → 'text_translated' MUST BE in ${targetLanguage}
     → Never output English, Japanese, or other languages in 'text_translated'
     → Maintain exact ID values from input
     
     FINAL VERIFICATION:
     ✓ All ${batchLength} IDs present in output
-    ✓ All translations are Simplified Chinese
+    ✓ All translations are ${targetLanguage}
     ✓ No meaning lost from original text
     ✓ Filler words removed
     
@@ -869,12 +894,14 @@ export interface FixTimestampsPromptParams {
   glossaryContext: string;
   specificInstruction: string;
   conservativeMode?: boolean; // Only fine-tune, no splits/merges
+  targetLanguage?: string;
 }
 
 /**
  * Generate fix timestamps prompt
  */
 export const getFixTimestampsPrompt = (params: FixTimestampsPromptParams): string => {
+  const targetLanguage = params.targetLanguage || 'Simplified Chinese';
   const conservativeRules = params.conservativeMode
     ? `
     **[CONSERVATIVE MODE - ONLY PROCESS COMMENTED LINES]**
@@ -888,9 +915,9 @@ export const getFixTimestampsPrompt = (params: FixTimestampsPromptParams): strin
     → If a line has a "comment" field, prioritize fixing it according to the user's instruction
     
     [P2 - MANDATORY] Segment Splitting for Readability
-    → ${getSegmentSplittingRule('translation')}
+    → ${getSegmentSplittingRule('translation', targetLanguage)}
     ${getTimestampSplittingInstructions()}
-    → For NEW/SPLIT entries: provide appropriate translation in Simplified Chinese
+    → For NEW/SPLIT entries: provide appropriate translation in ${targetLanguage}
     `;
 
   const contentRules = params.conservativeMode
@@ -947,12 +974,15 @@ export interface ProofreadPromptParams {
   payload: any[];
   glossaryContext: string;
   specificInstruction: string;
+  targetLanguage?: string;
 }
 
 /**
  * Generate proofread prompt
  */
-export const getProofreadPrompt = (params: ProofreadPromptParams): string => `
+export const getProofreadPrompt = (params: ProofreadPromptParams): string => {
+  const targetLanguage = params.targetLanguage || 'Simplified Chinese';
+  return `
     Batch ${params.batchLabel}.
     TRANSLATION QUALITY IMPROVEMENT TASK
     Previous batch ended at: "${params.lastEndTime}"
@@ -964,9 +994,9 @@ export const getProofreadPrompt = (params: ProofreadPromptParams): string => `
     
     [P1 - PRIMARY] Translation Quality Excellence
     → Fix mistranslations and missed meanings
-    → Improve awkward or unnatural Chinese phrasing
-    → Ensure ALL 'text_translated' are fluent Simplified Chinese (never English/Japanese/etc.)
-    → Verify translation captures full intent of 'text_original'${getSearchEnhancedProofreadPrompt('batchProofread')}
+    → Improve awkward or unnatural ${targetLanguage} phrasing
+    → Ensure ALL 'text_translated' are fluent ${targetLanguage} (never English/Japanese/etc.)
+    → Verify translation captures full intent of 'text_original'${getSearchEnhancedProofreadPrompt('batchProofread', targetLanguage)}
 
     [P2 - CONTENT] Audio Content Verification
     → Listen to audio carefully
@@ -987,14 +1017,16 @@ export const getProofreadPrompt = (params: ProofreadPromptParams): string => `
     → Only modify when there's a clear translation quality problem
     
     FINAL VERIFICATION:
-    ✓ All 'text_translated' are fluent Simplified Chinese
+    ✓ All 'text_translated' are fluent ${targetLanguage}
     ✓ No missed meaning from 'text_original'
     ✓ No missed speech from audio
     ✓ Translation quality significantly improved
 
     Current Subtitles JSON:
     ${JSON.stringify(params.payload)}
-        `;
+    // End of getProofreadPrompt string template
+    `;
+};
 
 /**
  * Parameters for refinement prompt
@@ -1005,6 +1037,7 @@ export interface RefinementPromptParams {
   glossaryInfo: string;
   glossaryCount?: number;
   enableDiarization: boolean;
+  targetLanguage?: string;
 }
 
 /**
@@ -1025,7 +1058,7 @@ export const getRefinementPrompt = (params: RefinementPromptParams): string => `
             ${params.glossaryInfo ? `→ Pay special attention to key terminology listed below` : ''}
 ${getSearchEnhancedRefinementPrompt('refinement')}
             [P2 - READABILITY] Segment Splitting
-            → ${getSegmentSplittingRule()}
+            → ${getSegmentSplittingRule('transcription', params.targetLanguage)}
             ${getTimestampSplittingInstructions()}
             
             [P3 - CLEANING] Remove Non-Speech Elements

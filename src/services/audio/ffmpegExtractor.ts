@@ -1,32 +1,33 @@
 import { isElectron } from '@/services/utils/env';
 import { logger } from '@/services/utils/logger';
+import i18n from '@/i18n';
 import type { AudioExtractionOptions, AudioExtractionProgress } from '@/types/electron';
 
 /**
  * 使用 FFmpeg 提取音频并解码为 AudioBuffer
  */
-export async function extractAndDecodeAudio(
+export async function extractAudioWithFFmpeg(
   file: File,
   onProgress?: (progress: { stage: string; percent: number }) => void
 ): Promise<AudioBuffer> {
   if (!isElectron()) {
-    throw new Error('FFmpeg 提取仅在 Electron 环境中可用');
+    throw new Error(i18n.t('services:audio.errors.ffmpegElectronOnly'));
   }
 
-  // Priority: file.path (from native dialog) > webUtils.getPathForFile
+  // Get file path
   const filePath = (file as any).path || window.electronAPI.getFilePath(file);
   if (!filePath) {
-    throw new Error('FFmpeg 提取需要文件路径');
+    throw new Error(i18n.t('services:audio.errors.ffmpegFilePathRequired'));
   }
 
   let extractedAudioPath: string | undefined;
 
   try {
-    // 1. 获取音频信息
+    // 1. Get Audio Info
     logger.info('Getting audio info...');
     const infoResult = await window.electronAPI.getAudioInfo(filePath);
     if (!infoResult.success || !infoResult.info) {
-      throw new Error(infoResult.error || '获取音频信息失败');
+      throw new Error(infoResult.error || i18n.t('services:audio.errors.getAudioInfoFailed'));
     }
     logger.info('Audio info:', infoResult.info);
 
@@ -64,7 +65,9 @@ export async function extractAndDecodeAudio(
 
     const extractResult = await window.electronAPI.extractAudioFFmpeg(filePath, options);
     if (!extractResult.success || !extractResult.audioPath) {
-      throw new Error(extractResult.error || 'FFmpeg 提取失败');
+      throw new Error(
+        extractResult.error || i18n.t('services:audio.errors.ffmpegExtractionFailed')
+      );
     }
     extractedAudioPath = extractResult.audioPath;
     logger.info('Audio extracted to:', extractedAudioPath);
@@ -75,10 +78,10 @@ export async function extractAndDecodeAudio(
     }
     const arrayBuffer = await window.electronAPI.readExtractedAudio(extractedAudioPath);
 
-    // 5. 解码为 AudioBuffer
+    // Decode ArrayBuffer
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContext) {
-      throw new Error('不支持 Web Audio API');
+      throw new Error(i18n.t('services:audio.errors.webAudioNotSupported'));
     }
     const ctx = new AudioContext();
     const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
@@ -119,7 +122,7 @@ export async function smartDecodeAudio(
   try {
     // 优先尝试 FFmpeg
     logger.info('Attempting FFmpeg extraction...');
-    return await extractAndDecodeAudio(file, onProgress);
+    return await extractAudioWithFFmpeg(file, onProgress);
   } catch (err: any) {
     logger.warn('FFmpeg extraction failed, falling back to Web Audio API:', err.message);
     throw new Error('FFmpeg failed, use fallback');

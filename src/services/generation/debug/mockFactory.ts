@@ -17,7 +17,7 @@ export class MockFactory {
         terms: [
           {
             term: 'Mock Term',
-            translation: '模拟术语',
+            translation: 'Mock Term Translation',
             notes: 'Mock notes for validation',
           } as any,
         ],

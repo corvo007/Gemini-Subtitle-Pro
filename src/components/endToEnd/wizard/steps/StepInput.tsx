@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link2, Loader2, AlertCircle, Sparkles, CheckCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { formatDuration } from '@/services/subtitle/time';
 import { isValidVideoUrl } from '@/services/utils/url';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
@@ -21,6 +22,7 @@ export function StepInput({
   parseError?: string;
   videoInfo?: any;
 }) {
+  const { t } = useTranslation('endToEnd');
   const [inputUrl, setInputUrl] = useState(url);
   const [validationResult, setValidationResult] = useState<{
     valid: boolean;
@@ -50,8 +52,8 @@ export function StepInput({
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/30 mb-4">
           <Link2 className="w-8 h-8 text-violet-400" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">输入视频链接</h2>
-        <p className="text-white/60">支持 YouTube 和 Bilibili 视频</p>
+        <h2 className="text-2xl font-bold text-white mb-2">{t('wizard.inputStep.title')}</h2>
+        <p className="text-white/60">{t('wizard.inputStep.description')}</p>
       </div>
 
       <div className="space-y-4">
@@ -63,7 +65,7 @@ export function StepInput({
             onKeyDown={(e) =>
               e.key === 'Enter' && !isParsing && validationResult?.valid && handleParse()
             }
-            placeholder="粘贴 YouTube / Bilibili 视频链接..."
+            placeholder={t('wizard.inputStep.placeholder')}
             className={cn(
               'w-full px-4 py-4 bg-white/5 border rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 transition-all',
               validationResult?.valid === false &&
@@ -111,11 +113,15 @@ export function StepInput({
                 />
               )}
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-white truncate">{videoInfo.title || '未知标题'}</h4>
-                <p className="text-sm text-white/60">{videoInfo.uploader || '未知作者'}</p>
+                <h4 className="font-medium text-white truncate">
+                  {videoInfo.title || t('wizard.inputStep.unknownTitle')}
+                </h4>
+                <p className="text-sm text-white/60">
+                  {videoInfo.uploader || t('wizard.inputStep.unknownAuthor')}
+                </p>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded">
-                    {videoInfo.platform || '视频'}
+                    {videoInfo.platform || t('wizard.inputStep.video')}
                   </span>
                   {videoInfo.duration != null && (
                     <span className="text-xs text-white/50">
@@ -133,12 +139,12 @@ export function StepInput({
           onClick={handleParse}
           disabled={isParsing || !inputUrl.trim() || validationResult?.valid === false}
           loading={isParsing}
-          loadingText="正在解析..."
+          loadingText={t('wizard.inputStep.parsing')}
           icon={<Sparkles className="w-5 h-5" />}
           size="lg"
           fullWidth
         >
-          解析视频
+          {t('wizard.inputStep.parseButton')}
         </PrimaryButton>
       </div>
     </div>

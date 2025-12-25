@@ -17,19 +17,19 @@
   "cards": {
     "newProject": {
       "title": "新建项目",
-      "description": "上传本地视频，生成字幕并翻译"
+      "description": "上传本地视频，一键生成双语字幕"
     },
     "openSubtitle": {
       "title": "打开字幕",
-      "description": "导入已有字幕文件，编辑或翻译"
+      "description": "导入 SRT/ASS 字幕，进行编辑和翻译"
     },
     "download": {
       "title": "下载视频",
-      "description": "从 YouTube / Bilibili 下载视频"
+      "description": "支持 YouTube / Bilibili 等主流平台"
     },
     "compression": {
       "title": "视频压制",
-      "description": "将字幕嵌入视频并压缩导出"
+      "description": "将字幕烧录进视频并压制导出"
     }
   },
   "webWarning": "⚠️ 以上功能及全自动模式在网页版不可用，请使用桌面版以获得最佳体验"

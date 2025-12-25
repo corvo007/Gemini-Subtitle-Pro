@@ -1,6 +1,7 @@
 import { logger } from '@/services/utils/logger';
 import { isElectron } from '@/services/utils/env';
-import { smartDecodeAudio } from '@/services/audio/ffmpegExtractor';
+import { smartDecodeAudio as extractWithFFmpeg } from './ffmpegExtractor';
+import i18n from '@/i18n';
 
 /**
  * Decode audio file to AudioBuffer
@@ -25,7 +26,7 @@ export const decodeAudio = async (
   if (isElectron() && filePath) {
     try {
       logger.info('Starting audio decoding using FFmpeg...');
-      return await smartDecodeAudio(file, onProgress);
+      return await extractWithFFmpeg(file, onProgress);
     } catch (err: any) {
       logger.warn('FFmpeg failed, using Web Audio API fallback:', err.message);
       // 继续使用下面的 Web Audio API 降级方案
@@ -44,7 +45,7 @@ export const decodeAudio = async (
   }
 
   const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-  if (!AudioContext) throw new Error('不支持 Web Audio API');
+  if (!AudioContext) throw new Error(i18n.t('services:audio.errors.webAudioNotSupported'));
   const ctx = new AudioContext();
 
   try {
@@ -52,12 +53,14 @@ export const decodeAudio = async (
   } catch (e: any) {
     // Provide user-friendly error messages for common audio decoding failures
     if (e.name === 'EncodingError' || e.message?.includes('Unable to decode')) {
-      throw new Error('不支持的音频格式，请尝试转换为 WAV 或 MP3 格式后重试');
+      throw new Error(i18n.t('services:audio.errors.unsupportedAudioFormat'));
     }
     if (e.name === 'NotSupportedError') {
-      throw new Error('浏览器不支持此音频编码，请尝试其他格式');
+      throw new Error(i18n.t('services:audio.errors.unsupportedBrowserEncoding'));
     }
-    throw new Error(`音频解码失败: ${e.message || '未知错误'}`);
+    throw new Error(
+      i18n.t('services:audio.errors.decodeFailed', { error: e.message || 'Unknown' })
+    );
   }
 };
 
@@ -73,13 +76,12 @@ export async function decodeAudioWithRetry(
     try {
       return await decodeAudio(file, onProgress);
     } catch (e: any) {
-      if (i < retries - 1) {
-        logger.warn(`Audio decoding failed. Retrying...`, { attempt: i + 1, error: e.message });
-        await new Promise((r) => setTimeout(r, 1000));
-      } else {
-        throw e;
+      if (i === retries - 1) {
+        logger.error('Audio decode failed after retries', e);
+        throw new Error(i18n.t('services:audio.errors.decodeRetryFailed'));
       }
+      logger.warn(`Audio decode attempt ${i + 1} failed, retrying...`, e);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
-  throw new Error('音频解码重试后仍然失败。');
 }

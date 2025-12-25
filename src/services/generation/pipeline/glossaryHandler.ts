@@ -8,6 +8,7 @@ import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { getActionableErrorMessage } from '@/services/api/gemini/core/client';
 import { ArtifactSaver } from '@/services/generation/debug/artifactSaver';
 import { logger } from '@/services/utils/logger';
+import i18n from '@/i18n';
 
 export class GlossaryHandler {
   static async handle(
@@ -34,7 +35,7 @@ export class GlossaryHandler {
           id: 'glossary',
           total: 1,
           status: 'processing',
-          message: '正在提取术语...',
+          message: i18n.t('services:pipeline.status.generatingGlossary'),
         });
 
         extractedGlossaryResults = await glossaryPromise;
@@ -55,7 +56,7 @@ export class GlossaryHandler {
             id: 'glossary',
             total: 1,
             status: 'processing',
-            message: '等待用户确认...',
+            message: i18n.t('services:pipeline.status.waitingUserConfirm'),
           });
 
           // BLOCKING CALL (User Interaction)
@@ -73,20 +74,31 @@ export class GlossaryHandler {
             id: 'glossary',
             total: 1,
             status: 'completed',
-            message: '术语表已应用。',
+            message: i18n.t('services:pipeline.status.glossaryApplied'),
           });
         } else {
           logger.info('No glossary extraction needed', { totalTerms, hasFailures });
-          onProgress?.({ id: 'glossary', total: 1, status: 'completed', message: '未发现术语。' });
+          onProgress?.({
+            id: 'glossary',
+            total: 1,
+            status: 'completed',
+            message: i18n.t('services:pipeline.status.noTermsFound'),
+          });
         }
       } catch (e: any) {
         if (e.message === '操作已取消' || e.name === 'AbortError') {
           logger.info('Glossary extraction cancelled');
-          onProgress?.({ id: 'glossary', total: 1, status: 'completed', message: '已取消' });
+          onProgress?.({
+            id: 'glossary',
+            total: 1,
+            status: 'completed',
+            message: i18n.t('services:pipeline.status.cancelled'),
+          });
         } else {
           logger.warn('Glossary extraction failed or timed out', e);
           const actionableMsg = getActionableErrorMessage(e);
-          const errorMsg = actionableMsg || '术语提取失败';
+          const errorMsg =
+            actionableMsg || i18n.t('services:pipeline.status.glossaryExtractionFailed');
           onProgress?.({ id: 'glossary', total: 1, status: 'error', message: errorMsg });
         }
       }

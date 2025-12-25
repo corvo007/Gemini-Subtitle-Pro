@@ -4,6 +4,7 @@ import { decodeAudioWithRetry } from '@/services/audio/decoder';
 import { formatTime } from '@/services/subtitle/time';
 import { SmartSegmenter } from '@/services/audio/segmenter';
 import { logger } from '@/services/utils/logger';
+import i18n from '@/i18n';
 
 export interface ChunkParams {
   index: number;
@@ -29,7 +30,12 @@ export async function preprocessAudio(
   signal?: AbortSignal
 ): Promise<PreprocessResult> {
   // 1. Decode Audio
-  onProgress?.({ id: 'decoding', total: 1, status: 'processing', message: '正在解码音频...' });
+  onProgress?.({
+    id: 'decoding',
+    total: 1,
+    status: 'processing',
+    message: i18n.t('services:pipeline.status.decoding'),
+  });
 
   let audioBuffer: AudioBuffer;
   try {
@@ -39,7 +45,9 @@ export async function preprocessAudio(
         id: 'decoding',
         total: 1,
         status: 'completed',
-        message: `使用缓存音频，时长: ${formatTime(audioBuffer.duration)}`,
+        message: i18n.t('services:pipeline.status.decodingUsingCache', {
+          duration: formatTime(audioBuffer.duration),
+        }),
       });
     } else {
       audioBuffer = await decodeAudioWithRetry(audioSource);
@@ -47,12 +55,14 @@ export async function preprocessAudio(
         id: 'decoding',
         total: 1,
         status: 'completed',
-        message: `解码完成，时长: ${formatTime(audioBuffer.duration)}`,
+        message: i18n.t('services:pipeline.status.decodingComplete', {
+          duration: formatTime(audioBuffer.duration),
+        }),
       });
     }
   } catch (e) {
     logger.error('Failed to decode audio', e);
-    throw new Error('音频解码失败，请确保文件是有效的视频或音频格式。');
+    throw new Error(i18n.t('services:pipeline.errors.decodeFailed'));
   }
 
   const totalDuration = audioBuffer.duration;
@@ -64,7 +74,12 @@ export async function preprocessAudio(
   let vadSegments: { start: number; end: number }[] | undefined;
 
   if (settings.useSmartSplit) {
-    onProgress?.({ id: 'segmenting', total: 1, status: 'processing', message: '正在智能分段...' });
+    onProgress?.({
+      id: 'segmenting',
+      total: 1,
+      status: 'processing',
+      message: i18n.t('services:pipeline.status.segmenting'),
+    });
     const segmenter = new SmartSegmenter();
     const result = await segmenter.segmentAudio(audioBuffer, chunkDuration, signal);
     logger.info('Smart Segmentation Results', {
@@ -88,7 +103,9 @@ export async function preprocessAudio(
       id: 'segmenting',
       total: 1,
       status: 'completed',
-      message: `智能分段完成，共 ${result.chunks.length} 个片段。`,
+      message: i18n.t('services:pipeline.status.segmentingComplete', {
+        count: result.chunks.length,
+      }),
     });
   } else {
     // Standard fixed-size chunking

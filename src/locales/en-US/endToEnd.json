@@ -165,6 +165,56 @@
       "cancel": "Cancel",
       "start": "Start Processing",
       "next": "Next"
+    },
+    "inputStep": {
+      "title": "Enter Video URL",
+      "description": "Supports YouTube and Bilibili videos",
+      "placeholder": "Paste YouTube / Bilibili video URL...",
+      "unknownTitle": "Unknown Title",
+      "unknownAuthor": "Unknown Author",
+      "video": "Video",
+      "parsing": "Parsing...",
+      "parseButton": "Parse Video"
+    },
+    "resultStep": {
+      "success": "Processing Complete",
+      "failure": "Processing Failed",
+      "duration": "Duration: {{minutes}} minutes",
+      "unknownError": "Unknown error occurred",
+      "originalVideo": "Original Video",
+      "subtitleFile": "Subtitle File",
+      "outputVideo": "Burned Video",
+      "errorStage": "Error Stage: {{stage}}",
+      "processNew": "Process New Video",
+      "done": "Done"
     }
+  },
+  "errors": {
+    "desktopOnly": "This feature is only available on desktop",
+    "parseTimeout": "Parsing timed out, please check your network connection and try again",
+    "parseError": "Failed to parse video link",
+    "parseException": "An error occurred while parsing the video link",
+    "enterUrl": "Please enter a video link",
+    "selectOutputDir": "Please select an output directory",
+    "executionFailed": "Execution failed",
+    "busy": "Task already in progress",
+    "invalidPath": "Invalid audio path",
+    "missingGeminiKey": "Missing Gemini API Key, please configure in settings",
+    "missingOpenAIKey": "Missing OpenAI API Key or local Whisper not configured",
+    "fileReadError": "Failed to read audio file: {{error}}",
+    "fileEmpty": "Audio file is empty",
+    "fileCorrupt": "Audio file is too small, likely corrupted",
+    "decodeError": "Audio decoding failed: {{error}}",
+    "audioTooShort": "Audio is too short (< 1 second)",
+    "audioTooLong": "Audio is too long (> 6 hours)",
+    "cancelled": "Operation cancelled",
+    "noSpeech": "No subtitles generated, audio might contain no speech",
+    "apiKeyError": "API KEY Error: {{error}}",
+    "rateLimited": "API rate limit exceeded, please try again later",
+    "timeout": "Request timed out, please check your network connection",
+    "unknown": "Subtitle generation failed"
+  },
+  "status": {
+    "initializing": "Initializing..."
   }
 }

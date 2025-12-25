@@ -2,6 +2,7 @@ import { type SubtitleItem, type OpenAIWhisperSegment } from '@/types/subtitle';
 import { generateSubtitleId } from '@/services/utils/id';
 import { formatTime } from '@/services/subtitle/time';
 import { logger } from '@/services/utils/logger';
+import i18n from '@/i18n';
 
 /**
  * Extracts a user-actionable error message from a Whisper/OpenAI API error.
@@ -33,7 +34,7 @@ function getActionableWhisperError(error: any): string | undefined {
     combined.includes('invalid api key') ||
     combined.includes('incorrect api key')
   ) {
-    return 'OpenAI API 密钥无效！请检查您的 API 密钥是否正确配置。';
+    return i18n.t('services:api.errors.invalidKey');
   }
 
   // === PermissionDeniedError (403) ===
@@ -43,7 +44,7 @@ function getActionableWhisperError(error: any): string | undefined {
     combined.includes('forbidden') ||
     combined.includes('permission denied')
   ) {
-    return 'OpenAI API 访问被拒绝 (403)！请检查 API 密钥权限或账户状态。';
+    return i18n.t('services:api.errors.permissionDenied');
   }
 
   // === RateLimitError (429) - Quota exceeded ===
@@ -56,7 +57,7 @@ function getActionableWhisperError(error: any): string | undefined {
     combined.includes('rate limit') ||
     combined.includes('too many requests')
   ) {
-    return 'OpenAI API 配额已用尽或请求过于频繁 (429)！请稍后重试或检查您的配额限制。';
+    return i18n.t('services:api.network.rateLimited');
   }
 
   // === Billing/Payment issues ===
@@ -67,7 +68,7 @@ function getActionableWhisperError(error: any): string | undefined {
     combined.includes('payment') ||
     combined.includes('balance')
   ) {
-    return 'OpenAI 账户余额不足或未配置付款方式！请检查您的账户计费设置。';
+    return i18n.t('services:api.openai.errors.billingHardLimit');
   }
 
   // === NotFoundError (404) ===
@@ -77,13 +78,13 @@ function getActionableWhisperError(error: any): string | undefined {
     combined.includes('model not found') ||
     combined.includes('not found')
   ) {
-    return '请求的 Whisper 模型不存在 (404)！请检查模型名称是否正确。';
+    return i18n.t('services:api.errors.modelNotFound');
   }
 
   // === BadRequestError (400) - Invalid parameters ===
   if (httpStatus === 400 && !combined.includes('api key')) {
     if (combined.includes('audio') || combined.includes('file')) {
-      return '音频文件格式错误 (400)！请确保文件格式受支持。';
+      return i18n.t('services:api.openai.errors.invalidAudioFormat');
     }
   }
 
@@ -117,7 +118,7 @@ export const transcribeWithWhisper = async (
     try {
       // Check cancellation
       if (signal?.aborted) {
-        throw new Error('操作已取消');
+        throw new Error(i18n.t('services:pipeline.errors.cancelled'));
       }
 
       const controller = new AbortController();
@@ -183,5 +184,5 @@ export const transcribeWithWhisper = async (
     throw new Error(actionableMessage);
   }
 
-  throw lastError || new Error('Failed to connect to Whisper API.');
+  throw lastError || new Error(i18n.t('services:api.errors.connectionFailed'));
 };

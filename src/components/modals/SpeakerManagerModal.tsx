@@ -12,6 +12,7 @@ import {
   CheckSquare,
   Loader2,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { getSpeakerColor } from '@/services/utils/colors';
 import { SimpleConfirmationModal } from '@/components/modals/SimpleConfirmationModal';
@@ -38,6 +39,7 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
   onMerge,
   onCreate,
 }) => {
+  const { t } = useTranslation('modals');
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editName, setEditName] = React.useState('');
   const [mergeMode, setMergeMode] = React.useState(false);
@@ -147,7 +149,7 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
             <div className="p-2 bg-indigo-500/20 rounded-lg">
               <Users className="w-5 h-5 text-indigo-400" />
             </div>
-            <h2 className="text-lg font-bold text-white">说话人档案</h2>
+            <h2 className="text-lg font-bold text-white">{t('speakerManager.title')}</h2>
           </div>
           <button
             onClick={handleClose}
@@ -162,8 +164,8 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
           {speakerProfiles.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <User className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>暂无说话人</p>
-              <p className="text-xs mt-1">生成字幕后会自动添加</p>
+              <p>{t('speakerManager.noSpeakers')}</p>
+              <p className="text-xs mt-1">{t('speakerManager.autoAddHint')}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -228,14 +230,14 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
                           <button
                             onClick={() => handleStartEdit(profile)}
                             className="p-1.5 text-slate-500 hover:text-white hover:bg-slate-700 rounded transition-colors"
-                            title="重命名"
+                            title={t('speakerManager.rename')}
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteClick(profile.id)}
                             className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
-                            title="删除"
+                            title={t('speakerManager.delete')}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -261,7 +263,7 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
                   if (e.key === 'Enter') handleCreateSpeaker();
                   if (e.key === 'Escape') setIsCreating(false);
                 }}
-                placeholder="输入说话人名称..."
+                placeholder={t('speakerManager.inputPlaceholder')}
                 autoFocus
                 className="flex-1 bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
               />
@@ -270,7 +272,7 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
                 disabled={!newSpeakerName.trim()}
                 className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm rounded transition-colors"
               >
-                添加
+                {t('speakerManager.add')}
               </button>
               <button
                 onClick={() => {
@@ -279,20 +281,20 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
                 }}
                 className="px-3 py-1.5 text-sm text-slate-400 hover:text-white transition-colors"
               >
-                取消
+                {t('speakerManager.cancel')}
               </button>
             </div>
           ) : mergeMode ? (
             <>
               <span className="text-xs text-slate-400">
-                已选择 {selectedForMerge.size} 个说话人
+                {t('speakerManager.mergeSelected', { count: selectedForMerge.size })}
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={cancelMerge}
                   className="px-3 py-1.5 text-sm text-slate-400 hover:text-white transition-colors"
                 >
-                  取消
+                  {t('speakerManager.cancel')}
                 </button>
                 <button
                   onClick={handleMerge}
@@ -300,7 +302,7 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
                   className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm rounded transition-colors flex items-center gap-2"
                 >
                   {isProcessing && <Loader2 className="w-3 h-3 animate-spin" />}
-                  {isProcessing ? '合并中...' : '合并'}
+                  {isProcessing ? t('speakerManager.merging') : t('speakerManager.merge')}
                 </button>
               </div>
             </>
@@ -313,7 +315,7 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
                     className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-400 hover:text-white transition-colors"
                   >
                     <Plus className="w-4 h-4" />
-                    新建
+                    {t('speakerManager.create')}
                   </button>
                 )}
                 <button
@@ -322,14 +324,14 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <GitMerge className="w-4 h-4" />
-                  合并
+                  {t('speakerManager.merge')}
                 </button>
               </div>
               <button
                 onClick={handleClose}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
               >
-                完成
+                {t('speakerManager.done')}
               </button>
             </>
           )}
@@ -344,9 +346,9 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
           setDeleteCandidateId(null);
         }}
         onConfirm={confirmDelete}
-        title="删除说话人"
-        message={`确定要删除说话人「${deleteCandidateName}」吗？该说话人的所有字幕将不再关联任何说话人。`}
-        confirmText="删除"
+        title={t('speakerManager.deleteTitle')}
+        message={t('speakerManager.deleteConfirm', { name: deleteCandidateName })}
+        confirmText={t('speakerManager.deleteConfirmBtn')}
         type="danger"
       />
     </div>

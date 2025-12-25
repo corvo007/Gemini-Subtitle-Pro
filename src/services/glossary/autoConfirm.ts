@@ -3,6 +3,7 @@
  * Shared logic between End-to-End mode and manual Workspace mode
  */
 
+import i18n from '@/i18n';
 import type { GlossaryItem, GlossaryExtractionMetadata } from '@/types/glossary';
 import type { AppSettings } from '@/types/settings';
 import { mergeGlossaryResults } from '@/services/glossary/merger';
@@ -66,7 +67,7 @@ export function autoConfirmGlossaryTerms(options: AutoConfirmOptions): AutoConfi
   let updatedGlossaries = [...currentGlossaries];
 
   if (!targetGlossaryId || !currentGlossaries.find((g) => g.id === targetGlossaryId)) {
-    const newGlossary = createGlossary('自动提取术语');
+    const newGlossary = createGlossary(i18n.t('services:glossary.autoName'));
     newGlossary.terms = [];
     updatedGlossaries = [...currentGlossaries, newGlossary];
     targetGlossaryId = newGlossary.id;

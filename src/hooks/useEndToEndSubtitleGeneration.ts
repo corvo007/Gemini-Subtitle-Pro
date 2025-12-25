@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { generateSubtitles } from '@/services/generation/pipeline';
 import { generateAssContent, generateSrtContent } from '@/services/subtitle/generator';
 import { decodeAudioWithRetry } from '@/services/audio/decoder';
@@ -27,6 +28,7 @@ export function useEndToEndSubtitleGeneration({
   settings,
   updateSetting,
 }: UseEndToEndSubtitleGenerationProps) {
+  const { t } = useTranslation('endToEnd');
   const isProcessingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -84,13 +86,13 @@ export function useEndToEndSubtitleGeneration({
       // Guard: Already processing
       if (isProcessingRef.current) {
         logger.warn('[EndToEnd] Already processing, rejecting new request');
-        return { success: false, error: '已有任务在处理中', errorCode: 'BUSY' };
+        return { success: false, error: t('errors.busy'), errorCode: 'BUSY' };
       }
 
       // Guard: Missing audio path
       if (!audioPath || typeof audioPath !== 'string') {
         logger.error('[EndToEnd] Invalid audio path', { audioPath });
-        return { success: false, error: '无效的音频路径', errorCode: 'INVALID_PATH' };
+        return { success: false, error: t('errors.invalidPath'), errorCode: 'INVALID_PATH' };
       }
 
       isProcessingRef.current = true;
@@ -115,14 +117,14 @@ export function useEndToEndSubtitleGeneration({
         if (!hasGeminiKey) {
           return {
             success: false,
-            error: '缺少 Gemini API 密钥，请在设置中配置',
+            error: t('errors.missingGeminiKey'),
             errorCode: 'MISSING_API_KEY',
           };
         }
         if (!hasOpenAIKey && !currentSettings.useLocalWhisper) {
           return {
             success: false,
-            error: '缺少 OpenAI API 密钥或未配置本地 Whisper',
+            error: t('errors.missingOpenAIKey'),
             errorCode: 'MISSING_API_KEY',
           };
         }
@@ -136,7 +138,7 @@ export function useEndToEndSubtitleGeneration({
           logger.error('[EndToEnd] Failed to load audio file', loadError);
           return {
             success: false,
-            error: `无法读取音频文件: ${loadError.message}`,
+            error: t('errors.fileReadError', { error: loadError.message }),
             errorCode: 'FILE_READ_ERROR',
           };
         }
@@ -144,13 +146,13 @@ export function useEndToEndSubtitleGeneration({
         // Guard: Empty audio file
         if (audioFile.size === 0) {
           logger.error('[EndToEnd] Audio file is empty');
-          return { success: false, error: '音频文件为空', errorCode: 'EMPTY_FILE' };
+          return { success: false, error: t('errors.fileEmpty'), errorCode: 'EMPTY_FILE' };
         }
 
         // Guard: File too small (likely corrupted, less than 1KB)
         if (audioFile.size < 1024) {
           logger.warn('[EndToEnd] Audio file suspiciously small', { size: audioFile.size });
-          return { success: false, error: '音频文件过小，可能已损坏', errorCode: 'CORRUPT_FILE' };
+          return { success: false, error: t('errors.fileCorrupt'), errorCode: 'CORRUPT_FILE' };
         }
 
         // Decode audio with error handling
@@ -162,7 +164,7 @@ export function useEndToEndSubtitleGeneration({
           logger.error('[EndToEnd] Failed to decode audio', decodeError);
           return {
             success: false,
-            error: `音频解码失败: ${decodeError.message}`,
+            error: t('errors.decodeError', { error: decodeError.message }),
             errorCode: 'DECODE_ERROR',
           };
         }
@@ -170,7 +172,7 @@ export function useEndToEndSubtitleGeneration({
         // Guard: Very short audio (less than 1 second)
         if (audioBuffer.duration < 1) {
           logger.error('[EndToEnd] Audio too short', { duration: audioBuffer.duration });
-          return { success: false, error: '音频时长过短（少于1秒）', errorCode: 'AUDIO_TOO_SHORT' };
+          return { success: false, error: t('errors.audioTooShort'), errorCode: 'AUDIO_TOO_SHORT' };
         }
 
         // Guard: Very long audio (more than 6 hours)
@@ -178,14 +180,14 @@ export function useEndToEndSubtitleGeneration({
           logger.error('[EndToEnd] Audio too long', { duration: audioBuffer.duration });
           return {
             success: false,
-            error: '音频时长过长（超过6小时）',
+            error: t('errors.audioTooLong'),
             errorCode: 'AUDIO_TOO_LONG',
           };
         }
 
         // Check abort before expensive operation
         if (signal.aborted) {
-          return { success: false, error: '操作已取消', errorCode: 'CANCELLED' };
+          return { success: false, error: t('errors.cancelled'), errorCode: 'CANCELLED' };
         }
 
         // Send progress update
@@ -263,7 +265,7 @@ export function useEndToEndSubtitleGeneration({
           logger.warn('[EndToEnd] No subtitles generated');
           return {
             success: false,
-            error: '未生成任何字幕，音频可能无语音内容',
+            error: t('errors.noSpeech'),
             errorCode: 'NO_SPEECH',
           };
         }
@@ -301,7 +303,7 @@ export function useEndToEndSubtitleGeneration({
 
         // Categorize error types
         if (error.name === 'AbortError' || error.message?.includes('cancelled') || signal.aborted) {
-          return { success: false, error: '操作已取消', errorCode: 'CANCELLED' };
+          return { success: false, error: t('errors.cancelled'), errorCode: 'CANCELLED' };
         }
 
         if (error.message?.includes('API key') || error.message?.includes('密钥')) {
@@ -311,16 +313,20 @@ export function useEndToEndSubtitleGeneration({
         if (error.message?.includes('rate limit') || error.message?.includes('429')) {
           return {
             success: false,
-            error: 'API 请求频率限制，请稍后重试',
+            error: t('errors.rateLimited'),
             errorCode: 'RATE_LIMITED',
           };
         }
 
         if (error.message?.includes('timeout') || error.message?.includes('超时')) {
-          return { success: false, error: '请求超时，请检查网络连接', errorCode: 'TIMEOUT' };
+          return { success: false, error: t('errors.timeout'), errorCode: 'TIMEOUT' };
         }
 
-        return { success: false, error: error.message || '字幕生成失败', errorCode: 'UNKNOWN' };
+        return {
+          success: false,
+          error: error.message || t('errors.unknown'),
+          errorCode: 'UNKNOWN',
+        };
       } finally {
         clearTimeout(timeoutId);
         isProcessingRef.current = false;

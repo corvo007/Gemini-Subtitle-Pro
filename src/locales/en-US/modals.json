@@ -1,5 +1,12 @@
 {
   "glossaryConfirmation": {
+    "extractionFailed": {
+      "title": "Glossary Extraction Failed",
+      "description": "Failed to extract terms from audio. This may be due to network issues or poor audio quality.",
+      "retry": "Retry Extraction",
+      "retryProcessing": "Retrying...",
+      "continue": "Skip (Continue without new terms)"
+    },
     "title": "Confirm Glossary",
     "subtitle": "Extraction complete. Please select the terms to apply.",
     "conflicts": "Conflicts",
@@ -32,5 +39,42 @@
       "cancel": "Cancel",
       "create": "Create"
     }
+  },
+  "speakerManager": {
+    "title": "Speaker Profiles",
+    "selectSpeaker": "Select Speaker",
+    "manageSpeakers": "Manage Speakers",
+    "noSpeakers": "No speakers found",
+    "autoAddHint": "Speakers will be added automatically after generation",
+    "rename": "Rename",
+    "delete": "Delete",
+    "inputPlaceholder": "Enter speaker name...",
+    "add": "Add",
+    "cancel": "Cancel",
+    "mergeSelected": "{{count}} speakers selected",
+    "merge": "Merge",
+    "merging": "Merging...",
+    "create": "New",
+    "done": "Done",
+    "deleteTitle": "Delete Speaker",
+    "deleteConfirm": "Are you sure you want to delete speaker \"{{name}}\"? This speaker will be removed from all subtitles.",
+    "deleteConfirmBtn": "Delete"
+  },
+  "glossaryImport": {
+    "title": "Import Glossary",
+    "ready": "Ready to Import",
+    "readCount": "Read <1>{{count}}</1> terms from file.",
+    "selectMode": "Select Import Mode",
+    "create": "Create New Glossary",
+    "nameLabel": "Glossary Name",
+    "namePlaceholder": "Enter name...",
+    "merge": "Merge into Existing Glossary",
+    "targetLabel": "Target Glossary",
+    "selectPlaceholder": "Select glossary",
+    "conflictLabel": "Conflict Resolution (When term exists)",
+    "skip": "Skip (Keep old value)",
+    "overwrite": "Overwrite (Use new value)",
+    "cancel": "Cancel",
+    "confirm": "Confirm Import"
   }
 }

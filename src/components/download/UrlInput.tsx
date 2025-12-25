@@ -2,6 +2,7 @@
  * URL Input Component - Tailwind CSS Version
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 
 import { isValidVideoUrl } from '@/services/utils/url';
@@ -13,6 +14,7 @@ interface UrlInputProps {
 }
 
 export function UrlInput({ onParse, disabled, loading }: UrlInputProps) {
+  const { t } = useTranslation('download');
   const [url, setUrl] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -23,7 +25,6 @@ export function UrlInput({ onParse, disabled, loading }: UrlInputProps) {
   };
 
   const validation = isValidVideoUrl(url);
-  const platform = validation.valid ? validation.platform : null;
   const isValidUrl = validation.valid;
 
   return (
@@ -34,7 +35,7 @@ export function UrlInput({ onParse, disabled, loading }: UrlInputProps) {
             type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="粘贴 YouTube / Bilibili 视频链接..."
+            placeholder={t('urlPlaceholder')}
             disabled={disabled}
             className="flex-1 px-4 py-3.5 bg-white/5 border border-white/10 rounded-lg text-white text-base
                           placeholder:text-white/40 transition-all
@@ -45,9 +46,9 @@ export function UrlInput({ onParse, disabled, loading }: UrlInputProps) {
             type="submit"
             disabled={disabled || !isValidUrl}
             loading={loading}
-            loadingText="解析中"
+            loadingText={t('parsing')}
           >
-            解析
+            {t('parse')}
           </PrimaryButton>
         </div>
       </form>

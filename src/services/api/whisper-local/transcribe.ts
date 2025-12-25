@@ -1,5 +1,6 @@
 import { type SubtitleItem } from '@/types/subtitle';
 import { logger } from '@/services/utils/logger';
+import i18n from '@/i18n';
 import { generateSubtitleId } from '@/services/utils/id';
 
 // Error types
@@ -26,20 +27,19 @@ export const transcribeWithLocalWhisper = async (
   );
 
   try {
-    // Environment check
+    // 1. Environment check
     if (!window.electronAPI) {
-      throw new WhisperLocalError('NOT_ELECTRON', '本地 Whisper 仅在桌面应用中可用');
+      throw new WhisperLocalError(
+        'NOT_ELECTRON',
+        i18n.t('services:api.whisperLocal.errors.notElectron')
+      );
     }
 
-    // Convert Blob to ArrayBuffer
+    // 2. Convert Blob to ArrayBuffer
     const arrayBuffer = await audioBlob.arrayBuffer();
 
     if (signal?.aborted) {
-      throw new Error('操作已取消');
-    }
-
-    if (signal?.aborted) {
-      throw new Error('操作已取消');
+      throw new Error(i18n.t('services:pipeline.errors.cancelled'));
     }
 
     // Call Electron IPC
@@ -58,7 +58,7 @@ export const transcribeWithLocalWhisper = async (
       if (signal) {
         signal.addEventListener('abort', () => {
           logger.info('[LocalWhisper] Transcription cancelled by user');
-          reject(new Error('操作已取消'));
+          reject(new Error(i18n.t('services:pipeline.errors.cancelled')));
         });
       }
     });
@@ -66,7 +66,10 @@ export const transcribeWithLocalWhisper = async (
     const result = await Promise.race([transcriptionPromise, cancelPromise]);
 
     if (!result.success) {
-      throw new WhisperLocalError('TRANSCRIPTION_FAILED', result.error || '转录失败');
+      throw new WhisperLocalError(
+        'TRANSCRIPTION_FAILED',
+        result.error || i18n.t('services:api.whisperLocal.errors.transcriptionFailed')
+      );
     }
 
     logger.info(`[Success] Received ${result.segments?.length || 0} segments`);

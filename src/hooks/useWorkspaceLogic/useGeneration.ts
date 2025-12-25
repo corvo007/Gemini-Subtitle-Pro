@@ -1,6 +1,7 @@
 import { type RefObject } from 'react';
 import type React from 'react';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { type SubtitleItem } from '@/types/subtitle';
 import { type AppSettings } from '@/types/settings';
 import { type GlossaryItem, type GlossaryExtractionMetadata } from '@/types/glossary';
@@ -76,9 +77,11 @@ export function useGeneration({
   setShowSettings,
   updateSetting,
 }: UseGenerationProps): UseGenerationReturn {
+  const { t } = useTranslation(['workspace', 'services']);
+
   const handleGenerate = useCallback(async () => {
     if (!file) {
-      setError('请先上传媒体文件。');
+      setError(t('workspace:hooks.generation.errors.fileRequired'));
       return;
     }
     const hasGemini = !!(settings.geminiKey || ENV.GEMINI_API_KEY);
@@ -86,7 +89,7 @@ export function useGeneration({
     const hasLocalWhisper = !!settings.useLocalWhisper;
 
     if (!hasGemini || (!hasOpenAI && !hasLocalWhisper)) {
-      setError('API 密钥未配置，请在设置中添加。');
+      setError(t('workspace:hooks.generation.errors.apiKeyMissing'));
       setShowSettings(true);
       return;
     }
@@ -126,14 +129,16 @@ export function useGeneration({
             id: 'decoding',
             total: 1,
             status: 'processing',
-            message: '正在解码音频...',
+
+            message: t('services:pipeline.status.decoding'),
           });
           audioBuffer = await decodeAudioWithRetry(file);
           audioCacheRef.current = { file, buffer: audioBuffer };
         }
       } catch (e) {
         logger.error('Failed to decode audio in handleGenerate', e);
-        throw new Error('音频解码失败，请确保文件是有效的视频或音频格式。');
+
+        throw new Error(t('services:pipeline.errors.decodeFailed'));
       }
 
       const { subtitles: result } = await generateSubtitles(
@@ -217,16 +222,22 @@ export function useGeneration({
       );
 
       // Then check subtitle results
-      if (result.length === 0) throw new Error('未生成任何字幕。');
+      if (result.length === 0) throw new Error(t('workspace:hooks.generation.errors.noSubtitles'));
 
       setSubtitles(result);
       setStatus(GenerationStatus.COMPLETED);
       const fileId = file ? window.electronAPI?.getFilePath?.(file) || file.name : '';
       const fileName = file?.name || '';
-      snapshotsValues.createSnapshot('初始生成', result, {}, fileId, fileName);
+      snapshotsValues.createSnapshot(
+        t('services:snapshots.initialGeneration'),
+        result,
+        {},
+        fileId,
+        fileName
+      );
 
       logger.info('Subtitle generation completed', { count: result.length });
-      addToast('字幕生成成功！', 'success');
+      addToast(t('workspace:hooks.generation.status.success'), 'success');
     } catch (err: unknown) {
       const error = err as Error;
       // Check if it was a cancellation
@@ -239,21 +250,22 @@ export function useGeneration({
           const fileId = file ? window.electronAPI?.getFilePath?.(file) || file.name : '';
           const fileName = file?.name || '';
           snapshotsValues.createSnapshot(
-            '部分生成 (已终止)',
+            t('services:snapshots.partialGeneration'),
             subtitlesRef.current,
             batchComments,
             fileId,
             fileName
           );
-          addToast('生成已终止，保留部分结果', 'warning');
+
+          addToast(t('workspace:hooks.generation.status.cancelledPartial'), 'warning');
         } else {
-          addToast('生成已终止', 'info');
+          addToast(t('workspace:hooks.generation.status.cancelled'), 'info');
         }
       } else {
         setStatus(GenerationStatus.ERROR);
         setError(error.message);
         logger.error('Subtitle generation failed', err);
-        addToast(`生成失败：${error.message}`, 'error');
+        addToast(t('workspace:hooks.generation.status.failed', { error: error.message }), 'error');
       }
     } finally {
       abortControllerRef.current = null;

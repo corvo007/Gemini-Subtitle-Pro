@@ -14,6 +14,7 @@ import { ToggleOptionInline } from '@/components/endToEnd/wizard/shared/ToggleOp
 import { GenreSelectorInline } from '@/components/endToEnd/wizard/shared/GenreSelector';
 import { DirectorySelector } from '@/components/ui/DirectorySelector';
 import { QualitySelector } from '@/components/download/QualitySelector';
+import { TargetLanguageSelector } from '@/components/settings/TargetLanguageSelector';
 
 /** 步骤 2: 配置选项 */
 export function StepConfig({
@@ -129,6 +130,7 @@ export function StepConfig({
         {/* ================================ */}
         <Card title={t('config.sections.subtitle')} icon={<FileText className="w-4 h-4" />}>
           {/* Genre Selection */}
+
           <div className="mb-4">
             <label className="block text-sm font-medium text-white/70 mb-2">
               {t('config.subtitle.genre')}
@@ -136,6 +138,15 @@ export function StepConfig({
             <GenreSelectorInline
               currentGenre={config.genre || 'anime'}
               onGenreChange={(genre) => onConfigChange({ genre })}
+            />
+          </div>
+
+          {/* Target Language */}
+          <div className="mb-4">
+            <TargetLanguageSelector
+              value={config.targetLanguage}
+              onChange={(val) => onConfigChange({ targetLanguage: val })}
+              className="bg-white/5 border border-white/10 rounded-xl p-4"
             />
           </div>
 

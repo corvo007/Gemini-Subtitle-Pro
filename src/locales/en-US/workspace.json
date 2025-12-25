@@ -16,6 +16,10 @@
     "startTranscription": "Start Transcription",
     "attachMedia": "Attach Media (Optional)",
     "subtitleFile": "Subtitle File",
+    "selected": "{{count}} selected",
+    "segment": "Segment {{id}}",
+    "commentPlaceholder": "Add notes or comments...",
+    "proofread": "Proofread Translation",
     "rows": "{{count}} rows",
     "parsing": "Parsing",
     "parsingSubtitles": "Parsing subtitles...",
@@ -25,6 +29,7 @@
     "genre": "Genre",
     "editGenre": "Edit Genre / Context",
     "glossary": "Glossary",
+    "targetLanguage": "Target Language",
     "noGlossary": "(None)",
     "speakerCount": "Speaker Count (Optional)",
     "speakerMin": "Min",
@@ -73,6 +78,53 @@
       "title": "Batch Delete",
       "message": "Are you sure you want to delete {{count}} subtitles? This action cannot be undone.",
       "confirm": "Delete"
+    }
+  },
+  "hooks": {
+    "generation": {
+      "errors": {
+        "fileRequired": "Please upload a media file first.",
+        "apiKeyMissing": "API key not configured, please add in settings.",
+        "noSubtitles": "No subtitles generated."
+      },
+      "status": {
+        "success": "Subtitle generation successful!",
+        "cancelledPartial": "Generation cancelled, partial results kept",
+        "cancelled": "Generation cancelled",
+        "failed": "Generation failed: {{error}}"
+      }
+    },
+    "fileOperations": {
+      "confirm": {
+        "replaceFile": {
+          "title": "Confirm File Replacement",
+          "message": "Replacing the file will clear current subtitles. It is recommended to export subtitles first. Continue?"
+        }
+      },
+      "errors": {
+        "processFailed": "File processing failed",
+        "parseFailed": "Subtitle parsing failed: {{error}}"
+      }
+    },
+    "batch": {
+      "errors": {
+        "fixTimestamps": {
+          "audioRequired": "Timestamp correction requires source video or audio file."
+        }
+      },
+      "actions": {
+        "fixTimestamps": "Fix Timestamps",
+        "refineTranslation": "Refine Translation"
+      },
+      "snapshot": {
+        "backupSuffix": "Backup before {{action}}"
+      },
+      "status": {
+        "completed": "Batch operation '{{action}}' completed!",
+        "cancelledRestore": "Operation cancelled, original state restored",
+        "cancelled": "Operation cancelled",
+        "failed": "Operation failed: {{error}}"
+      }
     }
   }
 }

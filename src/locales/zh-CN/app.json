@@ -11,5 +11,10 @@
       "backupLabel": "恢复前备份",
       "unknownFile": "未知文件"
     }
+  },
+  "errorBoundary": {
+    "title": "出错了",
+    "description": "应用程序遇到意外错误。我们已记录此问题。",
+    "reload": "重新加载应用"
   }
 }

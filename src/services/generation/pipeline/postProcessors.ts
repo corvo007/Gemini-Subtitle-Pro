@@ -8,6 +8,7 @@ import { type GoogleGenAI } from '@google/genai';
 import { type SubtitleItem } from '@/types/subtitle';
 import { type TokenUsage } from '@/types/api';
 import { logger } from '@/services/utils/logger';
+import i18n from '@/i18n';
 import { cleanNonSpeechAnnotations } from '@/services/subtitle/parser';
 import {
   validateTimeline,
@@ -94,7 +95,8 @@ export function createTranslationPostProcessor(
   signal?: AbortSignal,
   onUsage?: (usage: TokenUsage) => void,
   timeoutMs?: number,
-  useDiarization: boolean = false
+  useDiarization: boolean = false,
+  targetLanguage?: string
 ) {
   return async (
     rawResult: RawTranslationResult,
@@ -111,7 +113,11 @@ export function createTranslationPostProcessor(
     // Step 2: Retry missing items if not final attempt and partial failure
     if (!isFinalAttempt && missingItems.length > 0 && missingItems.length < batch.length) {
       logger.info(`Retrying ${missingItems.length} missing translations...`);
-      onStatusUpdate?.({ message: `重试 ${missingItems.length} 条漏翻...` });
+      onStatusUpdate?.({
+        message: i18n.t('services:pipeline.status.retryMissedTranslations', {
+          count: missingItems.length,
+        }),
+      });
 
       try {
         const retryPayload = missingItems.map((item) => ({
@@ -119,7 +125,11 @@ export function createTranslationPostProcessor(
           text: item.original,
           speaker: item.speaker,
         }));
-        const retryPrompt = getTranslationBatchPrompt(missingItems.length, retryPayload);
+        const retryPrompt = getTranslationBatchPrompt(
+          missingItems.length,
+          retryPayload,
+          targetLanguage
+        );
 
         const retryData = await generateContentWithRetry<any[]>(
           ai,

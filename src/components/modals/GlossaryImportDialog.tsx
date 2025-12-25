@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Plus, Merge, X, CheckCircle } from 'lucide-react';
+import { useTranslation, Trans } from 'react-i18next';
 import { type Glossary } from '@/types/glossary';
 import { CustomSelect } from '@/components/settings';
 import { cn } from '@/lib/cn';
@@ -29,6 +30,7 @@ export const GlossaryImportDialog: React.FC<GlossaryImportDialogProps> = ({
   importCount,
   defaultName,
 }) => {
+  const { t } = useTranslation('modals');
   const [mode, setMode] = useState<ImportMode>('create');
   const [newName, setNewName] = useState(defaultName);
   const [targetId, setTargetId] = useState<string>(glossaries.length > 0 ? glossaries[0].id : '');
@@ -65,7 +67,7 @@ export const GlossaryImportDialog: React.FC<GlossaryImportDialogProps> = ({
         <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
           <h3 className="text-xl font-bold text-white flex items-center">
             <FileText className="w-5 h-5 mr-2 text-indigo-400" />
-            导入术语表
+            {t('glossaryImport.title')}
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
             <X className="w-6 h-6" />
@@ -78,15 +80,21 @@ export const GlossaryImportDialog: React.FC<GlossaryImportDialogProps> = ({
               <CheckCircle className="w-5 h-5 text-indigo-400" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-indigo-300">准备导入</h4>
+              <h4 className="text-sm font-bold text-indigo-300">{t('glossaryImport.ready')}</h4>
               <p className="text-sm text-slate-400 mt-1">
-                已从文件中读取 <span className="text-white font-bold">{importCount}</span> 个术语。
+                <Trans
+                  i18nKey="modals:glossaryImport.readCount"
+                  count={importCount}
+                  components={{ 1: <span className="text-white font-bold" /> }}
+                />
               </p>
             </div>
           </div>
 
           <div className="space-y-4">
-            <label className="text-sm font-medium text-slate-300">选择导入方式</label>
+            <label className="text-sm font-medium text-slate-300">
+              {t('glossaryImport.selectMode')}
+            </label>
 
             <div className="grid grid-cols-1 gap-3">
               {/* Option 1: Create New */}
@@ -112,19 +120,21 @@ export const GlossaryImportDialog: React.FC<GlossaryImportDialogProps> = ({
                   </div>
                   <div className="flex-1">
                     <div className="font-medium text-white flex items-center">
-                      <Plus className="w-4 h-4 mr-2" /> 创建新术语表
+                      <Plus className="w-4 h-4 mr-2" /> {t('glossaryImport.create')}
                     </div>
                   </div>
                 </div>
 
                 {mode === 'create' && (
                   <div className="mt-4 pl-8 animate-fade-in">
-                    <label className="block text-xs text-slate-400 mb-1">术语表名称</label>
+                    <label className="block text-xs text-slate-400 mb-1">
+                      {t('glossaryImport.nameLabel')}
+                    </label>
                     <input
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                      placeholder="输入名称..."
+                      placeholder={t('glossaryImport.namePlaceholder')}
                       autoFocus
                       onClick={(e) => e.stopPropagation()}
                     />
@@ -153,7 +163,7 @@ export const GlossaryImportDialog: React.FC<GlossaryImportDialogProps> = ({
                   </div>
                   <div className="flex-1">
                     <div className="font-medium text-white flex items-center">
-                      <Merge className="w-4 h-4 mr-2" /> 合并到现有术语表
+                      <Merge className="w-4 h-4 mr-2" /> {t('glossaryImport.merge')}
                     </div>
                   </div>
                 </div>
@@ -161,19 +171,21 @@ export const GlossaryImportDialog: React.FC<GlossaryImportDialogProps> = ({
                 {mode === 'merge' && (
                   <div className="mt-4 pl-8 space-y-4 animate-fade-in">
                     <div onClick={(e) => e.stopPropagation()}>
-                      <label className="block text-xs text-slate-400 mb-1">目标术语表</label>
+                      <label className="block text-xs text-slate-400 mb-1">
+                        {t('glossaryImport.targetLabel')}
+                      </label>
                       <CustomSelect
                         value={targetId}
                         onChange={(val) => setTargetId(val)}
                         options={glossaries.map((g) => ({ value: g.id, label: g.name }))}
                         className="w-full"
-                        placeholder="选择术语表"
+                        placeholder={t('glossaryImport.selectPlaceholder')}
                       />
                     </div>
 
                     <div className="bg-slate-950/50 rounded-lg p-3 border border-slate-800">
                       <label className="block text-xs text-slate-400 mb-2">
-                        冲突处理（当术语已存在）
+                        {t('glossaryImport.conflictLabel')}
                       </label>
                       <div className="flex space-x-4">
                         <label className="flex items-center space-x-2 cursor-pointer">
@@ -187,7 +199,7 @@ export const GlossaryImportDialog: React.FC<GlossaryImportDialogProps> = ({
                               <div className="w-2 h-2 rounded-full bg-indigo-500" />
                             )}
                           </div>
-                          <span className="text-sm text-slate-300">跳过 (保留旧值)</span>
+                          <span className="text-sm text-slate-300">{t('glossaryImport.skip')}</span>
                         </label>
                         <label className="flex items-center space-x-2 cursor-pointer">
                           <div
@@ -202,7 +214,9 @@ export const GlossaryImportDialog: React.FC<GlossaryImportDialogProps> = ({
                               <div className="w-2 h-2 rounded-full bg-indigo-500" />
                             )}
                           </div>
-                          <span className="text-sm text-slate-300">覆盖（使用新值）</span>
+                          <span className="text-sm text-slate-300">
+                            {t('glossaryImport.overwrite')}
+                          </span>
                         </label>
                       </div>
                     </div>
@@ -218,7 +232,7 @@ export const GlossaryImportDialog: React.FC<GlossaryImportDialogProps> = ({
             onClick={onClose}
             className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
           >
-            取消
+            {t('glossaryImport.cancel')}
           </button>
           <button
             onClick={handleConfirm}
@@ -226,7 +240,7 @@ export const GlossaryImportDialog: React.FC<GlossaryImportDialogProps> = ({
             className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium shadow-lg shadow-indigo-500/25 transition-all flex items-center"
           >
             <CheckCircle className="w-4 h-4 mr-2" />
-            确认导入
+            {t('glossaryImport.confirm')}
           </button>
         </div>
       </div>

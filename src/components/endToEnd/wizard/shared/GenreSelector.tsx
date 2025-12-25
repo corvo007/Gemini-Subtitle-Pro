@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Film } from 'lucide-react';
 import { GenrePicker } from '@/components/ui/GenrePicker';
 
@@ -13,11 +14,12 @@ export function GenreSelector({
   currentGenre: string;
   onGenreChange: (genre: string) => void;
 }) {
+  const { t } = useTranslation('endToEnd');
   return (
     <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
       <label className="block text-sm font-medium text-white/80 mb-3">
         <Film className="w-4 h-4 inline mr-2" />
-        内容类型
+        {t('config.subtitle.genre')}
       </label>
       <GenrePicker
         currentGenre={currentGenre}

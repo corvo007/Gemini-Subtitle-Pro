@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type {
   EndToEndConfig,
   PipelineProgress,
@@ -67,6 +68,7 @@ const DEFAULT_CONFIG: Partial<EndToEndConfig> = {
 };
 
 export function useEndToEnd(): UseEndToEndReturn {
+  const { t } = useTranslation('endToEnd');
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
 
   // State
@@ -160,7 +162,7 @@ export function useEndToEnd(): UseEndToEndReturn {
   const parseUrl = useCallback(
     async (url: string) => {
       if (!isElectron || !window.electronAPI?.download?.parse) {
-        throw new Error('此功能仅在桌面版可用');
+        throw new Error(t('errors.desktopOnly'));
       }
 
       setState((prev) => ({
@@ -176,7 +178,7 @@ export function useEndToEnd(): UseEndToEndReturn {
       try {
         const parsePromise = window.electronAPI.download.parse(url);
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('解析超时，请检查网络连接后重试')), PARSE_TIMEOUT_MS)
+          setTimeout(() => reject(new Error(t('errors.parseTimeout'))), PARSE_TIMEOUT_MS)
         );
 
         const result = await Promise.race([parsePromise, timeoutPromise]);
@@ -192,14 +194,14 @@ export function useEndToEnd(): UseEndToEndReturn {
           setState((prev) => ({
             ...prev,
             isParsing: false,
-            parseError: result.error || '解析视频链接失败',
+            parseError: result.error || t('errors.parseError'),
           }));
         }
       } catch (error: any) {
         setState((prev) => ({
           ...prev,
           isParsing: false,
-          parseError: error.message || '解析视频链接时发生错误',
+          parseError: error.message || t('errors.parseException'),
         }));
       }
     },
@@ -209,16 +211,16 @@ export function useEndToEnd(): UseEndToEndReturn {
   // Pipeline execution
   const startPipeline = useCallback(async (): Promise<PipelineResult | null> => {
     if (!isElectron || !window.electronAPI?.endToEnd?.start) {
-      throw new Error('此功能仅在桌面版可用');
+      throw new Error(t('errors.desktopOnly'));
     }
 
     // Validate config
     const config = state.config as EndToEndConfig;
     if (!config.url) {
-      throw new Error('请输入视频链接');
+      throw new Error(t('errors.enterUrl'));
     }
     if (!config.outputDir) {
-      throw new Error('请选择输出目录');
+      throw new Error(t('errors.selectOutputDir'));
     }
 
     setState((prev) => ({
@@ -229,7 +231,7 @@ export function useEndToEnd(): UseEndToEndReturn {
         stage: 'idle',
         stageProgress: 0,
         overallProgress: 0,
-        message: '正在初始化...',
+        message: t('status.initializing'),
       },
     }));
 
@@ -255,7 +257,7 @@ export function useEndToEnd(): UseEndToEndReturn {
         finalStage: 'failed' as const,
         outputs: {},
         duration: 0,
-        error: error.message || '执行失败',
+        error: error.message || t('errors.executionFailed'),
       } as PipelineResult;
 
       setState((prev) => ({

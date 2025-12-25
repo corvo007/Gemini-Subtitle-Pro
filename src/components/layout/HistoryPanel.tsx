@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, GitCommit, RotateCcw, Trash2, ChevronDown, ChevronRight, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { type SubtitleSnapshot } from '@/types/subtitle';
 
 interface HistoryPanelProps {
@@ -23,6 +24,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
   onRestoreSnapshot,
   onDeleteSnapshot,
 }) => {
+  const { t } = useTranslation('ui');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -58,7 +60,8 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
     groups.forEach((snaps, fileId) => {
       result.push({
         fileId,
-        fileName: snaps[0]?.fileName || '未知文件',
+
+        fileName: snaps[0]?.fileName || t('history.unknownFile'),
         snapshots: snaps,
       });
     });
@@ -71,7 +74,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
     });
 
     return result;
-  }, [snapshots, searchQuery]);
+  }, [snapshots, searchQuery, t]);
 
   const toggleGroup = (fileId: string) => {
     setExpandedGroups((prev) => {
@@ -106,7 +109,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
 
       <h2 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
         <GitCommit className="w-5 h-5 text-indigo-400" />
-        快照记录
+        {t('history.title')}
       </h2>
 
       {/* Search */}
@@ -114,7 +117,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
         <input
           type="text"
-          placeholder="搜索文件名或描述..."
+          placeholder={t('history.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-9 pr-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
@@ -123,7 +126,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
 
       {/* Grouped Snapshots */}
       {groupedSnapshots.length === 0 ? (
-        <div className="text-center py-8 text-slate-500 text-sm">暂无快照</div>
+        <div className="text-center py-8 text-slate-500 text-sm">{t('history.noSnapshots')}</div>
       ) : (
         <div className="space-y-3">
           {groupedSnapshots.map((group) => {
@@ -168,7 +171,10 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                               {snap.description}
                             </h4>
                             <p className="text-xs text-slate-500 mt-0.5">
-                              {snap.subtitles.length} 行字幕 · {snap.timestamp}
+                              {t('history.subtitleInfo', {
+                                count: snap.subtitles.length,
+                                timestamp: snap.timestamp,
+                              })}
                             </p>
                           </div>
                           <div className="flex items-center gap-1 ml-2">
@@ -176,12 +182,12 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                               onClick={() => onRestoreSnapshot(snap)}
                               className="px-2.5 py-1.5 bg-slate-700 hover:bg-indigo-600 rounded text-xs text-white transition-colors flex items-center gap-1"
                             >
-                              <RotateCcw className="w-3 h-3" /> 加载
+                              <RotateCcw className="w-3 h-3" /> {t('history.load')}
                             </button>
                             <button
                               onClick={() => onDeleteSnapshot(snap.id)}
                               className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                              title="删除"
+                              title={t('history.delete')}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

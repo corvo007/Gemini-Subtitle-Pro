@@ -1,8 +1,8 @@
 import { type SubtitleItem } from '@/types/subtitle';
 import { logger } from '@/services/utils/logger';
+import i18n from '@/i18n';
 import { transcribeWithWhisper } from '@/services/api/openai/whisper';
 import { transcribeWithOpenAIChat } from '@/services/api/openai/chat';
-import { transcribeWithLocalWhisper } from '@/services/api/whisper-local/transcribe';
 
 export const transcribeAudio = async (
   audioBlob: Blob,
@@ -18,23 +18,36 @@ export const transcribeAudio = async (
 ): Promise<SubtitleItem[]> => {
   // Check cancellation
   if (signal?.aborted) {
-    throw new Error('操作已取消');
+    throw new Error(i18n.t('services:pipeline.errors.cancelled'));
   }
 
   // Try local Whisper
   if (useLocalWhisper && window.electronAPI) {
     if (!localModelPath) {
-      throw new Error('已启用本地 Whisper 但未提供模型路径');
+      throw new Error(i18n.t('services:api.whisperLocal.errors.noModelPath'));
     }
     try {
       logger.debug('Attempting local whisper');
-      return await transcribeWithLocalWhisper(
-        audioBlob,
-        localModelPath,
-        'auto',
-        localThreads,
-        signal,
-        customBinaryPath
+      const segments = await window.electronAPI.transcribeLocal({
+        audioData: await audioBlob.arrayBuffer(),
+        modelPath: localModelPath,
+        language: 'auto', // TODO: Make configurable
+        threads: localThreads || 4,
+        customBinaryPath: customBinaryPath,
+      });
+
+      if (segments.success && segments.segments) {
+        return segments.segments.map((seg, index) => ({
+          id: String(index + 1),
+          startTime: seg.start,
+          endTime: seg.end,
+          original: seg.text.trim(),
+          translated: '',
+        }));
+      }
+
+      throw new Error(
+        segments.error || i18n.t('services:api.whisperLocal.errors.transcriptionFailed')
       );
     } catch (error: any) {
       logger.warn('Local failed, fallback to API:', error.message);
@@ -42,11 +55,16 @@ export const transcribeAudio = async (
       if (apiKey) {
         // Show fallback toast
         if (typeof window !== 'undefined' && (window as any).showToast) {
-          (window as any).showToast(`本地转录失败，已切换到在线 API`, 'warning');
+          (window as any).showToast(
+            i18n.t('services:api.whisperLocal.errors.fallbackToApi'),
+            'warning'
+          );
         }
         logger.info('Falling back to API');
       } else {
-        throw new Error(`本地转录失败：${error.message}`);
+        throw new Error(
+          `${i18n.t('services:api.whisperLocal.errors.transcriptionFailed')}: ${error.message}`
+        );
       }
     }
   }

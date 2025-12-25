@@ -27,7 +27,8 @@ export const extractGlossaryFromAudio = async (
   onProgress?: (completed: number, total: number) => void,
   signal?: AbortSignal,
   onUsage?: (usage: TokenUsage) => void,
-  timeoutMs?: number // Custom timeout in milliseconds
+  timeoutMs?: number, // Custom timeout in milliseconds
+  targetLanguage?: string
 ): Promise<GlossaryExtractionResult[]> => {
   logger.info(`Starting glossary extraction on ${chunks.length} chunks...`);
 
@@ -45,7 +46,7 @@ export const extractGlossaryFromAudio = async (
     try {
       const wavBlob = await sliceAudioBuffer(audioBuffer, start, end);
       const base64Audio = await blobToBase64(wavBlob);
-      const prompt = GLOSSARY_EXTRACTION_PROMPT(genre);
+      const prompt = GLOSSARY_EXTRACTION_PROMPT(genre, targetLanguage);
 
       const terms = await generateContentWithRetry<GlossaryItem[]>(
         ai,
@@ -93,8 +94,11 @@ export const extractGlossaryFromAudio = async (
         // All retries exhausted or non-retryable error
         // Check for actionable error message to provide user-friendly feedback
         const actionableMsg = getActionableErrorMessage(e);
-        const reason = isRetryable ? `在 ${attemptNumber} 次尝试后` : '(不可重试的错误)';
-        logger.error(`[分段 ${index}] 提取失败 ${reason}`, { error: e.message, status: e.status });
+        const reason = isRetryable ? `after ${attemptNumber} attempts` : '(non-retryable error)';
+        logger.error(`[Chunk ${index}] Extraction failed ${reason}`, {
+          error: e.message,
+          status: e.status,
+        });
 
         // Throw with actionable message if available
         if (actionableMsg) {
@@ -166,7 +170,7 @@ export const extractGlossaryFromAudio = async (
           }
           logger.info(`[Chunk ${failedChunk.index}] Aggregated retry succeeded!`);
         } catch (e: any) {
-          logger.error(`[分块 ${failedChunk.index}] 聚合重试失败`, {
+          logger.error(`[Chunk ${failedChunk.index}] Aggregated retry failed`, {
             error: e.message,
             status: e.status,
           });
@@ -199,7 +203,8 @@ export const retryGlossaryExtraction = async (
   genre: string,
   concurrency: number,
   endpoint?: string,
-  timeout?: number
+  timeout?: number,
+  targetLanguage?: string
 ): Promise<GlossaryExtractionMetadata> => {
   const ai = new GoogleGenAI({
     apiKey,
@@ -217,7 +222,8 @@ export const retryGlossaryExtraction = async (
     undefined,
     undefined,
     undefined,
-    timeout
+    timeout,
+    targetLanguage
   );
 
   const totalTerms = results.reduce((sum, r) => sum + r.terms.length, 0);

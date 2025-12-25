@@ -40,7 +40,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           onShowGlossary={onShowGlossary}
           onShowSettings={onShowSettings}
         />
-        <main className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto w-full">
+        <main className="flex-1 flex flex-col items-center justify-center max-w-5xl mx-auto w-full">
           {/* Workflow indicator */}
           <div className="w-full mb-10">
             <div className="flex items-center justify-center gap-3 text-sm text-slate-400">

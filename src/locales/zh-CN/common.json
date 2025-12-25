@@ -18,5 +18,9 @@
     "movie": "电影/剧集",
     "news": "新闻",
     "tech": "科技"
+  },
+  "languages": {
+    "zh-CN": "简体中文",
+    "en-US": "English"
   }
 }

@@ -16,5 +16,12 @@
   "thumbnail": "Thumbnail",
   "openOutputDir": "Open Download Directory",
   "downloadNewVideo": "Download New Video",
-  "continueGenerating": "Continue Generating Subtitles"
+  "continueGenerating": "Continue Generating Subtitles",
+  "errors": {
+    "thumbnailFailed": "Thumbnail download failed"
+  },
+  "urlPlaceholder": "Paste YouTube / Bilibili video link...",
+  "parse": "Parse",
+  "parsing": "Parsing",
+  "qualityLabel": "Quality Selection"
 }

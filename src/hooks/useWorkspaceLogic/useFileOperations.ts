@@ -1,6 +1,7 @@
 import { type RefObject } from 'react';
 import type React from 'react';
 import { useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { type SubtitleItem } from '@/types/subtitle';
 import { GenerationStatus } from '@/types/api';
 import { type SpeakerUIProfile } from '@/types/speaker';
@@ -118,6 +119,7 @@ export function useFileOperations({
   snapshotsValues,
   parseSubtitle,
 }: UseFileOperationsProps): UseFileOperationsReturn {
+  const { t } = useTranslation(['workspace', 'services']);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [isLoadingSubtitle, setIsLoadingSubtitle] = useState(false);
   const [subtitleFileName, setSubtitleFileName] = useState<string | null>(null);
@@ -173,8 +175,8 @@ export function useFileOperations({
         // Check if confirmation is needed BEFORE processing
         if (file && subtitles.length > 0 && status === GenerationStatus.COMPLETED) {
           showConfirm(
-            '确认替换文件',
-            '替换文件后将清空当前字幕。建议先导出字幕（SRT/ASS）再操作。是否继续？',
+            t('workspace:hooks.fileOperations.confirm.replaceFile.title'),
+            t('workspace:hooks.fileOperations.confirm.replaceFile.message'),
             async () => {
               setSubtitles([]);
               setStatus(GenerationStatus.IDLE);
@@ -249,8 +251,9 @@ export function useFileOperations({
           await processFileInternal(fileObj);
         } catch (err) {
           if (currentOpId !== operationIdRef.current) return;
+
           logger.error('Failed to process file', err);
-          setError('文件处理失败');
+          setError(t('workspace:hooks.fileOperations.errors.processFailed'));
           setIsLoadingFile(false);
         }
       };
@@ -258,8 +261,8 @@ export function useFileOperations({
       // Check if confirmation is needed BEFORE reading file
       if (file && subtitles.length > 0 && status === GenerationStatus.COMPLETED) {
         showConfirm(
-          '确认替换文件',
-          '替换文件后将清空当前字幕。建议先导出字幕（SRT/ASS）再操作。是否继续？',
+          t('workspace:hooks.fileOperations.confirm.replaceFile.title'),
+          t('workspace:hooks.fileOperations.confirm.replaceFile.message'),
           async () => {
             setSubtitles([]);
             setStatus(GenerationStatus.IDLE);
@@ -301,12 +304,10 @@ export function useFileOperations({
           if (currentOpId !== operationIdRef.current) return;
 
           const content = await subFile.text();
-          if (currentOpId !== operationIdRef.current) return;
 
           const fileType = subFile.name.endsWith('.ass') ? 'ass' : 'srt';
 
           const parsed = await parseSubtitle(content, fileType);
-          if (currentOpId !== operationIdRef.current) return;
 
           setSubtitles(parsed);
           setSubtitleFileName(subFile.name);
@@ -326,12 +327,19 @@ export function useFileOperations({
           setStatus(GenerationStatus.COMPLETED);
           setBatchComments({});
           const fileId = window.electronAPI?.getFilePath?.(subFile) || subFile.name;
-          snapshotsValues.createSnapshot('初始导入', parsed, {}, fileId, subFile.name);
+          snapshotsValues.createSnapshot(
+            t('services:snapshots.initialImport'),
+            parsed,
+            {},
+            fileId,
+            subFile.name
+          );
         } catch (error: unknown) {
           if (currentOpId !== operationIdRef.current) return;
+
           const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error('Failed to parse subtitle', error);
-          setError(`字幕解析失败: ${errorMessage}`);
+          setError(t('workspace:hooks.fileOperations.errors.parseFailed', { error: errorMessage }));
           setStatus(GenerationStatus.ERROR);
         } finally {
           if (currentOpId === operationIdRef.current) {
@@ -391,12 +399,19 @@ export function useFileOperations({
       setStatus(GenerationStatus.COMPLETED);
       setBatchComments({});
       const fileId = result.filePath || result.fileName;
-      snapshotsValues.createSnapshot('初始导入', parsed, {}, fileId, result.fileName);
+      snapshotsValues.createSnapshot(
+        t('services:snapshots.initialImport'),
+        parsed,
+        {},
+        fileId,
+        result.fileName
+      );
     } catch (error: unknown) {
       if (currentOpId !== operationIdRef.current) return;
       const errorMessage = error instanceof Error ? error.message : String(error);
+
       logger.error('Failed to parse subtitle (native)', error);
-      setError(`字幕解析失败: ${errorMessage}`);
+      setError(t('workspace:hooks.fileOperations.errors.parseFailed', { error: errorMessage }));
       setStatus(GenerationStatus.ERROR);
     } finally {
       if (currentOpId === operationIdRef.current) {

@@ -5,6 +5,7 @@ import { intelligentAudioSampling } from '@/services/audio/sampler';
 import { extractSpeakerProfiles } from '@/services/generation/extractors/speakerProfile';
 import { getActionableErrorMessage } from '@/services/api/gemini/core/client';
 import { logger } from '@/services/utils/logger';
+import i18n from '@/i18n';
 
 export class SpeakerAnalyzer {
   static async analyze(
@@ -19,7 +20,7 @@ export class SpeakerAnalyzer {
       id: 'diarization',
       total: 1,
       status: 'processing',
-      message: '正在分析说话人...',
+      message: i18n.t('services:pipeline.status.analyzingSpeakers'),
     });
 
     try {
@@ -54,7 +55,9 @@ export class SpeakerAnalyzer {
         id: 'diarization',
         total: 1,
         status: 'completed',
-        message: `已识别 ${profileSet.profiles.length} 位说话人`,
+        message: i18n.t('services:pipeline.status.speakersIdentified', {
+          count: profileSet.profiles.length,
+        }),
       });
 
       // Swap ID with Name if available, so the AI uses the name in the output
@@ -66,7 +69,7 @@ export class SpeakerAnalyzer {
       logger.error('Speaker profile extraction failed', e);
       // Use actionable error message if available
       const actionableMsg = getActionableErrorMessage(e);
-      const errorMsg = actionableMsg || '说话人预分析失败';
+      const errorMsg = actionableMsg || i18n.t('services:pipeline.status.speakerAnalysisFailed');
       onProgress?.({ id: 'diarization', total: 1, status: 'error', message: errorMsg });
       return [];
     }

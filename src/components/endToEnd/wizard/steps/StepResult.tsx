@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle, XCircle, Film, FileText, Wand2, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { OutputItem } from '@/components/endToEnd/wizard/shared/OutputItem';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
@@ -14,6 +15,7 @@ export function StepResult({
   onReset: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('endToEnd');
   const success = result?.success;
   const outputs = result?.outputs || {};
 
@@ -40,11 +42,16 @@ export function StepResult({
             <XCircle className="w-8 h-8 text-red-400" />
           )}
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">{success ? '处理完成' : '处理失败'}</h2>
+
+        <h2 className="text-2xl font-bold text-white mb-2">
+          {success ? t('wizard.resultStep.success') : t('wizard.resultStep.failure')}
+        </h2>
         <p className="text-white/60">
           {success
-            ? `耗时 ${Math.round((result?.duration || 0) / 1000 / 60)} 分钟`
-            : result?.error || '发生未知错误'}
+            ? t('wizard.resultStep.duration', {
+                minutes: Math.round((result?.duration || 0) / 1000 / 60),
+              })
+            : result?.error || t('wizard.resultStep.unknownError')}
         </p>
       </div>
 
@@ -54,7 +61,7 @@ export function StepResult({
           {outputs.videoPath && (
             <OutputItem
               icon={<Film className="w-5 h-5" />}
-              label="原始视频"
+              label={t('wizard.resultStep.originalVideo')}
               path={outputs.videoPath}
               onOpen={() => handleOpenFolder(outputs.videoPath)}
             />
@@ -62,7 +69,7 @@ export function StepResult({
           {outputs.subtitlePath && (
             <OutputItem
               icon={<FileText className="w-5 h-5" />}
-              label="字幕文件"
+              label={t('wizard.resultStep.subtitleFile')}
               path={outputs.subtitlePath}
               onOpen={() => handleOpenFolder(outputs.subtitlePath)}
             />
@@ -70,7 +77,7 @@ export function StepResult({
           {outputs.outputVideoPath && (
             <OutputItem
               icon={<Wand2 className="w-5 h-5" />}
-              label="压制视频"
+              label={t('wizard.resultStep.outputVideo')}
               path={outputs.outputVideoPath}
               onOpen={() => handleOpenFolder(outputs.outputVideoPath)}
               highlight
@@ -83,7 +90,9 @@ export function StepResult({
       {!success && result?.errorDetails && (
         <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl mb-8">
           <div className="text-red-200 text-sm">
-            <p className="font-medium mb-1">错误阶段: {result.errorDetails.stage}</p>
+            <p className="font-medium mb-1">
+              {t('wizard.resultStep.errorStage', { stage: result.errorDetails.stage })}
+            </p>
             <p className="text-red-300/70">{result.errorDetails.message}</p>
           </div>
         </div>
@@ -97,10 +106,10 @@ export function StepResult({
         >
           <span className="flex items-center gap-2">
             <RefreshCw className="w-4 h-4" />
-            处理新视频
+            {t('wizard.resultStep.processNew')}
           </span>
         </button>
-        <PrimaryButton onClick={onClose}>完成</PrimaryButton>
+        <PrimaryButton onClick={onClose}>{t('wizard.resultStep.done')}</PrimaryButton>
       </div>
     </div>
   );

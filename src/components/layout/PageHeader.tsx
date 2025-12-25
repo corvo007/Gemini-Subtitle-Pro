@@ -54,7 +54,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             {typeof title === 'string' ? <span className="truncate">{title}</span> : title}
           </h1>
           {subtitle && (
-            <p className="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-[300px]">
+            <p className="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-[400px] md:max-w-[600px]">
               {subtitle}
             </p>
           )}

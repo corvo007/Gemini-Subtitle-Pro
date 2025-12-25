@@ -7,7 +7,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
-  throw new Error('未找到 root 挂载元素');
+  throw new Error('Root mount element not found');
 }
 
 const root = ReactDOM.createRoot(rootElement);

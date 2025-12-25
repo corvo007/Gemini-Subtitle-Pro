@@ -1,5 +1,12 @@
 {
   "glossaryConfirmation": {
+    "extractionFailed": {
+      "title": "术语提取失败",
+      "description": "无法从音频中提取术语，可能是网络问题或音频质量不佳。",
+      "retry": "重试提取",
+      "retryProcessing": "正在重试...",
+      "continue": "跳过 (继续而不使用新术语)"
+    },
     "title": "确认术语表",
     "subtitle": "提取完成，请选择要应用的术语。",
     "conflicts": "冲突",
@@ -32,5 +39,42 @@
       "cancel": "取消",
       "create": "创建"
     }
+  },
+  "speakerManager": {
+    "title": "说话人档案",
+    "selectSpeaker": "选择说话人",
+    "manageSpeakers": "管理说话人",
+    "noSpeakers": "暂无说话人",
+    "autoAddHint": "生成字幕后会自动添加",
+    "rename": "重命名",
+    "delete": "删除",
+    "inputPlaceholder": "输入说话人名称...",
+    "add": "添加",
+    "cancel": "取消",
+    "mergeSelected": "已选择 {{count}} 个说话人",
+    "merge": "合并",
+    "merging": "合并中...",
+    "create": "新建",
+    "done": "完成",
+    "deleteTitle": "删除说话人",
+    "deleteConfirm": "确定要删除说话人「{{name}}」吗？该说话人的所有字幕将不再关联任何说话人。",
+    "deleteConfirmBtn": "删除"
+  },
+  "glossaryImport": {
+    "title": "导入术语表",
+    "ready": "准备导入",
+    "readCount": "已从文件中读取 <1>{{count}}</1> 个术语。",
+    "selectMode": "选择导入方式",
+    "create": "创建新术语表",
+    "nameLabel": "术语表名称",
+    "namePlaceholder": "输入名称...",
+    "merge": "合并到现有术语表",
+    "targetLabel": "目标术语表",
+    "selectPlaceholder": "选择术语表",
+    "conflictLabel": "冲突处理（当术语已存在）",
+    "skip": "跳过 (保留旧值)",
+    "overwrite": "覆盖（使用新值）",
+    "cancel": "取消",
+    "confirm": "确认导入"
   }
 }

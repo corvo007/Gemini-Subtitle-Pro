@@ -3,6 +3,7 @@
  */
 import React from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { DownloadProgress as Progress } from '@/types/download';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 
@@ -12,17 +13,19 @@ interface DownloadProgressProps {
 }
 
 export function DownloadProgress({ progress, onCancel }: DownloadProgressProps) {
+  const { t } = useTranslation('ui');
+
   const getStageLabel = () => {
-    if (!progress) return '准备下载中...';
+    if (!progress) return t('download.preparing');
     switch (progress.stage) {
       case 'video':
-        return '正在下载视频画面 (1/2)...';
+        return t('download.downloadingVideo');
       case 'audio':
-        return '正在下载音频声音 (2/2)...';
+        return t('download.downloadingAudio');
       case 'merging':
-        return '正在合并文件...';
+        return t('download.merging');
       default:
-        return '下载中...';
+        return t('download.downloading');
     }
   };
 
@@ -37,7 +40,7 @@ export function DownloadProgress({ progress, onCancel }: DownloadProgressProps) 
                         transition-colors hover:bg-red-500/10"
         >
           <span className="flex items-center gap-1">
-            <X className="w-3.5 h-3.5" /> 取消
+            <X className="w-3.5 h-3.5" /> {t('download.cancel')}
           </span>
         </button>
       </div>
@@ -56,10 +59,10 @@ export function DownloadProgress({ progress, onCancel }: DownloadProgressProps) 
           <>
             <span>{progress.percent.toFixed(1)}%</span>
             <span>{progress.speed}</span>
-            <span>剩余 {progress.eta}</span>
+            <span>{t('download.eta', { time: progress.eta })}</span>
           </>
         ) : (
-          <span>正在连接服务器...</span>
+          <span>{t('download.connecting')}</span>
         )}
       </div>
     </div>

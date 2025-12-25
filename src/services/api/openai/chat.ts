@@ -1,5 +1,6 @@
 import { type SubtitleItem } from '@/types/subtitle';
 import { formatTime } from '@/services/subtitle/time';
+import i18n from '@/i18n';
 import { blobToBase64 } from '@/services/audio/converter';
 import { logger } from '@/services/utils/logger';
 import { extractJsonArray } from '@/services/subtitle/parser';
@@ -45,7 +46,7 @@ export const transcribeWithOpenAIChat = async (
   try {
     // Check cancellation
     if (signal?.aborted) {
-      throw new Error('操作已取消');
+      throw new Error(i18n.t('services:pipeline.errors.cancelled'));
     }
 
     const controller = new AbortController();
@@ -67,8 +68,12 @@ export const transcribeWithOpenAIChat = async (
     }).finally(() => clearTimeout(timeoutId));
 
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(`GPT-4o 转录错误：${err.error?.message || response.statusText}`);
+      const err = await response.json().catch(() => ({}));
+      throw new Error(
+        i18n.t('services:api.openai.errors.transcriptionFailed', {
+          error: err.error?.message || response.statusText,
+        })
+      );
     }
 
     const data = await response.json();
@@ -101,6 +106,6 @@ export const transcribeWithOpenAIChat = async (
       translated: '',
     }));
   } catch (e: any) {
-    throw new Error(`GPT-4o 音频转录失败：${e.message}`);
+    throw new Error(i18n.t('services:api.openai.errors.transcriptionFailed', { error: e.message }));
   }
 };

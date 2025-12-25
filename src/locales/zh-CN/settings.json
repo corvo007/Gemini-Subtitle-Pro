@@ -28,6 +28,11 @@
     },
     "output": {
       "title": "输出设置",
+      "targetLanguage": {
+        "label": "目标语言",
+        "placeholder": "选择语言",
+        "description": "字幕翻译的目标语言。"
+      },
       "exportMode": "导出模式",
       "bilingual": "双语字幕",
       "targetOnly": "仅译文",
@@ -138,5 +143,21 @@
     "ffprobePath": "Custom ffprobe.exe Path",
     "whisperPath": "Custom whisper-cli.exe Path",
     "defaultAutoDetected": "Default (Auto-detected)"
+  },
+  "languages": {
+    "simplifiedChinese": "简体中文",
+    "traditionalChinese": "繁体中文",
+    "english": "英语",
+    "japanese": "日语",
+    "korean": "韩语",
+    "spanish": "西班牙语",
+    "french": "法语",
+    "german": "德语",
+    "russian": "俄语",
+    "portuguese": "葡萄牙语",
+    "italian": "意大利语",
+    "vietnamese": "越南语",
+    "thai": "泰语",
+    "indonesian": "印尼语"
   }
 }

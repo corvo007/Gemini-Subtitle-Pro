@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import { type Glossary, type GlossaryItem } from '@/types/glossary';
 import { validateGlossaryItem } from '@/services/glossary/validator';
 
@@ -42,7 +43,7 @@ export function importGlossary(jsonContent: string): Glossary {
 
     // Basic validation
     if (!parsed.name || !Array.isArray(parsed.terms)) {
-      throw new Error('术语表格式无效');
+      throw new Error(i18n.t('services:glossary.errors.invalidFormat'));
     }
 
     // Validate items
@@ -58,6 +59,9 @@ export function importGlossary(jsonContent: string): Glossary {
       updatedAt: new Date().toISOString(),
     };
   } catch (e) {
-    throw new Error('术语表文件解析失败');
+    if (e instanceof Error && e.message !== i18n.t('services:glossary.errors.invalidFormat')) {
+      throw new Error(i18n.t('services:glossary.errors.parseFailed'));
+    }
+    throw e;
   }
 }

@@ -2,6 +2,7 @@
  * useDownload Hook - Video Download State Management
  */
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { VideoInfo, DownloadProgress, DownloadStatus, DownloadError } from '@/types/download';
 import {
   parseVideoUrl,
@@ -36,6 +37,7 @@ interface UseDownloadReturn {
 }
 
 export function useDownload(): UseDownloadReturn {
+  const { t } = useTranslation(['download']);
   const [status, setStatus] = useState<DownloadStatus>('idle');
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
@@ -127,7 +129,7 @@ export function useDownload(): UseDownloadReturn {
       // Don't set error state for thumbnail failures - it's not critical
       // But show a toast to notify the user
       if (typeof window !== 'undefined' && (window as any).showToast) {
-        (window as any).showToast('封面下载失败', 'warning');
+        (window as any).showToast(t('download:errors.thumbnailFailed'), 'warning');
       }
       return undefined;
     }

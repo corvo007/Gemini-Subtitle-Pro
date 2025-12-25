@@ -1,6 +1,7 @@
 import { type RefObject } from 'react';
 import type React from 'react';
 import { useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { type SubtitleItem, type BatchOperationMode } from '@/types/subtitle';
 import { type AppSettings } from '@/types/settings';
 import { GenerationStatus, type ChunkStatus } from '@/types/api';
@@ -74,6 +75,7 @@ export function useBatchActions({
   snapshotsValues,
   addToast,
 }: UseBatchActionsProps): UseBatchActionsReturn {
+  const { t } = useTranslation(['workspace', 'services']);
   // Use ref instead of state to avoid closure issues in async catch block
   const snapshotBeforeOperationRef = useRef<SubtitleItem[] | null>(null);
 
@@ -83,11 +85,11 @@ export function useBatchActions({
         singleIndex !== undefined ? [singleIndex] : (Array.from(selectedBatches) as number[]);
       if (indices.length === 0) return;
       if (!settings.geminiKey && !ENV.GEMINI_API_KEY) {
-        setError('缺少 API 密钥。');
+        setError(t('services:pipeline.errors.missingGeminiKey'));
         return;
       }
       if (mode === 'fix_timestamps' && !file) {
-        setError('校对时间轴需要源视频或音频文件。');
+        setError(t('workspace:hooks.batch.errors.fixTimestamps.audioRequired'));
         return;
       }
 
@@ -95,11 +97,14 @@ export function useBatchActions({
       snapshotBeforeOperationRef.current = [...subtitles];
 
       // Create snapshot BEFORE AI operation for user recovery
-      const actionName = mode === 'fix_timestamps' ? '校对时间轴' : '润色翻译';
+      const actionName =
+        mode === 'fix_timestamps'
+          ? t('workspace:hooks.batch.actions.fixTimestamps')
+          : t('workspace:hooks.batch.actions.refineTranslation');
       const fileId = file ? window.electronAPI?.getFilePath?.(file) || file.name : '';
       const fileName = file?.name || '';
       snapshotsValues.createSnapshot(
-        `${actionName}前备份`,
+        t('workspace:hooks.batch.snapshot.backupSuffix', { action: actionName }),
         subtitles,
         batchComments,
         fileId,
@@ -135,7 +140,7 @@ export function useBatchActions({
         });
         if (singleIndex === undefined) setSelectedBatches(new Set());
         logger.info(`Batch action ${mode} completed`);
-        addToast(`批量操作 '${actionName}' 完成！`, 'success');
+        addToast(t('workspace:hooks.batch.status.completed', { action: actionName }), 'success');
       } catch (err: unknown) {
         const error = err as Error;
         // Check if it was a cancellation
@@ -146,15 +151,15 @@ export function useBatchActions({
           // Restore from snapshot (read from ref for fresh value)
           if (snapshotBeforeOperationRef.current) {
             setSubtitles(snapshotBeforeOperationRef.current);
-            addToast('操作已终止，已恢复原状态', 'warning');
+            addToast(t('workspace:hooks.batch.status.cancelledRestore'), 'warning');
           } else {
-            addToast('操作已终止', 'info');
+            addToast(t('workspace:hooks.batch.status.cancelled'), 'info');
           }
         } else {
           setStatus(GenerationStatus.ERROR);
-          setError(`操作失败: ${error.message}`);
+          setError(t('workspace:hooks.batch.status.failed', { error: error.message }));
           logger.error(`Batch action ${mode} failed`, err);
-          addToast(`操作失败：${error.message}`, 'error');
+          addToast(t('workspace:hooks.batch.status.failed', { error: error.message }), 'error');
         }
       } finally {
         abortControllerRef.current = null;

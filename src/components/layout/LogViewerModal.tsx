@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, FileText, Download, Filter } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { LogEntry } from '@/services/utils/logger';
 import { CustomSelect } from '@/components/settings/CustomSelect';
 import { cn } from '@/lib/cn';
@@ -18,6 +19,7 @@ const LOG_LEVELS: LogLevel[] = ['ALL', 'DEBUG', 'INFO', 'WARN', 'ERROR'];
  * Modal component for viewing application logs
  */
 export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, logs, onClose }) => {
+  const { t } = useTranslation('ui');
   const [filterLevel, setFilterLevel] = useState<LogLevel>('ALL');
 
   // Filter logs based on minimum level
@@ -91,7 +93,7 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, logs, on
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl animate-fade-in relative">
         <div className="p-6 border-b border-slate-800 flex items-center justify-between">
           <h2 className="text-xl font-bold text-white flex items-center">
-            <FileText className="w-5 h-5 mr-2 text-blue-400" /> 应用日志
+            <FileText className="w-5 h-5 mr-2 text-blue-400" /> {t('logs.title')}
           </h2>
           <div className="flex items-center gap-2">
             {/* Log Level Filter */}
@@ -100,7 +102,7 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, logs, on
               onChange={(value) => setFilterLevel(value as LogLevel)}
               options={LOG_LEVELS.map((level) => ({
                 value: level,
-                label: level === 'ALL' ? '全部' : level,
+                label: level === 'ALL' ? t('logs.filterAll') : level,
               }))}
               icon={<Filter className="w-4 h-4" />}
               className="w-40"
@@ -109,10 +111,10 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, logs, on
               onClick={handleExportLogs}
               disabled={logs.length === 0}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="导出所有日志"
+              title={t('logs.exportAll')}
             >
               <Download className="w-4 h-4" />
-              <span className="text-sm font-medium">导出</span>
+              <span className="text-sm font-medium">{t('logs.export')}</span>
             </button>
             <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
               <X className="w-5 h-5" />
@@ -123,12 +125,12 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, logs, on
           {logs.length === 0 ? (
             <div className="text-center text-slate-500 py-12">
               <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>暂无日志</p>
+              <p>{t('logs.empty')}</p>
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="text-center text-slate-500 py-12">
               <Filter className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>当前级别没有日志</p>
+              <p>{t('logs.emptyLevel')}</p>
             </div>
           ) : (
             <div className="space-y-2 font-mono text-sm">

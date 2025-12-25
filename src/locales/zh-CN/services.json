@@ -1,0 +1,68 @@
+{
+  "glossary": {
+    "autoName": "自动提取术语",
+    "errors": {
+      "invalidFormat": "术语表格式无效",
+      "parseFailed": "术语表文件解析失败"
+    }
+  },
+  "api": {
+    "errors": {
+      "billingRequired": "需要启用结算（免费层级用尽或未启用）",
+      "invalidKey": "API Key 无效",
+      "permissionDenied": "无权限 / 访问被拒绝",
+      "modelNotFound": "找不到该模型",
+      "notFound": "资源未找到",
+      "regionRestricted": "区域受限（当前位置不可用）",
+      "network": "网络错误"
+    },
+    "network": {
+      "rateLimited": "请求频率受限 / 配额用尽",
+      "timeout": "请求超时",
+      "timeoutWithSeconds": "请求超时（{{seconds}}秒）",
+      "cancelled": "请求已取消"
+    }
+  },
+  "snapshots": {
+    "autoSave": "自动保存",
+    "initialImport": "初始导入",
+    "initialGeneration": "初始生成",
+    "partialGeneration": "部分生成 (已终止)"
+  },
+  "parser": {
+    "soundEffects": {
+      "laughter": "笑声",
+      "applause": "掌声",
+      "music": "音乐",
+      "cough": "咳",
+      "sigh": "叹气",
+      "themeSong": "主题曲",
+      "outro": "片尾曲",
+      "intro": "片头曲"
+    }
+  },
+  "pipeline": {
+    "status": {
+      "retryMissedTranslations": "正在重试 {{count}} 条缺失的翻译...",
+      "loadingAudio": "正在加载音频文件...",
+      "proofing": "正在校对...",
+      "fixingTimestamps": "正在修复时间轴...",
+      "translating": "正在翻译...",
+      "completed": "完成",
+      "failed": "失败",
+      "translatingNew": "正在翻译 {{count}} 条新条目...",
+      "autoTranslationComplete": "自动翻译完成",
+      "autoTranslationFailed": "自动翻译失败",
+      "extractingGlossaryInit": "正在初始化术语提取 (共 {{total}} 个片段)...",
+      "extractingGlossaryComplete": "术语提取完成",
+      "extractingGlossary": "正在提取术语 ({{current}}/{{total}})...",
+      "analyzingSpeakers": "正在分析说话人..."
+    },
+    "errors": {
+      "translationFailed": "翻译失败: {{error}}",
+      "translationFailedUseOriginal": "翻译失败，使用原文",
+      "missingGeminiKey": "缺少 Gemini API Key",
+      "missingOpenAIKey": "缺少 OpenAI API Key (或未启用本地 Whisper)"
+    }
+  }
+}

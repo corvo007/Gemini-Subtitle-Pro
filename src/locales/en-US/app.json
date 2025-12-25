@@ -11,5 +11,10 @@
       "backupLabel": "Pre-restore backup",
       "unknownFile": "Unknown file"
     }
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "The application encountered an unexpected error. This issue has been logged.",
+    "reload": "Reload Application"
   }
 }

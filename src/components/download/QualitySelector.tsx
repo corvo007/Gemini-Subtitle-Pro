@@ -2,6 +2,7 @@
  * Quality Selector Component - Tailwind CSS Version
  */
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { VideoFormat } from '@/types/download';
 import { cn } from '@/lib/cn';
 
@@ -19,9 +20,12 @@ export function QualitySelector({
   selectedFormat,
   onSelect,
   disabled,
-  label = '画质选择',
+  label,
   className = '',
 }: QualitySelectorProps) {
+  const { t } = useTranslation('download');
+  const displayLabel = label || t('qualityLabel');
+
   const formatFilesize = (bytes?: number): string => {
     if (!bytes) return '';
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -31,7 +35,7 @@ export function QualitySelector({
 
   return (
     <div className={className}>
-      <label className="block text-sm text-white/60 mb-3">{label}</label>
+      <label className="block text-sm text-white/60 mb-3">{displayLabel}</label>
       <div className="flex flex-wrap gap-2 md:gap-3">
         {formats.map((format) => (
           <button

@@ -3,12 +3,13 @@ import { type GlossaryItem, type Glossary } from '@/types/glossary';
 export const GENRE_PRESETS = ['general', 'anime', 'movie', 'news', 'tech'];
 export type Genre = 'general' | 'anime' | 'movie' | 'news' | 'tech';
 
-export const GENRE_LABELS: Record<string, string> = {
-  general: '通用',
-  anime: '动漫',
-  movie: '电影/剧集',
-  news: '新闻',
-  tech: '科技',
+// Translation keys for genres
+export const GENRE_KEYS: Record<string, string> = {
+  general: 'genre.general',
+  anime: 'genre.anime',
+  movie: 'genre.movie',
+  news: 'genre.news',
+  tech: 'genre.tech',
 };
 
 export interface DebugSettings {
@@ -32,6 +33,7 @@ export interface AppSettings {
   customTranslationPrompt: string;
   customProofreadingPrompt: string;
   outputMode: 'bilingual' | 'target_only';
+  targetLanguage?: string; // Target language for translation (default: 'Simplified Chinese')
   proofreadBatchSize: number;
   translationBatchSize: number;
   chunkDuration: number;

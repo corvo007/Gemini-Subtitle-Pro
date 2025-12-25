@@ -1,0 +1,68 @@
+{
+  "glossary": {
+    "autoName": "Auto Extracted Glossary",
+    "errors": {
+      "invalidFormat": "Invalid glossary format",
+      "parseFailed": "Failed to parse glossary file"
+    }
+  },
+  "api": {
+    "errors": {
+      "billingRequired": "Billing required (Free tier exhausted or not enabled)",
+      "invalidKey": "Invalid API Key",
+      "permissionDenied": "Permission denied / Access forbidden",
+      "modelNotFound": "Model not found",
+      "notFound": "Resource not found",
+      "regionRestricted": "Region restricted (Not available in your location)",
+      "network": "Network error"
+    },
+    "network": {
+      "rateLimited": "Rate limit exceeded / Quota exhausted",
+      "timeout": "Request timed out",
+      "timeoutWithSeconds": "Request timed out after {{seconds}}s",
+      "cancelled": "Request cancelled"
+    }
+  },
+  "snapshots": {
+    "autoSave": "Auto Save",
+    "initialImport": "Initial Import",
+    "initialGeneration": "Initial Generation",
+    "partialGeneration": "Partial Generation (Terminated)"
+  },
+  "parser": {
+    "soundEffects": {
+      "laughter": "Laughter",
+      "applause": "Applause",
+      "music": "Music",
+      "cough": "Cough",
+      "sigh": "Sigh",
+      "themeSong": "Theme Song",
+      "outro": "Outro",
+      "intro": "Intro"
+    }
+  },
+  "pipeline": {
+    "status": {
+      "retryMissedTranslations": "Retrying {{count}} missing translations...",
+      "loadingAudio": "Loading audio file...",
+      "proofing": "Proofreading...",
+      "fixingTimestamps": "Fixing timestamps...",
+      "translating": "Translating...",
+      "completed": "Completed",
+      "failed": "Failed",
+      "translatingNew": "Translating {{count}} new entries...",
+      "autoTranslationComplete": "Auto-translation complete",
+      "autoTranslationFailed": "Auto-translation failed",
+      "extractingGlossaryInit": "Initializing glossary extraction ({{total}} chunks)...",
+      "extractingGlossaryComplete": "Glossary extraction complete",
+      "extractingGlossary": "Extracting glossary ({{current}}/{{total}})...",
+      "analyzingSpeakers": "Analyzing speakers..."
+    },
+    "errors": {
+      "translationFailed": "Translation failed: {{error}}",
+      "translationFailedUseOriginal": "Translation failed, using original text",
+      "missingGeminiKey": "Gemini API key is missing",
+      "missingOpenAIKey": "OpenAI API Key missing (or local Whisper not enabled)"
+    }
+  }
+}

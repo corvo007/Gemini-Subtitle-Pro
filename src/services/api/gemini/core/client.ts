@@ -8,6 +8,7 @@ import {
   parseJsonObjectStrict,
 } from '@/services/subtitle/parser';
 import { type TokenUsage } from '@/types/api';
+import i18n from '@/i18n';
 
 /**
  * Determines if an error should trigger a retry attempt.
@@ -134,7 +135,7 @@ export function getActionableErrorMessage(error: any): string | undefined {
     httpStatus === 401 ||
     combinedMsg.includes('unauthorized')
   ) {
-    return 'API 密钥无效！请检查您的 API 密钥是否正确配置。';
+    return i18n.t('services:api.errors.invalidKey');
   }
 
   // === FAILED_PRECONDITION (400) - Need to enable billing ===
@@ -146,7 +147,7 @@ export function getActionableErrorMessage(error: any): string | undefined {
     combinedMsg.includes('free tier') ||
     combinedMsg.includes('免费层级')
   ) {
-    return 'Gemini API 免费层级不可用！请在 Google AI Studio 中为您的项目启用结算功能。';
+    return i18n.t('services:api.errors.billingRequired');
   }
 
   // === PERMISSION_DENIED (403) - API key doesn't have permission ===
@@ -157,7 +158,7 @@ export function getActionableErrorMessage(error: any): string | undefined {
     combinedMsg.includes('forbidden') ||
     combinedMsg.includes('access denied')
   ) {
-    return 'API 访问被拒绝 (403)！请检查：1) API 密钥权限设置 2) API 是否为当前地区启用 3) 是否需要开启计费';
+    return i18n.t('services:api.errors.permissionDenied');
   }
 
   // === RESOURCE_EXHAUSTED (429) - Rate limit / quota exceeded ===
@@ -168,15 +169,15 @@ export function getActionableErrorMessage(error: any): string | undefined {
     combinedMsg.includes('rate limit') ||
     combinedMsg.includes('too many requests')
   ) {
-    return 'API 配额已用尽或请求过于频繁 (429)！请稍后重试，或检查您的 API 配额限制。';
+    return i18n.t('services:api.network.rateLimited');
   }
 
   // === NOT_FOUND (404) - Resource not found ===
   if (httpStatus === 404 || errorStatus === 'not_found') {
     if (combinedMsg.includes('model')) {
-      return '请求的模型不存在 (404)！请检查模型名称是否正确。';
+      return i18n.t('services:api.errors.modelNotFound');
     }
-    return '请求的资源不存在 (404)！请检查请求参数。';
+    return i18n.t('services:api.errors.notFound');
   }
 
   // === Region/Location restrictions ===
@@ -186,7 +187,7 @@ export function getActionableErrorMessage(error: any): string | undefined {
     combinedMsg.includes('not available in') ||
     combinedMsg.includes('国家/地区')
   ) {
-    return 'API 在当前地区不可用！请检查是否需要使用代理或更换 API 端点。';
+    return i18n.t('services:api.errors.regionRestricted');
   }
 
   // Return undefined for transient errors (500, 503, 504) - these should be retried
@@ -253,9 +254,8 @@ export async function generateContentWithRetry<T = any>(
   parseJson?: 'array' | 'object' | false // Optional JSON parsing mode
 ): Promise<T> {
   for (let i = 0; i < retries; i++) {
-    // Check cancellation before request
     if (signal?.aborted) {
-      throw new Error('操作已取消');
+      throw new Error(i18n.t('services:api.network.cancelled'));
     }
 
     try {
@@ -278,7 +278,14 @@ export async function generateContentWithRetry<T = any>(
           promises.push(
             new Promise((_, reject) => {
               timeoutHandle = setTimeout(
-                () => reject(new Error(`请求超时 (${Math.round(timeoutMs / 1000)}秒)`)),
+                () =>
+                  reject(
+                    new Error(
+                      i18n.t('services:api.network.timeoutWithSeconds', {
+                        seconds: Math.round(timeoutMs / 1000),
+                      })
+                    )
+                  ),
                 timeoutMs
               );
             })
@@ -289,9 +296,9 @@ export async function generateContentWithRetry<T = any>(
             promises.push(
               new Promise((_, reject) => {
                 if (signal.aborted) {
-                  reject(new Error('Operation cancelled'));
+                  reject(new Error(i18n.t('services:api.network.cancelled')));
                 } else {
-                  abortHandler = () => reject(new Error('Operation cancelled'));
+                  abortHandler = () => reject(new Error(i18n.t('services:api.network.cancelled')));
                   signal.addEventListener('abort', abortHandler);
                 }
               })
@@ -430,7 +437,7 @@ export async function generateContentWithRetry<T = any>(
       }
     }
   }
-  throw new Error('Gemini API 请求重试后仍然失败。');
+  throw new Error(i18n.t('services:api.errors.retryFailed'));
 }
 
 export async function generateContentWithLongOutput(
@@ -453,7 +460,7 @@ export async function generateContentWithLongOutput(
   try {
     // Check before initial generation
     if (signal?.aborted) {
-      throw new Error('Operation cancelled');
+      throw new Error(i18n.t('services:api.network.cancelled'));
     }
 
     // Initial generation
@@ -522,7 +529,7 @@ export async function generateContentWithLongOutput(
       // and ask to continue.
 
       if (signal?.aborted) {
-        throw new Error('操作已取消');
+        throw new Error(i18n.t('services:api.network.cancelled'));
       }
 
       messages.push({ role: 'model', parts: [{ text: text }] });
@@ -572,7 +579,7 @@ export async function generateContentWithLongOutput(
         preview: fullText.substring(0, 1000), // Increased preview to 1000 chars
         error: e,
       });
-      throw new Error(`Gemini响应格式错误：经过3次续写尝试后JSON仍然无效。请稍后重试。`);
+      throw new Error(i18n.t('services:api.errors.parseFailed'));
     }
   } catch (e: any) {
     logger.error('generateContentWithLongOutput failed', e);

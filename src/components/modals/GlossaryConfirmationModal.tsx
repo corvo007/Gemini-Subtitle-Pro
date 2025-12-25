@@ -640,7 +640,7 @@ export const GlossaryConfirmationModal: React.FC<GlossaryConfirmationModalProps>
                               );
                             }}
                             className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-                            placeholder="术语"
+                            placeholder={t('glossaryConfirmation.termPlaceholder')}
                           />
                           <input
                             value={editValue?.translation}
@@ -650,7 +650,7 @@ export const GlossaryConfirmationModal: React.FC<GlossaryConfirmationModalProps>
                               );
                             }}
                             className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-                            placeholder="翻译"
+                            placeholder={t('glossaryConfirmation.translationPlaceholder')}
                           />
                           <input
                             value={editValue?.notes}
@@ -660,7 +660,7 @@ export const GlossaryConfirmationModal: React.FC<GlossaryConfirmationModalProps>
                               );
                             }}
                             className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-slate-400"
-                            placeholder="备注"
+                            placeholder={t('glossaryConfirmation.notesPlaceholder')}
                           />
                           <div className="flex justify-end gap-2">
                             <button

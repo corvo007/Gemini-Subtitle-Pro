@@ -22,6 +22,7 @@ import { mapInParallel, Semaphore } from '@/services/utils/concurrency';
 import { logger } from '@/services/utils/logger';
 import { ChunkProcessor } from './chunkProcessor';
 import { ENV } from '@/config';
+import i18n from '@/i18n';
 
 export const generateSubtitles = async (
   audioSource: File | AudioBuffer,
@@ -35,8 +36,9 @@ export const generateSubtitles = async (
   const geminiKey = ENV.GEMINI_API_KEY || settings.geminiKey?.trim();
   const openaiKey = ENV.OPENAI_API_KEY || settings.openaiKey?.trim();
 
-  if (!geminiKey) throw new Error('缺少 Gemini API 密钥。');
-  if (!openaiKey && !settings.useLocalWhisper) throw new Error('缺少 OpenAI API 密钥。');
+  if (!geminiKey) throw new Error(i18n.t('services:pipeline.errors.missingGeminiKey'));
+  if (!openaiKey && !settings.useLocalWhisper)
+    throw new Error(i18n.t('services:pipeline.errors.missingOpenAIKey'));
 
   const ai = new GoogleGenAI({
     apiKey: geminiKey,
@@ -118,7 +120,9 @@ export const generateSubtitles = async (
       id: 'glossary',
       total: glossaryChunks.length,
       status: 'processing',
-      message: `正在提取术语 (0/${glossaryChunks.length})...`,
+      message: i18n.t('services:pipeline.status.extractingGlossaryInit', {
+        total: glossaryChunks.length,
+      }),
     });
 
     glossaryPromise = extractGlossaryFromAudio(
@@ -133,12 +137,18 @@ export const generateSubtitles = async (
           total: total,
           status: completed === total ? 'completed' : 'processing',
           message:
-            completed === total ? '术语提取完成。' : `正在提取术语 (${completed}/${total})...`,
+            completed === total
+              ? i18n.t('services:pipeline.status.extractingGlossaryComplete')
+              : i18n.t('services:pipeline.status.extractingGlossary', {
+                  current: completed,
+                  total,
+                }),
         });
       },
       signal,
       trackUsage,
-      (settings.requestTimeout || 600) * 1000 // Custom timeout in milliseconds
+      (settings.requestTimeout || 600) * 1000, // Custom timeout in milliseconds
+      settings.targetLanguage
     );
   }
 
@@ -163,7 +173,7 @@ export const generateSubtitles = async (
       id: 'diarization',
       total: 1,
       status: 'processing',
-      message: '正在分析说话人...',
+      message: i18n.t('services:pipeline.status.analyzingSpeakers'),
     });
 
     speakerProfilePromise = SpeakerAnalyzer.analyze(context, audioBuffer, vadSegments);

@@ -54,6 +54,47 @@
   },
   "encoderSelector": {
     "h264Desc": "兼容性最好，适合大多数场景",
-    "hevcDesc": "高压缩率，同画质体积更小"
+    "hevcDesc": "压缩效率更高，文件更小，但编码速度较慢",
+    "hevc_nvenc": "HEVC (NVENC) - 高效压缩"
+  },
+  "header": {
+    "history": "历史",
+    "viewHistory": "历史记录",
+    "logs": "日志",
+    "viewLogs": "查看日志",
+    "glossary": "术语表",
+    "manageGlossary": "术语表管理",
+    "settings": "设置",
+    "subtitle": "AI 字幕生成与翻译工具"
+  },
+  "upload": {
+    "changeFile": "更改文件"
+  },
+  "history": {
+    "title": "快照记录",
+    "noSnapshots": "暂无快照",
+    "searchPlaceholder": "搜索文件名或描述...",
+    "unknownFile": "未知文件",
+    "load": "加载",
+    "subtitleInfo": "{{count}} 行字幕 · {{timestamp}}",
+    "delete": "删除"
+  },
+  "logs": {
+    "title": "应用日志",
+    "filterAll": "全部",
+    "export": "导出",
+    "exportAll": "导出所有日志",
+    "empty": "暂无日志",
+    "emptyLevel": "当前级别没有日志"
+  },
+  "download": {
+    "preparing": "准备下载中...",
+    "downloadingVideo": "正在下载视频画面 (1/2)...",
+    "downloadingAudio": "正在下载音频声音 (2/2)...",
+    "merging": "正在合并文件...",
+    "downloading": "下载中...",
+    "cancel": "取消",
+    "eta": "剩余 {{time}}",
+    "connecting": "正在连接服务器..."
   }
 }
