@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { type CompressionOptions, type CompressionProgress } from '@/types/compression';
 import { FileVideo, Settings, Play, FolderOpen, FileText, AlertCircle, X } from 'lucide-react';
 import { PageHeader, HeaderButton } from '@/components/layout/PageHeader';
@@ -37,6 +38,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
   onShowLogs,
   onShowSettings,
 }) => {
+  const { t } = useTranslation('compression');
   const [file, setFile] = useState<File | null>(null);
   const [options, setOptions] = useState<CompressionOptions>({
     encoder: 'libx264',
@@ -173,8 +175,8 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
       <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col min-h-0">
         {/* Header */}
         <PageHeader
-          title="视频压制"
-          subtitle="高性能 H.264/H.265 视频编码与字幕内嵌"
+          title={t('title')}
+          subtitle={t('subtitle')}
           onBack={onGoBack}
           actions={
             <>
@@ -182,8 +184,8 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                 <HeaderButton
                   onClick={onShowLogs}
                   icon={<FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                  label="日志"
-                  title="查看日志"
+                  label={t('logs')}
+                  title={t('viewLogs')}
                   hoverColor="blue"
                 />
               )}
@@ -191,7 +193,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                 <HeaderButton
                   onClick={onShowSettings}
                   icon={<Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                  label="设置"
+                  label={t('settings')}
                   hoverColor="emerald"
                 />
               )}
@@ -253,14 +255,14 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                         </p>
                         {workspaceVideoFile && file === workspaceVideoFile && (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-900/50 text-indigo-300 border border-indigo-700/50 mt-2">
-                            来自工作区
+                            {t('fromWorkspace')}
                           </span>
                         )}
                       </div>
                     ) : (
                       <div className="space-y-1">
-                        <p className="text-lg font-medium text-slate-300">点击选择视频文件</p>
-                        <p className="text-sm text-slate-500">支持 MP4, MKV, FLV 等格式</p>
+                        <p className="text-lg font-medium text-slate-300">{t('selectVideo')}</p>
+                        <p className="text-sm text-slate-500">{t('supportedFormats')}</p>
                       </div>
                     )}
                   </div>
@@ -274,8 +276,10 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                         <AlertCircle className="w-5 h-5 text-indigo-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-indigo-200">检测到工作区文件</p>
-                        <p className="text-xs text-indigo-300/70">是否自动加载视频/音频及字幕？</p>
+                        <p className="text-sm font-medium text-indigo-200">
+                          {t('workspaceFileDetected')}
+                        </p>
+                        <p className="text-xs text-indigo-300/70">{t('autoLoadPrompt')}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -289,7 +293,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                         onClick={handleAutoLoad}
                         className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-colors shadow-lg shadow-indigo-500/20"
                       >
-                        加载
+                        {t('load')}
                       </button>
                     </div>
                   </div>
@@ -303,7 +307,9 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                         <FileVideo className="w-5 h-5 text-violet-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-violet-200">检测到已下载视频</p>
+                        <p className="text-sm font-medium text-violet-200">
+                          {t('downloadedVideoDetected')}
+                        </p>
                         <p className="text-xs text-violet-300/70 truncate max-w-xs">
                           {downloadedVideoPath.split(/[\\/]/).pop()}
                         </p>
@@ -320,7 +326,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                         onClick={handleLoadDownloadedVideo}
                         className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium rounded-lg transition-colors shadow-lg shadow-violet-500/20"
                       >
-                        加载
+                        {t('load')}
                       </button>
                     </div>
                   </div>
@@ -330,12 +336,14 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
               {/* Settings Panel */}
               <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 space-y-6">
                 <h2 className="text-lg font-semibold text-white flex items-center gap-2 border-b border-slate-800 pb-4">
-                  <Settings className="w-5 h-5 text-indigo-400" /> 参数设置
+                  <Settings className="w-5 h-5 text-indigo-400" /> {t('parameters')}
                 </h2>
 
                 {/* Encoder */}
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
-                  <label className="w-32 text-sm font-medium text-slate-400 shrink-0">编码器</label>
+                  <label className="w-32 text-sm font-medium text-slate-400 shrink-0">
+                    {t('encoder')}
+                  </label>
                   <div className="flex-1">
                     <EncoderSelector
                       value={options.encoder}
@@ -347,7 +355,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                 {/* Hardware Acceleration */}
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                   <label className="w-32 text-sm font-medium text-slate-400 shrink-0">
-                    硬件加速
+                    {t('hardwareAccel')}
                   </label>
                   <div className="flex-1">
                     <HardwareAccelerationSelector
@@ -362,7 +370,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                 {/* CRF */}
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                   <label className="w-32 text-sm font-medium text-slate-400 shrink-0">
-                    质量 (CRF)
+                    {t('quality')}
                   </label>
                   <div className="flex-1 space-y-2">
                     <NumberInput
@@ -373,15 +381,15 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                       allowDecimals={true}
                       className="w-full font-mono"
                     />
-                    <div className="text-xs text-slate-500">
-                      范围 0-51，数值越小画质越高。推荐：H.264 (23), H.265 (28)
-                    </div>
+                    <div className="text-xs text-slate-500">{t('qualityHint')}</div>
                   </div>
                 </div>
 
                 {/* Resolution */}
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
-                  <label className="w-32 text-sm font-medium text-slate-400 shrink-0">分辨率</label>
+                  <label className="w-32 text-sm font-medium text-slate-400 shrink-0">
+                    {t('resolution')}
+                  </label>
                   <div className="flex-1">
                     <ResolutionSelector
                       resolution={resolutionPreset}
@@ -398,7 +406,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                 {/* Subtitles */}
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                   <label className="w-32 text-sm font-medium text-slate-400 shrink-0">
-                    字幕内嵌
+                    {t('subtitleEmbed')}
                   </label>
                   <div className="flex-1 space-y-3">
                     <CustomSelect
@@ -409,8 +417,8 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                           value: 'none',
                           label: (
                             <div>
-                              <div className="font-medium text-slate-200">无</div>
-                              <div className="text-xs text-slate-500">不内嵌字幕</div>
+                              <div className="font-medium text-slate-200">{t('subtitleNone')}</div>
+                              <div className="text-xs text-slate-500">{t('subtitleNoneDesc')}</div>
                             </div>
                           ),
                         },
@@ -418,10 +426,8 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                           value: 'file',
                           label: (
                             <div>
-                              <div className="font-medium text-slate-200">本地文件</div>
-                              <div className="text-xs text-slate-500">
-                                选择本地 .ass 或 .srt 字幕文件
-                              </div>
+                              <div className="font-medium text-slate-200">{t('subtitleLocal')}</div>
+                              <div className="text-xs text-slate-500">{t('subtitleLocalDesc')}</div>
                             </div>
                           ),
                         },
@@ -430,11 +436,15 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                           disabled: !workspaceSubtitles || workspaceSubtitles.length === 0,
                           label: (
                             <div>
-                              <div className="font-medium text-slate-200">当前工作区</div>
+                              <div className="font-medium text-slate-200">
+                                {t('subtitleWorkspace')}
+                              </div>
                               <div className="text-xs text-slate-500">
                                 {!workspaceSubtitles || workspaceSubtitles.length === 0
-                                  ? '当前工作区无字幕'
-                                  : `自动使用工作区中的 ${workspaceSubtitles.length} 条字幕`}
+                                  ? t('subtitleWorkspaceEmpty')
+                                  : t('subtitleWorkspaceCount', {
+                                      count: workspaceSubtitles.length,
+                                    })}
                               </div>
                             </div>
                           ),
@@ -448,7 +458,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                           type="text"
                           value={subtitlePath}
                           readOnly
-                          placeholder="请选择字幕文件 (.ass, .srt)"
+                          placeholder={t('selectSubtitleFile')}
                           className="flex-1 bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-4 text-slate-400 text-sm focus:outline-none"
                         />
                         <button
@@ -475,9 +485,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                     {subtitleMode === 'workspace' && (
                       <div className="flex items-center gap-2 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
                         <FileText className="w-4 h-4 text-indigo-400" />
-                        <span className="text-sm text-indigo-300">
-                          将自动生成 ASS 字幕并内嵌到视频中
-                        </span>
+                        <span className="text-sm text-indigo-300">{t('autoGenerateAss')}</span>
                       </div>
                     )}
                   </div>
@@ -490,16 +498,16 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
               {/* Output Path */}
               <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800">
                 <h2 className="text-lg font-semibold text-white flex items-center gap-2 border-b border-slate-800 pb-4 mb-4">
-                  <FolderOpen className="w-5 h-5 text-indigo-400" /> 输出设置
+                  <FolderOpen className="w-5 h-5 text-indigo-400" /> {t('outputSettings')}
                 </h2>
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                   <label className="w-20 text-sm font-medium text-slate-400 shrink-0">
-                    输出目录
+                    {t('outputDir')}
                   </label>
                   <div className="flex-1 min-w-0">
                     <DirectorySelector
                       value={outputPath}
-                      placeholder="未选择"
+                      placeholder={t('notSelected')}
                       onSelect={handleSelectOutputDir}
                       variant="accent"
                     />
@@ -515,7 +523,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                   // Get file path - try getFilePath API first, fallback to path property
                   const inputPath = window.electronAPI?.getFilePath?.(file) || (file as any).path;
                   if (!inputPath) {
-                    setErrorMessage('无法获取视频文件路径，请重新选择文件');
+                    setErrorMessage(t('errors.noVideoPath'));
                     return;
                   }
 
@@ -546,10 +554,10 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                         if (res.success && res.path) {
                           finalSubtitlePath = res.path;
                         } else {
-                          throw new Error('无法创建临时字幕文件: ' + res.error);
+                          throw new Error(t('errors.tempSubtitleFailed') + ': ' + res.error);
                         }
                       } catch (err: any) {
-                        throw new Error('字幕生成失败: ' + err.message);
+                        throw new Error(t('errors.subtitleGenFailed') + ': ' + err.message);
                       }
                     }
 
@@ -566,7 +574,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                   } catch (e: any) {
                     // Don't show error for user-initiated cancellation
                     if (!e.message?.includes('CANCELLED')) {
-                      setErrorMessage('压制失败: ' + e.message);
+                      setErrorMessage(t('errors.compressFailed') + ': ' + e.message);
                     }
                   } finally {
                     setIsCompressing(false);
@@ -585,11 +593,11 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                 {isCompressing ? (
                   <span className="flex items-center gap-2">
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    压制中...
+                    {t('compressing')}
                   </span>
                 ) : (
                   <>
-                    <Play className="w-5 h-5 fill-current" /> 开始压制
+                    <Play className="w-5 h-5 fill-current" /> {t('startCompress')}
                   </>
                 )}
               </button>
@@ -614,9 +622,11 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
 
                   <div className="flex justify-between items-center text-xs text-slate-500 font-mono pt-2 border-t border-slate-800/50">
                     <span>
-                      耗时: {elapsedTime} | 进度: {progress.timemark}
+                      {t('elapsed')}: {elapsedTime} | {t('progress')}: {progress.timemark}
                     </span>
-                    <span>大小: {(progress.targetSize / 1024).toFixed(2)} MB</span>
+                    <span>
+                      {t('size')}: {(progress.targetSize / 1024).toFixed(2)} MB
+                    </span>
                   </div>
 
                   {/* Cancel Button */}
@@ -630,7 +640,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                     }}
                     className="w-full py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 text-sm font-medium transition-colors flex items-center justify-center gap-2"
                   >
-                    <X className="w-4 h-4" /> 取消压制
+                    <X className="w-4 h-4" /> {t('cancelCompress')}
                   </button>
                 </div>
               )}
@@ -647,10 +657,10 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
             void window.electronAPI.showItemInFolder(outputPath);
           }
         }}
-        title="压制完成"
-        message="视频压制已成功完成！"
-        confirmText="打开输出目录"
-        cancelText="关闭"
+        title={t('compressComplete')}
+        message={t('compressCompleteMsg')}
+        confirmText={t('openOutputDir')}
+        cancelText={t('close')}
         type="info"
       />
       {/* Error Modal */}
@@ -658,9 +668,9 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
         isOpen={!!errorMessage}
         onClose={() => setErrorMessage(null)}
         onConfirm={() => setErrorMessage(null)}
-        title="压制失败"
+        title={t('compressFailed')}
         message={errorMessage || ''}
-        confirmText="确定"
+        confirmText={t('confirm')}
         type="warning"
         hideCancelButton
       />

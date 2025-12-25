@@ -4,6 +4,8 @@ import progress from './progress.json';
 import settings from './settings.json';
 import app from './app.json';
 import workspace from './workspace.json';
+import download from './download.json';
+import compression from './compression.json';
 
 export default {
   common,
@@ -12,4 +14,6 @@ export default {
   settings,
   app,
   workspace,
+  download,
+  compression,
 };

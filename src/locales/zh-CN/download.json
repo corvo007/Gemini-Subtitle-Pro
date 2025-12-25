@@ -1,0 +1,20 @@
+{
+  "title": "视频下载",
+  "subtitle": "支持 YouTube 和 Bilibili 视频下载",
+  "logs": "日志",
+  "viewLogs": "查看日志",
+  "settings": "设置",
+  "retry": "重试",
+  "clear": "清除",
+  "outputDir": "输出目录",
+  "notSelected": "未选择",
+  "downloadThumbnail": "同时下载封面",
+  "thumbnailOnly": "仅下载封面",
+  "downloadVideo": "下载视频",
+  "downloadAndGenerate": "下载并生成字幕",
+  "downloadComplete": "下载完成",
+  "thumbnail": "封面",
+  "openOutputDir": "打开下载目录",
+  "downloadNewVideo": "下载新视频",
+  "continueGenerating": "继续生成字幕"
+}

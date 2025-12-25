@@ -1,0 +1,20 @@
+{
+  "title": "Video Download",
+  "subtitle": "Support YouTube and Bilibili video downloads",
+  "logs": "Logs",
+  "viewLogs": "View Logs",
+  "settings": "Settings",
+  "retry": "Retry",
+  "clear": "Clear",
+  "outputDir": "Output Directory",
+  "notSelected": "Not selected",
+  "downloadThumbnail": "Also download thumbnail",
+  "thumbnailOnly": "Download thumbnail only",
+  "downloadVideo": "Download Video",
+  "downloadAndGenerate": "Download & Generate Subtitles",
+  "downloadComplete": "Download Complete",
+  "thumbnail": "Thumbnail",
+  "openOutputDir": "Open Download Directory",
+  "downloadNewVideo": "Download New Video",
+  "continueGenerating": "Continue Generating Subtitles"
+}
