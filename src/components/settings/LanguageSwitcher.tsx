@@ -36,8 +36,8 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ className })
     updateSetting('language', lang as 'zh-CN' | 'en-US');
   };
 
-  // Determine current value: use settings.language if available, otherwise detect from i18n
-  const currentValue = settings.language || (i18n.language.startsWith('zh') ? 'zh-CN' : 'en-US');
+  // Use i18n.language as source of truth (auto-detected on first use)
+  const currentValue = i18n.language.startsWith('zh') ? 'zh-CN' : 'en-US';
 
   return (
     <CustomSelect
