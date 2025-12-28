@@ -142,12 +142,20 @@ export function StepConfig({
           </div>
 
           {/* Target Language */}
-          <div className="mb-4">
-            <TargetLanguageSelector
-              value={config.targetLanguage}
-              onChange={(val) => onConfigChange({ targetLanguage: val })}
-              className="bg-white/5 border border-white/10 rounded-xl p-4"
-            />
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <span className="text-sm text-white/90">
+                {t('config.subtitle.targetLanguage.label')}
+              </span>
+              <p className="text-xs text-white/50">{t('config.subtitle.targetLanguage.desc')}</p>
+            </div>
+            <div className="w-40">
+              <TargetLanguageSelector
+                value={config.targetLanguage}
+                onChange={(val) => onConfigChange({ targetLanguage: val })}
+                variant="inline"
+              />
+            </div>
           </div>
 
           {/* Glossary & Speaker Detection */}

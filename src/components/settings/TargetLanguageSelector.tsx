@@ -43,7 +43,6 @@ export const TargetLanguageSelector: React.FC<TargetLanguageSelectorProps> = ({
         options={languages}
         className={className}
         placeholder={t('general.output.targetLanguage.placeholder')}
-        icon={<Languages className="w-4 h-4" />}
       />
     );
   }

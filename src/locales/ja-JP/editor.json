@@ -36,7 +36,7 @@
     "charCount": "{{count}}文字",
     "sourcePlaceholder": "原文",
     "translationPlaceholder": "翻訳",
-    "commentPlaceholder": "具体的な修正説明を追加...",
+    "commentPlaceholder": "修正の説明を入力...",
     "moreActions": "その他のアクション",
     "editRow": "行を編集",
     "addNewRow": "新しい行を追加",

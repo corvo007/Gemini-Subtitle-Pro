@@ -11,7 +11,7 @@
     "display": {
       "title": "显示设置",
       "zoomLevel": "界面缩放",
-      "zoomHint": "调整界面元素的大小。如果您使用的是高分辨率屏幕且设置了系统缩放，界面看起来太窄，可以尝试调低此数值（如 80%）。",
+      "zoomHint": "调整界面缩放比例。高分屏电脑界面太窄可调低（如 80%）",
       "language": "界面语言",
       "languageHint": "切换应用程序界面语言。更改后立即生效。",
       "zoomOptions": {
@@ -31,7 +31,7 @@
       "targetLanguage": {
         "label": "目标语言",
         "placeholder": "选择语言",
-        "description": "字幕翻译的目标语言。"
+        "description": "翻译目标语言"
       },
       "exportMode": "导出模式",
       "bilingual": "双语字幕",

@@ -31,7 +31,7 @@
       "targetLanguage": {
         "label": "Target Language",
         "placeholder": "Select Language",
-        "description": "The language to translate subtitles into."
+        "description": "Target language for subtitles"
       },
       "exportMode": "Export Mode",
       "bilingual": "Bilingual Subtitles",
@@ -42,7 +42,7 @@
       "enableDiarization": "Enable Speaker Diarization",
       "enableDiarizationDesc": "Detects and separates different speakers in the audio pipeline.",
       "enablePreAnalysis": "Enable Speaker Pre-analysis (Experimental)",
-      "enablePreAnalysisDesc": "Pre-analyze audio before subtitle generation to identify speaker count and voice characteristics, improving diarization accuracy but increasing processing time",
+      "enablePreAnalysisDesc": "Analyze audio before transcription to identify speaker count and voice characteristics. Improves accuracy but takes longer.",
       "includeSpeakerInExport": "Include Speaker Names in Export",
       "includeSpeakerInExportDesc": "Display speaker names in subtitle files (e.g., Speaker A: dialogue content)",
       "useSpeakerColors": "Use Speaker Colors (ASS)",

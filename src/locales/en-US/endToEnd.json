@@ -92,6 +92,10 @@
         "label": "Enable Auto Glossary",
         "desc": "Apply extracted terms directly without manual confirmation. New terms will be merged into the active glossary (or a new one created)."
       },
+      "targetLanguage": {
+        "label": "Target Language",
+        "desc": "Target language for subtitle translation"
+      },
       "glossary": {
         "label": "Use Glossary",
         "desc": "Select an existing glossary to assist translation",

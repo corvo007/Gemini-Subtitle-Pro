@@ -13,7 +13,7 @@
       "zoomLevel": "インターフェースの拡大率",
       "zoomHint": "画面の表示サイズを調整します。高解像度画面で表示が窮屈な場合は、値を小さく（例: 80%）してみてください。",
       "language": "インターフェース言語",
-      "languageHint": "アプリケーションのインターフェース言語を切り替えます。変更は即座に反映されます。",
+      "languageHint": "アプリの表示言語を切り替えます。すぐに反映されます。",
       "zoomOptions": {
         "50": "50% (極小)",
         "67": "67% (小)",
@@ -31,7 +31,7 @@
       "targetLanguage": {
         "label": "ターゲット言語",
         "placeholder": "言語を選択",
-        "description": "字幕翻訳のターゲット言語。"
+        "description": "翻訳先の言語"
       },
       "exportMode": "エクスポートモード",
       "bilingual": "バイリンガル字幕",
@@ -40,7 +40,7 @@
     },
     "speaker": {
       "enableDiarization": "話者識別を有効化",
-      "enableDiarizationDesc": "音声や動画の異なる話者を識別してラベル付け",
+      "enableDiarizationDesc": "音声や動画から話者を識別してマークします",
       "enablePreAnalysis": "話者の事前分析を有効化（実験的）",
       "enablePreAnalysisDesc": "字幕を作る前に音声をチェックして、話者の数や声の特徴を分析します。時間はかかりますが、より正確に識別できるようになります。",
       "includeSpeakerInExport": "エクスポート時に話者名を含める",
@@ -60,7 +60,7 @@
       "geminiKeyHint": "翻訳には <strong>Gemini Flash</strong>、用語抽出や校正などの高度な処理には <strong>Gemini Pro</strong> を使用します。",
       "geminiEndpoint": "Gemini エンドポイント（オプション）",
       "geminiEndpointPlaceholder": "https://generativelanguage.googleapis.com",
-      "geminiEndpointHint": "カスタム API エンドポイント。プロキシやサードパーティゲートウェイに対応。"
+      "geminiEndpointHint": "カスタムエンドポイント。プロキシやAPIゲートウェイにも対応"
     },
     "transcription": {
       "title": "音声認識",

@@ -71,7 +71,7 @@
     "merge": "既存の用語集にマージ",
     "targetLabel": "ターゲット用語集",
     "selectPlaceholder": "用語集を選択",
-    "conflictLabel": "競合処理（用語が既に存在する場合）",
+    "conflictLabel": "重複時の処理",
     "skip": "スキップ（古い値を保持）",
     "overwrite": "上書き（新しい値を使用）",
     "cancel": "キャンセル",

@@ -103,7 +103,7 @@
       "confirm": {
         "replaceFile": {
           "title": "Confirm File Replacement",
-          "message": "Replacing the file will clear current subtitles. It is recommended to export subtitles first. Continue?"
+          "message": "Replacing the file will clear current subtitles. We recommend exporting first. Continue?"
         }
       },
       "errors": {

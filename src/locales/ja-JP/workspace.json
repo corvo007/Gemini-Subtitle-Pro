@@ -58,7 +58,7 @@
     "cancel": "キャンセル"
   },
   "editor": {
-    "noSubtitles": "生成された字幕がありません",
+    "noSubtitles": "まだ字幕がありません",
     "emptyStateNew": "メディアファイルをアップロードして生成を開始。",
     "emptyStateImport": "SRT/ASS ファイルをインポートして編集を開始。",
     "noMatchingSubtitles": "一致する字幕が見つかりませんでした",
