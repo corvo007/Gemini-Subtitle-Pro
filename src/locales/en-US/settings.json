@@ -39,6 +39,7 @@
       "bilingualHint": "Bilingual mode displays both original and translated text in subtitles."
     },
     "speaker": {
+      "title": "Speaker Diarization",
       "enableDiarization": "Enable Speaker Diarization",
       "enableDiarizationDesc": "Detects and separates different speakers in the audio pipeline.",
       "enablePreAnalysis": "Enable Speaker Pre-analysis (Experimental)",
@@ -81,7 +82,9 @@
         "instructionGgml": "Requires a .bin model file in <strong>GGML format</strong>",
         "instructionModel": "Only supports ",
         "instructionModelLink": "whisper.cpp official models",
-        "instructionModelSuffix": ", Faster-whisper models are not supported."
+        "instructionModelSuffix": ", Faster-whisper models are not supported.",
+        "selectError": "Model selection failed: {{error}}",
+        "selectErrorGeneric": "Failed to select model"
       }
     }
   },
@@ -94,6 +97,7 @@
       "concurrencyHint": "Number of simultaneous transcription tasks (1-4)"
     },
     "batch": {
+      "title": "Batch Processing",
       "proofreadBatchSize": "Proofreading Batch Size",
       "proofreadBatchSizeHint": "Number of subtitles per proofreading batch. Larger values provide better context and quality but consume more tokens.",
       "translationBatchSize": "Translation Batch Size",
@@ -102,6 +106,7 @@
       "chunkDurationHint": "Target length of audio segments (seconds), affects parallel transcription efficiency."
     },
     "concurrency": {
+      "title": "Concurrency & Timeout",
       "concurrencyFlash": "Concurrency (Flash)",
       "concurrencyFlashHint": "Applied to <strong>Gemini Flash models</strong> for translation/optimization and <strong>Whisper API</strong> transcription. Adjust based on account limits.",
       "concurrencyPro": "Concurrency (Pro)",
@@ -109,10 +114,24 @@
       "requestTimeout": "Request Timeout (seconds)",
       "requestTimeoutHint": "Maximum wait time for a single API request. Increase for slow networks or large batches."
     },
-    "smartSplit": "Smart Segmentation",
-    "smartSplitDesc": "Use AI voice detection to split audio at natural pauses, improving transcription accuracy (recommended)"
+    "audio": {
+      "title": "Audio Processing",
+      "smartSplit": "Smart Segmentation",
+      "smartSplitDesc": "Use AI voice detection to split audio at natural pauses, improving transcription accuracy (recommended)"
+    },
+    "cache": {
+      "title": "Video Preview Cache",
+      "currentSize": "Current Size",
+      "files": "files",
+      "clear": "Clear Cache",
+      "clearing": "Clearing...",
+      "hint": "Cached video previews allow faster loading when reopening the same video."
+    }
   },
   "glossary": {
+    "settings": {
+      "title": "Auto Glossary Settings"
+    },
     "enableAutoGlossary": "Enable Auto Glossary",
     "enableAutoGlossaryDesc": "Automatically identify and extract professional terms to improve translation accuracy and consistency",
     "sampleDuration": "Glossary Sample Duration",

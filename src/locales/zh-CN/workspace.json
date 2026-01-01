@@ -131,5 +131,17 @@
         "failed": "操作失败：{{error}}"
       }
     }
+  },
+  "videoPreview": {
+    "title": "视频预览",
+    "loading": "正在加载视频...",
+    "expand": "展开视频预览",
+    "transcoding": "转码中...",
+    "float": "悬浮/画中画",
+    "dock": "还原到固定位置",
+    "floatingMode": "视频正在悬浮窗口播放",
+    "restore": "还原",
+    "noVideo": "未加载视频",
+    "resize": "拖动调整高度"
   }
 }

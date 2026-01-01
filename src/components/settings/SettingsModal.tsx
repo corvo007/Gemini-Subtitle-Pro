@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Settings, X, Languages, Type, Clock, Book, Bug } from 'lucide-react';
+import { Settings, X, Languages, Type, Clock, Book, Bug, Trash2 } from 'lucide-react';
 import { type AppSettings } from '@/types/settings';
 import { CustomSelect } from '@/components/settings/CustomSelect';
 import { LocalWhisperSettings } from '@/components/settings/LocalWhisperSettings';
@@ -15,6 +15,79 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { OptionButton } from '@/components/ui/OptionButton';
 import { cn } from '@/lib/cn';
 
+// Format bytes to human readable string
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Cache Management Component
+const CacheManagement: React.FC = () => {
+  const { t } = useTranslation('settings');
+  const [cacheInfo, setCacheInfo] = useState<{ size: number; fileCount: number } | null>(null);
+  const [clearing, setClearing] = useState(false);
+
+  const loadCacheInfo = useCallback(async () => {
+    if (window.electronAPI?.cache?.getSize) {
+      const info = await window.electronAPI.cache.getSize();
+      setCacheInfo(info);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCacheInfo();
+  }, [loadCacheInfo]);
+
+  const handleClearCache = async () => {
+    if (!window.electronAPI?.cache?.clear) return;
+    setClearing(true);
+    try {
+      await window.electronAPI.cache.clear();
+      await loadCacheInfo();
+    } finally {
+      setClearing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <SectionHeader>{t('performance.cache.title', 'Video Preview Cache')}</SectionHeader>
+      <div className="flex items-center justify-between bg-slate-800/50 rounded-lg p-3">
+        <div>
+          <p className="text-sm text-slate-300">
+            {t('performance.cache.currentSize', 'Current Size')}
+          </p>
+          <p className="text-lg font-semibold text-white">
+            {cacheInfo ? formatBytes(cacheInfo.size) : '...'}
+            <span className="text-sm text-slate-500 ml-2">
+              ({cacheInfo?.fileCount ?? 0} {t('performance.cache.files', 'files')})
+            </span>
+          </p>
+        </div>
+        <button
+          onClick={handleClearCache}
+          disabled={clearing || !cacheInfo || cacheInfo.fileCount === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 hover:text-red-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Trash2 className="w-4 h-4" />
+          {clearing
+            ? t('performance.cache.clearing', 'Clearing...')
+            : t('performance.cache.clear', 'Clear Cache')}
+        </button>
+      </div>
+      <p className="text-xs text-slate-500">
+        {t(
+          'performance.cache.hint',
+          'Cached video previews allow faster loading when reopening the same video.'
+        )}
+      </p>
+    </div>
+  );
+};
+
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -25,6 +98,7 @@ interface SettingsModalProps {
   envGeminiKey: string;
   envOpenaiKey: string;
   onOpenGlossaryManager: () => void;
+  addToast: (message: string, type: 'info' | 'warning' | 'error' | 'success') => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -37,6 +111,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   envGeminiKey,
   envOpenaiKey,
   onOpenGlossaryManager,
+  addToast,
 }) => {
   const { t } = useTranslation('settings');
   const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
@@ -151,79 +226,80 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {t('general.output.bilingualHint')}
                     </p>
                   </div>
+                </div>
 
-                  {/* Speaker Diarization Settings */}
-                  <div className="space-y-4 mt-4 pt-4 border-t border-slate-700/50">
+                {/* Speaker Diarization Settings */}
+                <div className="space-y-4">
+                  <SectionHeader>{t('general.speaker.title')}</SectionHeader>
+                  <SettingRow
+                    label={t('general.speaker.enableDiarization')}
+                    description={t('general.speaker.enableDiarizationDesc')}
+                  >
+                    <Toggle
+                      checked={settings.enableDiarization || false}
+                      onChange={(v) => updateSetting('enableDiarization', v)}
+                    />
+                  </SettingRow>
+
+                  {settings.enableDiarization && (
                     <SettingRow
-                      label={t('general.speaker.enableDiarization')}
-                      description={t('general.speaker.enableDiarizationDesc')}
+                      label={t('general.speaker.enablePreAnalysis')}
+                      description={t('general.speaker.enablePreAnalysisDesc')}
+                      indented
                     >
                       <Toggle
-                        checked={settings.enableDiarization || false}
-                        onChange={(v) => updateSetting('enableDiarization', v)}
+                        checked={settings.enableSpeakerPreAnalysis || false}
+                        onChange={(v) => {
+                          updateSetting('enableSpeakerPreAnalysis', v);
+                          // Auto-disable styled translation when pre-analysis is disabled
+                          if (!v) {
+                            updateSetting('useSpeakerStyledTranslation', false);
+                          }
+                        }}
                       />
                     </SettingRow>
+                  )}
 
-                    {settings.enableDiarization && (
+                  {settings.enableDiarization && (
+                    <div className="space-y-4 animate-fade-in">
                       <SettingRow
-                        label={t('general.speaker.enablePreAnalysis')}
-                        description={t('general.speaker.enablePreAnalysisDesc')}
+                        label={t('general.speaker.includeSpeakerInExport')}
+                        description={t('general.speaker.includeSpeakerInExportDesc')}
                         indented
                       >
                         <Toggle
-                          checked={settings.enableSpeakerPreAnalysis || false}
-                          onChange={(v) => {
-                            updateSetting('enableSpeakerPreAnalysis', v);
-                            // Auto-disable styled translation when pre-analysis is disabled
-                            if (!v) {
-                              updateSetting('useSpeakerStyledTranslation', false);
-                            }
-                          }}
+                          checked={settings.includeSpeakerInExport || false}
+                          onChange={(v) => updateSetting('includeSpeakerInExport', v)}
                         />
                       </SettingRow>
-                    )}
-
-                    {settings.enableDiarization && (
-                      <div className="space-y-3 animate-fade-in">
-                        <SettingRow
-                          label={t('general.speaker.includeSpeakerInExport')}
-                          description={t('general.speaker.includeSpeakerInExportDesc')}
-                          indented
-                        >
-                          <Toggle
-                            checked={settings.includeSpeakerInExport || false}
-                            onChange={(v) => updateSetting('includeSpeakerInExport', v)}
-                          />
-                        </SettingRow>
-                        <SettingRow
-                          label={t('general.speaker.useSpeakerColors')}
-                          description={t('general.speaker.useSpeakerColorsDesc')}
-                          indented
-                        >
-                          <Toggle
-                            checked={settings.useSpeakerColors || false}
-                            onChange={(v) => updateSetting('useSpeakerColors', v)}
-                          />
-                        </SettingRow>
-                        <SettingRow
-                          label={t('general.speaker.styledTranslation')}
-                          description={
-                            settings.enableSpeakerPreAnalysis
-                              ? t('general.speaker.styledTranslationDesc')
-                              : t('general.speaker.styledTranslationDisabledDesc')
-                          }
-                          indented
+                      <SettingRow
+                        label={t('general.speaker.useSpeakerColors')}
+                        description={t('general.speaker.useSpeakerColorsDesc')}
+                        indented
+                      >
+                        <Toggle
+                          checked={settings.useSpeakerColors || false}
+                          onChange={(v) => updateSetting('useSpeakerColors', v)}
+                        />
+                      </SettingRow>
+                      <SettingRow
+                        label={t('general.speaker.styledTranslation')}
+                        description={
+                          settings.enableSpeakerPreAnalysis
+                            ? t('general.speaker.styledTranslationDesc')
+                            : t('general.speaker.styledTranslationDisabledDesc')
+                        }
+                        indented
+                        disabled={!settings.enableSpeakerPreAnalysis}
+                      >
+                        <Toggle
+                          checked={settings.useSpeakerStyledTranslation || false}
+                          onChange={(v) => updateSetting('useSpeakerStyledTranslation', v)}
                           disabled={!settings.enableSpeakerPreAnalysis}
-                        >
-                          <Toggle
-                            checked={settings.useSpeakerStyledTranslation || false}
-                            onChange={(v) => updateSetting('useSpeakerStyledTranslation', v)}
-                            disabled={!settings.enableSpeakerPreAnalysis}
-                          />
-                        </SettingRow>
-                      </div>
-                    )}
-                  </div>
+                        />
+                      </SettingRow>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -231,7 +307,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {activeTab === 'services' && (
               <div className="space-y-6 animate-fade-in">
                 {/* API Settings */}
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <SectionHeader>{t('services.translation.title')}</SectionHeader>
                   <div className="space-y-4">
                     {/* Gemini */}
@@ -272,7 +348,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 {/* Transcription Provider Settings */}
-                <div className="space-y-3 pt-4 border-t border-slate-800">
+                <div className="space-y-4 pt-4 border-t border-slate-800">
                   <SectionHeader>{t('services.transcription.title')}</SectionHeader>
 
                   {isElectron ? (
@@ -304,6 +380,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           onModelPathChange={(path) => {
                             updateSetting('whisperModelPath', path);
                           }}
+                          addToast={addToast}
                         />
                       ) : (
                         <div className="space-y-4 animate-fade-in">
@@ -385,14 +462,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
 
             {activeTab === 'performance' && (
-              <div className="space-y-3 animate-fade-in">
+              <div className="space-y-6 animate-fade-in">
+                {/* Local Whisper Performance Settings */}
                 {/* Local Whisper Performance Settings */}
                 {settings.useLocalWhisper && (
-                  <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-4 mb-4">
-                    <h3 className="text-sm font-semibold text-indigo-300 mb-3 flex items-center">
-                      <span className="w-2 h-2 rounded-full bg-indigo-400 mr-2"></span>
-                      {t('performance.localWhisper.title')}
-                    </h3>
+                  <div className="space-y-4">
+                    <SectionHeader>{t('performance.localWhisper.title')}</SectionHeader>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1.5">
@@ -432,104 +507,117 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      {t('performance.batch.proofreadBatchSize')}
-                    </label>
-                    <NumberInput
-                      value={settings.proofreadBatchSize || undefined}
-                      onChange={(v) => updateSetting('proofreadBatchSize', v ?? 0)}
-                      min={0}
-                      className="w-full"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">
-                      {t('performance.batch.proofreadBatchSizeHint')}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      {t('performance.batch.translationBatchSize')}
-                    </label>
-                    <NumberInput
-                      value={settings.translationBatchSize || undefined}
-                      onChange={(v) => updateSetting('translationBatchSize', v ?? 0)}
-                      min={0}
-                      className="w-full"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">
-                      {t('performance.batch.translationBatchSizeHint')}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      {t('performance.batch.chunkDuration')}
-                    </label>
-                    <NumberInput
-                      value={settings.chunkDuration || undefined}
-                      onChange={(v) => updateSetting('chunkDuration', v ?? 0)}
-                      min={0}
-                      className="w-full"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">
-                      {t('performance.batch.chunkDurationHint')}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      {t('performance.concurrency.concurrencyFlash')}
-                    </label>
-                    <NumberInput
-                      value={settings.concurrencyFlash || undefined}
-                      onChange={(v) => updateSetting('concurrencyFlash', v ?? 0)}
-                      min={0}
-                      className="w-full"
-                    />
-                    <p
-                      className="text-xs text-slate-500 mt-1"
-                      dangerouslySetInnerHTML={{
-                        __html: t('performance.concurrency.concurrencyFlashHint'),
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      {t('performance.concurrency.concurrencyPro')}
-                    </label>
-                    <NumberInput
-                      value={settings.concurrencyPro || undefined}
-                      onChange={(v) => updateSetting('concurrencyPro', v ?? 0)}
-                      min={0}
-                      className="w-full"
-                    />
-                    <p
-                      className="text-xs text-slate-500 mt-1"
-                      dangerouslySetInnerHTML={{
-                        __html: t('performance.concurrency.concurrencyProHint'),
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      {t('performance.concurrency.requestTimeout')}
-                    </label>
-                    <NumberInput
-                      value={settings.requestTimeout || undefined}
-                      onChange={(v) => updateSetting('requestTimeout', v ?? 600)}
-                      min={0}
-                      placeholder="600"
-                      className="w-full"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">
-                      {t('performance.concurrency.requestTimeoutHint')}
-                    </p>
+                {/* Batch Processing Section */}
+                <div className="space-y-4">
+                  <SectionHeader>{t('performance.batch.title')}</SectionHeader>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        {t('performance.batch.proofreadBatchSize')}
+                      </label>
+                      <NumberInput
+                        value={settings.proofreadBatchSize || undefined}
+                        onChange={(v) => updateSetting('proofreadBatchSize', v ?? 0)}
+                        min={0}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        {t('performance.batch.proofreadBatchSizeHint')}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        {t('performance.batch.translationBatchSize')}
+                      </label>
+                      <NumberInput
+                        value={settings.translationBatchSize || undefined}
+                        onChange={(v) => updateSetting('translationBatchSize', v ?? 0)}
+                        min={0}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        {t('performance.batch.translationBatchSizeHint')}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        {t('performance.batch.chunkDuration')}
+                      </label>
+                      <NumberInput
+                        value={settings.chunkDuration || undefined}
+                        onChange={(v) => updateSetting('chunkDuration', v ?? 0)}
+                        min={0}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        {t('performance.batch.chunkDurationHint')}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-800">
+                {/* Concurrency & Timeout Section */}
+                <div className="space-y-4">
+                  <SectionHeader>{t('performance.concurrency.title')}</SectionHeader>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        {t('performance.concurrency.concurrencyFlash')}
+                      </label>
+                      <NumberInput
+                        value={settings.concurrencyFlash || undefined}
+                        onChange={(v) => updateSetting('concurrencyFlash', v ?? 0)}
+                        min={0}
+                        className="w-full"
+                      />
+                      <p
+                        className="text-xs text-slate-500 mt-1"
+                        dangerouslySetInnerHTML={{
+                          __html: t('performance.concurrency.concurrencyFlashHint'),
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        {t('performance.concurrency.concurrencyPro')}
+                      </label>
+                      <NumberInput
+                        value={settings.concurrencyPro || undefined}
+                        onChange={(v) => updateSetting('concurrencyPro', v ?? 0)}
+                        min={0}
+                        className="w-full"
+                      />
+                      <p
+                        className="text-xs text-slate-500 mt-1"
+                        dangerouslySetInnerHTML={{
+                          __html: t('performance.concurrency.concurrencyProHint'),
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        {t('performance.concurrency.requestTimeout')}
+                      </label>
+                      <NumberInput
+                        value={settings.requestTimeout || undefined}
+                        onChange={(v) => updateSetting('requestTimeout', v ?? 600)}
+                        min={0}
+                        placeholder="600"
+                        className="w-full"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        {t('performance.concurrency.requestTimeoutHint')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Audio Processing Section */}
+                <div className="space-y-4">
+                  <SectionHeader>{t('performance.audio.title')}</SectionHeader>
                   <SettingRow
-                    label={t('performance.smartSplit')}
-                    description={t('performance.smartSplitDesc')}
+                    label={t('performance.audio.smartSplit')}
+                    description={t('performance.audio.smartSplitDesc')}
                   >
                     <Toggle
                       checked={settings.useSmartSplit !== false}
@@ -537,63 +625,75 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     />
                   </SettingRow>
                 </div>
+
+                {/* Video Preview Cache - Only show in Electron */}
+                {isElectron && (
+                  <div className="space-y-4">
+                    <CacheManagement />
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === 'glossary' && (
-              <div className="space-y-3 animate-fade-in">
-                <SettingRow
-                  label={t('glossary.enableAutoGlossary')}
-                  description={t('glossary.enableAutoGlossaryDesc')}
-                >
-                  <Toggle
-                    checked={settings.enableAutoGlossary !== false}
-                    onChange={(v) => updateSetting('enableAutoGlossary', v)}
-                  />
-                </SettingRow>
+              <div className="space-y-6 animate-fade-in">
+                {/* Auto Glossary Settings */}
+                <div className="space-y-4">
+                  <SectionHeader>{t('glossary.settings.title')}</SectionHeader>
+                  <SettingRow
+                    label={t('glossary.enableAutoGlossary')}
+                    description={t('glossary.enableAutoGlossaryDesc')}
+                  >
+                    <Toggle
+                      checked={settings.enableAutoGlossary !== false}
+                      onChange={(v) => updateSetting('enableAutoGlossary', v)}
+                    />
+                  </SettingRow>
 
-                {settings.enableAutoGlossary !== false && (
-                  <div className="space-y-4 animate-fade-in">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        {t('glossary.sampleDuration')}
-                      </label>
-                      <CustomSelect
-                        value={
-                          settings.glossarySampleMinutes === 'all'
-                            ? 'all'
-                            : settings.glossarySampleMinutes.toString()
-                        }
-                        onChange={(val) => {
-                          if (val === 'all') updateSetting('glossarySampleMinutes', 'all');
-                          else updateSetting('glossarySampleMinutes', parseInt(val));
-                        }}
-                        options={[
-                          { value: '5', label: t('glossary.sampleOptions.5') },
-                          { value: '15', label: t('glossary.sampleOptions.15') },
-                          { value: '30', label: t('glossary.sampleOptions.30') },
-                          { value: 'all', label: t('glossary.sampleOptions.all') },
-                        ]}
-                        icon={<Clock className="w-4 h-4" />}
-                      />
-                      <p className="text-xs text-slate-500 mt-1">
-                        {t('glossary.sampleDurationHint')}
-                      </p>
+                  {settings.enableAutoGlossary !== false && (
+                    <div className="space-y-4 animate-fade-in">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                          {t('glossary.sampleDuration')}
+                        </label>
+                        <CustomSelect
+                          value={
+                            settings.glossarySampleMinutes === 'all'
+                              ? 'all'
+                              : settings.glossarySampleMinutes.toString()
+                          }
+                          onChange={(val) => {
+                            if (val === 'all') updateSetting('glossarySampleMinutes', 'all');
+                            else updateSetting('glossarySampleMinutes', parseInt(val));
+                          }}
+                          options={[
+                            { value: '5', label: t('glossary.sampleOptions.5') },
+                            { value: '15', label: t('glossary.sampleOptions.15') },
+                            { value: '30', label: t('glossary.sampleOptions.30') },
+                            { value: 'all', label: t('glossary.sampleOptions.all') },
+                          ]}
+                          icon={<Clock className="w-4 h-4" />}
+                        />
+                        <p className="text-xs text-slate-500 mt-1">
+                          {t('glossary.sampleDurationHint')}
+                        </p>
+                      </div>
+
+                      <SettingRow
+                        label={t('glossary.autoConfirm')}
+                        description={t('glossary.autoConfirmDesc')}
+                      >
+                        <Toggle
+                          checked={settings.glossaryAutoConfirm || false}
+                          onChange={(v) => updateSetting('glossaryAutoConfirm', v)}
+                        />
+                      </SettingRow>
                     </div>
+                  )}
+                </div>
 
-                    <SettingRow
-                      label={t('glossary.autoConfirm')}
-                      description={t('glossary.autoConfirmDesc')}
-                    >
-                      <Toggle
-                        checked={settings.glossaryAutoConfirm || false}
-                        onChange={(v) => updateSetting('glossaryAutoConfirm', v)}
-                      />
-                    </SettingRow>
-                  </div>
-                )}
-
-                <div className="pt-4 border-t border-slate-800">
+                {/* Manage Glossary Button */}
+                <div>
                   <button
                     onClick={() => {
                       onClose();

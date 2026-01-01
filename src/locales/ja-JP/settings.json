@@ -39,6 +39,7 @@
       "bilingualHint": "バイリンガルモードでは、原文と訳文を並べて表示します。"
     },
     "speaker": {
+      "title": "話者識別",
       "enableDiarization": "話者識別を有効化",
       "enableDiarizationDesc": "音声や動画から話者を識別してマークします",
       "enablePreAnalysis": "話者の事前分析を有効化（実験的）",
@@ -81,7 +82,9 @@
         "instructionGgml": "<strong>GGML形式</strong> の .bin モデルファイルが必要です",
         "instructionModel": "サポート対象は ",
         "instructionModelLink": "whisper.cpp 公式モデル",
-        "instructionModelSuffix": " のみです。Faster-whisper モデルはサポートされていません。"
+        "instructionModelSuffix": " のみです。Faster-whisper モデルはサポートされていません。",
+        "selectError": "モデル選択に失敗しました: {{error}}",
+        "selectErrorGeneric": "モデルの選択に失敗しました"
       }
     }
   },
@@ -94,6 +97,7 @@
       "concurrencyHint": "同時に処理する文字起こしタスク数、範囲 1-4"
     },
     "batch": {
+      "title": "バッチ処理",
       "proofreadBatchSize": "校正翻訳バッチサイズ",
       "proofreadBatchSizeHint": "1回のチェック・翻訳で処理する字幕の行数。値が大きいほど文脈が考慮され質が良くなりますが、消費量が増えます。",
       "translationBatchSize": "翻訳バッチサイズ",
@@ -102,6 +106,7 @@
       "chunkDurationHint": "音声セグメントの目標長さ（秒）。文字起こしの並列処理効率に影響します。"
     },
     "concurrency": {
+      "title": "同時実行とタイムアウト",
       "concurrencyFlash": "同時実行数（Flash）",
       "concurrencyFlashHint": "<strong>Gemini Flash シリーズモデル</strong> の翻訳・最適化および <strong>Whisper API</strong> の文字起こしに適用。アカウントの制限に応じて調整してください。",
       "concurrencyPro": "同時実行数（Pro）",
@@ -109,10 +114,24 @@
       "requestTimeout": "リクエストタイムアウト（秒）",
       "requestTimeoutHint": "単一 API リクエストの最大待機時間。ネットワークが遅い場合や大量処理時は適宜増加してください。"
     },
-    "smartSplit": "スマート分割",
-    "smartSplitDesc": "AI音声検出を使用して自然な停止点で音声を分割し、文字起こし精度を向上（推奨）"
+    "audio": {
+      "title": "音声処理",
+      "smartSplit": "スマート分割",
+      "smartSplitDesc": "AI音声検出を使用して自然な停止点で音声を分割し、文字起こし精度を向上（推奨）"
+    },
+    "cache": {
+      "title": "動画プレビューキャッシュ",
+      "currentSize": "現在のサイズ",
+      "files": "ファイル",
+      "clear": "キャッシュをクリア",
+      "clearing": "クリア中...",
+      "hint": "キャッシュされたプレビューにより、同じ動画を再度開く際の読み込みが速くなります。"
+    }
   },
   "glossary": {
+    "settings": {
+      "title": "自動用語集設定"
+    },
     "enableAutoGlossary": "自動用語集を有効化",
     "enableAutoGlossaryDesc": "専門用語を自動的に識別・抽出し、翻訳の精度と一貫性を向上",
     "sampleDuration": "用語抽出音声長",

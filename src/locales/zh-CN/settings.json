@@ -39,6 +39,7 @@
       "bilingualHint": "双语模式会在字幕中同时显示原文和译文。"
     },
     "speaker": {
+      "title": "说话人区分",
       "enableDiarization": "启用说话人区分",
       "enableDiarizationDesc": "识别音频或视频中的不同说话人，并打上标签",
       "enablePreAnalysis": "启用说话人预分析 (实验性)",
@@ -81,7 +82,9 @@
         "instructionGgml": "需要 <strong>GGML 格式</strong> 的 .bin 模型文件",
         "instructionModel": "仅支持 ",
         "instructionModelLink": "whisper.cpp 官方模型",
-        "instructionModelSuffix": "，不支持 Faster-whisper 模型。"
+        "instructionModelSuffix": "，不支持 Faster-whisper 模型。",
+        "selectError": "模型选择失败: {{error}}",
+        "selectErrorGeneric": "选择模型失败"
       }
     }
   },
@@ -94,6 +97,7 @@
       "concurrencyHint": "同时处理的转录任务数，范围 1-4"
     },
     "batch": {
+      "title": "批处理",
       "proofreadBatchSize": "润色翻译批次大小",
       "proofreadBatchSizeHint": "每次润色翻译的字幕条数。数值越大上下文越完整、质量越高，但会消耗更多 Token。",
       "translationBatchSize": "翻译批次大小",
@@ -102,6 +106,7 @@
       "chunkDurationHint": "音频分段的目标长度（秒），影响转录的并行处理效率。"
     },
     "concurrency": {
+      "title": "并发与超时",
       "concurrencyFlash": "并发数 (Flash)",
       "concurrencyFlashHint": "应用于 <strong>Gemini Flash 系列模型</strong> 翻译、优化和 <strong>Whisper API</strong> 转录。请根据账户限额调整。",
       "concurrencyPro": "并发数 (Pro)",
@@ -109,10 +114,24 @@
       "requestTimeout": "请求超时 (秒)",
       "requestTimeoutHint": "单个 API 请求的最长等待时间。网络较慢或处理大批量时可适当增加。"
     },
-    "smartSplit": "智能分段",
-    "smartSplitDesc": "使用 AI 语音检测在自然停顿处切分音频，提升转录准确度（推荐）"
+    "audio": {
+      "title": "音频处理",
+      "smartSplit": "智能分段",
+      "smartSplitDesc": "使用 AI 语音检测在自然停顿处切分音频，提升转录准确度（推荐）"
+    },
+    "cache": {
+      "title": "视频预览缓存",
+      "currentSize": "当前大小",
+      "files": "个文件",
+      "clear": "清除缓存",
+      "clearing": "正在清除...",
+      "hint": "缓存的视频预览可在再次打开相同视频时加快加载速度。"
+    }
   },
   "glossary": {
+    "settings": {
+      "title": "自动术语表设置"
+    },
     "enableAutoGlossary": "启用自动术语表",
     "enableAutoGlossaryDesc": "自动识别并提取专业术语，提升翻译准确性和一致性",
     "sampleDuration": "术语提取音频长度",

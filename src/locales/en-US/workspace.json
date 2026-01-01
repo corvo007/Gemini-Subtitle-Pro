@@ -131,5 +131,17 @@
         "failed": "Operation failed: {{error}}"
       }
     }
+  },
+  "videoPreview": {
+    "title": "Video Preview",
+    "loading": "Loading video...",
+    "expand": "Expand Preview",
+    "transcoding": "Transcoding...",
+    "float": "PiP Mode",
+    "dock": "Dock to Window",
+    "floatingMode": "Video playing in floating window",
+    "restore": "Restore",
+    "noVideo": "No video loaded",
+    "resize": "Drag to resize height"
   }
 }

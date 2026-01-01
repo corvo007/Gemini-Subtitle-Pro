@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FileVideo,
@@ -31,11 +31,13 @@ import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { HistoryPanel } from '@/components/layout/HistoryPanel';
 import { FileUploader } from '@/components/upload/FileUploader';
 import { SubtitleEditor } from '@/components/editor/SubtitleEditor';
+import { VideoPlayerPreview } from '@/components/editor/VideoPlayerPreview';
+import { useVideoPreview } from '@/hooks/useVideoPreview';
 import { CustomSelect } from '@/components/settings';
 import { TargetLanguageSelector } from '@/components/settings/TargetLanguageSelector';
 import { Modal } from '@/components/ui/Modal';
 import { NumberInput } from '@/components/ui/NumberInput';
-import { formatDuration } from '@/services/subtitle/time';
+import { formatDuration, timeToSeconds } from '@/services/subtitle/time';
 import { isVideoFile } from '@/services/utils/file';
 import { cn } from '@/lib/cn';
 
@@ -166,6 +168,37 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
 
   // Export modal state
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // Video preview hook
+  const {
+    videoSrc,
+    isTranscoding,
+    transcodeProgress,
+    transcodedDuration,
+    fullVideoDuration,
+    isCollapsed: videoPreviewCollapsed,
+    playerRef,
+    prepareVideo,
+    seekTo,
+    updateTime,
+    setIsCollapsed: setVideoPreviewCollapsed,
+  } = useVideoPreview();
+
+  // Prepare video for preview when file changes
+  useEffect(() => {
+    if (file && isVideoFile(file)) {
+      void prepareVideo(file);
+    }
+  }, [file, prepareVideo]);
+
+  // Handle subtitle row click to seek video (will be passed to SubtitleEditor)
+  const _handleSubtitleRowClick = useCallback(
+    (startTimeStr: string) => {
+      const seconds = timeToSeconds(startTimeStr);
+      seekTo(seconds);
+    },
+    [seekTo]
+  );
 
   // Force vertical layout when viewport is too small (height or width)
   const [forceVerticalLayout, setForceVerticalLayout] = useState(false);
@@ -688,40 +721,59 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                   onDeleteSnapshot={onDeleteSnapshot}
                 />
               ) : (
-                <div className="flex-1 relative w-full h-full" ref={subtitleListRef}>
-                  <SubtitleEditor
-                    subtitles={subtitles}
-                    settings={settings}
-                    status={status}
-                    activeTab={activeTab}
-                    selectedBatches={selectedBatches}
-                    toggleAllBatches={toggleAllBatches}
-                    selectBatchesWithComments={selectBatchesWithComments}
-                    showSourceText={showSourceText}
-                    setShowSourceText={setShowSourceText}
-                    file={file}
-                    handleBatchAction={handleBatchAction}
-                    batchComments={batchComments}
-                    toggleBatch={toggleBatch}
-                    updateBatchComment={updateBatchComment}
-                    editingCommentId={editingCommentId}
-                    setEditingCommentId={setEditingCommentId}
-                    updateLineComment={updateLineComment}
-                    updateSubtitleText={updateSubtitleText}
-                    updateSubtitleOriginal={updateSubtitleOriginal}
-                    updateSpeaker={updateSpeaker}
-                    updateSubtitleTime={updateSubtitleTime}
-                    speakerProfiles={speakerProfiles}
-                    deleteSubtitle={deleteSubtitle}
-                    deleteMultipleSubtitles={deleteMultipleSubtitles}
-                    addSubtitle={addSubtitle}
-                    onManageSpeakers={onManageSpeakers}
-                    scrollContainerRef={subtitleListRef}
-                    conservativeBatchMode={settings.conservativeBatchMode}
-                    onToggleConservativeMode={() =>
-                      onUpdateSetting('conservativeBatchMode', !settings.conservativeBatchMode)
-                    }
-                  />
+                <div className="flex flex-col flex-1 relative w-full h-full min-h-0">
+                  {/* Video Preview Panel - only show for video files in Electron */}
+                  {window.electronAPI && file && isVideoFile(file) && (
+                    <VideoPlayerPreview
+                      ref={playerRef}
+                      videoSrc={videoSrc}
+                      subtitles={subtitles}
+                      speakerProfiles={speakerProfiles}
+                      isTranscoding={isTranscoding}
+                      transcodeProgress={transcodeProgress}
+                      transcodedDuration={transcodedDuration}
+                      fullVideoDuration={fullVideoDuration}
+                      showSourceText={showSourceText}
+                      isCollapsed={videoPreviewCollapsed}
+                      onTimeUpdate={updateTime}
+                      onToggleCollapse={() => setVideoPreviewCollapsed(!videoPreviewCollapsed)}
+                    />
+                  )}
+                  <div className="flex-1 relative w-full h-full min-h-0" ref={subtitleListRef}>
+                    <SubtitleEditor
+                      subtitles={subtitles}
+                      settings={settings}
+                      status={status}
+                      activeTab={activeTab}
+                      selectedBatches={selectedBatches}
+                      toggleAllBatches={toggleAllBatches}
+                      selectBatchesWithComments={selectBatchesWithComments}
+                      showSourceText={showSourceText}
+                      setShowSourceText={setShowSourceText}
+                      file={file}
+                      handleBatchAction={handleBatchAction}
+                      batchComments={batchComments}
+                      toggleBatch={toggleBatch}
+                      updateBatchComment={updateBatchComment}
+                      editingCommentId={editingCommentId}
+                      setEditingCommentId={setEditingCommentId}
+                      updateLineComment={updateLineComment}
+                      updateSubtitleText={updateSubtitleText}
+                      updateSubtitleOriginal={updateSubtitleOriginal}
+                      updateSpeaker={updateSpeaker}
+                      updateSubtitleTime={updateSubtitleTime}
+                      speakerProfiles={speakerProfiles}
+                      deleteSubtitle={deleteSubtitle}
+                      deleteMultipleSubtitles={deleteMultipleSubtitles}
+                      addSubtitle={addSubtitle}
+                      onManageSpeakers={onManageSpeakers}
+                      scrollContainerRef={subtitleListRef}
+                      conservativeBatchMode={settings.conservativeBatchMode}
+                      onToggleConservativeMode={() =>
+                        onUpdateSetting('conservativeBatchMode', !settings.conservativeBatchMode)
+                      }
+                    />
+                  </div>
                 </div>
               )}
             </div>

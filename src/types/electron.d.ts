@@ -116,6 +116,12 @@ export interface ElectronAPI {
     setSettings: (settings: Partial<AppSettings>) => Promise<void>;
   };
 
+  // Video Preview Cache
+  cache: {
+    getSize: () => Promise<{ size: number; fileCount: number }>;
+    clear: () => Promise<{ cleared: number; freedBytes: number }>;
+  };
+
   // Open external link
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
 
@@ -209,6 +215,19 @@ export interface ElectronAPI {
     }>;
     onProgress: (callback: (progress: any) => void) => () => void;
   };
+
+  // Video Preview Transcoding APIs (for streaming playback during transcode)
+  transcodeForPreview: (options: { filePath: string }) => Promise<{
+    success: boolean;
+    outputPath?: string;
+    duration?: number;
+    error?: string;
+  }>;
+  needsTranscode: (filePath: string) => Promise<boolean>;
+  onTranscodeProgress: (
+    callback: (data: { percent: number; transcodedDuration?: number }) => void
+  ) => () => void;
+  onTranscodeStart: (callback: (data: { outputPath: string }) => void) => () => void;
 
   // History APIs
   history: {

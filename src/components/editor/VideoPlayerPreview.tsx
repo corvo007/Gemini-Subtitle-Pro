@@ -1,0 +1,599 @@
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  useMemo,
+  forwardRef,
+  useImperativeHandle,
+  useCallback,
+} from 'react';
+import {
+  ChevronUp,
+  ChevronDown,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize2,
+  Minimize2,
+} from 'lucide-react';
+import { Rnd } from 'react-rnd';
+import { createPortal } from 'react-dom';
+import type { SubtitleItem } from '@/types/subtitle';
+import type { SpeakerUIProfile } from '@/types/speaker';
+import { timeToSeconds, formatDuration } from '@/services/subtitle/time';
+import { cn } from '@/lib/cn';
+import { useTranslation } from 'react-i18next';
+
+export interface VideoPlayerPreviewRef {
+  seekTo: (seconds: number) => void;
+  play: () => void;
+  pause: () => void;
+  getCurrentTime: () => number;
+}
+
+interface VideoPlayerPreviewProps {
+  videoSrc: string | null;
+  subtitles: SubtitleItem[];
+  speakerProfiles?: SpeakerUIProfile[];
+  showSourceText: boolean;
+  isCollapsed: boolean;
+  isTranscoding?: boolean;
+  transcodeProgress?: number;
+  transcodedDuration?: number;
+  fullVideoDuration?: number; // Full duration from backend for accurate progress
+  onTimeUpdate: (seconds: number) => void;
+  onToggleCollapse: () => void;
+}
+
+export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerPreviewProps>(
+  (
+    {
+      videoSrc,
+      subtitles,
+      speakerProfiles,
+      showSourceText,
+      isCollapsed,
+      isTranscoding,
+      transcodeProgress,
+      transcodedDuration,
+      fullVideoDuration,
+      onTimeUpdate,
+      onToggleCollapse,
+    },
+    ref
+  ) => {
+    const { t } = useTranslation('workspace');
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [playing, setPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [volume, setVolume] = useState(1);
+    const [muted, setMuted] = useState(false);
+    const [ready, setReady] = useState(false);
+    const [isFloating, setIsFloating] = useState(false);
+
+    const [isResizing, setIsResizing] = useState(false);
+    const [dockedHeight, setDockedHeight] = useState(320);
+    const startYRef = useRef(0);
+    const startHeightRef = useRef(0);
+    const currentTimeRef = useRef(0); // Track currentTime in ref to preserve across re-renders
+
+    const handleResizeStart = useCallback(
+      (e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizing(true);
+        startYRef.current = e.clientY;
+        startHeightRef.current = dockedHeight;
+
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+          const deltaY = moveEvent.clientY - startYRef.current;
+          const newHeight = Math.max(200, Math.min(800, startHeightRef.current + deltaY));
+          setDockedHeight(newHeight);
+        };
+
+        const handleMouseUp = () => {
+          setIsResizing(false);
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+      },
+      [dockedHeight]
+    );
+
+    // ==========================================
+    // Restore missing logic
+    // ==========================================
+    const [rndScale, setRndScale] = useState(1);
+
+    // Calculate specific scale for Rnd to fix dragging sensitivity on high DPI
+    useEffect(() => {
+      const updateScale = () => {
+        const dpr = window.devicePixelRatio || 1;
+        if (dpr > 1) {
+          setRndScale(1 / dpr);
+        } else {
+          setRndScale(1);
+        }
+      };
+
+      updateScale();
+      window.addEventListener('resize', updateScale);
+      return () => window.removeEventListener('resize', updateScale);
+    }, []);
+
+    // Expose methods to parent component
+    useImperativeHandle(ref, () => ({
+      seekTo: (seconds: number) => {
+        if (!videoRef.current) return;
+        const targetTime =
+          transcodedDuration !== undefined ? Math.min(seconds, transcodedDuration - 0.5) : seconds;
+        videoRef.current.currentTime = Math.max(0, targetTime);
+      },
+      play: () => {
+        videoRef.current?.play().catch(() => {});
+        setPlaying(true);
+      },
+      pause: () => {
+        videoRef.current?.pause();
+        setPlaying(false);
+      },
+      getCurrentTime: () => currentTime,
+    }));
+
+    // Find current subtitle based on playback time
+    const currentSubtitle = useMemo(() => {
+      return subtitles.find((sub) => {
+        const start = timeToSeconds(sub.startTime);
+        const end = timeToSeconds(sub.endTime);
+        return currentTime >= start && currentTime <= end;
+      });
+    }, [subtitles, currentTime]);
+
+    // Handle video time update
+    const handleTimeUpdate = useCallback(() => {
+      if (videoRef.current) {
+        const time = videoRef.current.currentTime;
+        setCurrentTime(time);
+        currentTimeRef.current = time; // Sync ref for mode switch restoration
+        onTimeUpdate(time);
+      }
+    }, [onTimeUpdate]);
+
+    // Handle seek from progress bar
+    const handleSeek = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        const targetTime = Number(e.target.value);
+        if (!videoRef.current) return;
+
+        // Check if seeking beyond transcoded portion
+        if (transcodedDuration !== undefined && targetTime > transcodedDuration - 0.5) {
+          videoRef.current.currentTime = transcodedDuration - 0.5;
+          return;
+        }
+
+        videoRef.current.currentTime = targetTime;
+      },
+      [transcodedDuration]
+    );
+
+    // Handle play/pause toggle
+    const togglePlay = useCallback(() => {
+      if (!videoRef.current) return;
+      if (playing) {
+        videoRef.current.pause();
+        setPlaying(false);
+      } else {
+        videoRef.current.play().catch(() => {});
+        setPlaying(true);
+      }
+    }, [playing]);
+
+    // Handle volume toggle
+    const toggleMute = useCallback(() => {
+      if (videoRef.current) {
+        videoRef.current.muted = !muted;
+        setMuted(!muted);
+      }
+    }, [muted]);
+
+    // Handle volume change
+    const handleVolumeChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newVolume = parseFloat(e.target.value);
+        if (videoRef.current) {
+          videoRef.current.volume = newVolume;
+          setVolume(newVolume);
+          // Auto-unmute if adjusting volume from 0
+          if (newVolume > 0 && muted) {
+            videoRef.current.muted = false;
+            setMuted(false);
+          }
+        }
+      },
+      [muted]
+    );
+
+    // Keyboard shortcuts
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+        if (isCollapsed || !videoSrc || !videoRef.current) return;
+
+        switch (e.code) {
+          case 'Space':
+            e.preventDefault();
+            togglePlay();
+            break;
+          case 'ArrowLeft':
+            e.preventDefault();
+            videoRef.current.currentTime = Math.max(0, currentTime - 5);
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            {
+              const maxTime = transcodedDuration ?? duration;
+              videoRef.current.currentTime = Math.min(maxTime - 0.5, currentTime + 5);
+            }
+            break;
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [currentTime, duration, isCollapsed, videoSrc, transcodedDuration, togglePlay]);
+
+    // Calculate progress bar percentages
+    // Use fullVideoDuration from backend if available, otherwise browser-reported duration
+    const displayDuration =
+      fullVideoDuration && fullVideoDuration > 0 ? fullVideoDuration : duration;
+    const currentProgress = displayDuration > 0 ? (currentTime / displayDuration) * 100 : 0;
+    const transcodedProgress =
+      displayDuration > 0 && transcodedDuration !== undefined
+        ? (transcodedDuration / displayDuration) * 100
+        : 100;
+
+    // Memoize player content to reduce Rnd re-renders
+    const playerContent = useMemo(
+      () => (
+        <div
+          className={cn(
+            'flex flex-col relative group h-full w-full',
+            isFloating ? 'bg-black border border-slate-700/50 rounded-lg overflow-hidden' : '',
+            isFloating && !isResizing && 'shadow-2xl'
+          )}
+        >
+          {/* Floating Mode: Full size drag handle overlay */}
+          {isFloating && <div className="drag-handle absolute inset-0 z-10 cursor-move" />}
+
+          {/* Floating Mode Overlay Controls (Buttons) */}
+          {isFloating && (
+            <div className="absolute top-0 inset-x-0 h-8 bg-gradient-to-b from-black/60 to-transparent z-20 flex justify-end gap-2 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              {/* Buttons need pointer-events-auto because parent is pointer-events-none */}
+              <button
+                onClick={() => setIsFloating(false)}
+                className="p-1 bg-black/60 hover:bg-black/80 text-white rounded cursor-pointer pointer-events-auto"
+                title={t('videoPreview.dock', 'Restore to dock')}
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Player Container */}
+          <div className="relative bg-black overflow-hidden flex-1 flex items-center justify-center w-full h-full">
+            {videoSrc ? (
+              <>
+                <video
+                  ref={videoRef}
+                  src={videoSrc}
+                  className={cn(
+                    'w-full h-full object-contain relative z-0',
+                    isResizing && 'pointer-events-none' // Disable interaction during resize
+                  )}
+                  onTimeUpdate={handleTimeUpdate}
+                  onLoadedMetadata={() => {
+                    if (videoRef.current) {
+                      setDuration(videoRef.current.duration);
+                      setReady(true);
+                      // Restore time if switching modes (use ref to get latest value)
+                      if (currentTimeRef.current > 0) {
+                        videoRef.current.currentTime = currentTimeRef.current;
+                      }
+                      // Restore playback state if it was playing
+                      if (playing) {
+                        videoRef.current.play().catch(console.error);
+                      }
+                      // Restore mute state
+                      if (muted) {
+                        videoRef.current.muted = true;
+                      }
+                    }
+                  }}
+                  onEnded={() => setPlaying(false)}
+                  onPlay={() => setPlaying(true)}
+                  onPause={() => setPlaying(false)}
+                />
+
+                {/* Subtitle Overlay */}
+                {currentSubtitle &&
+                  (() => {
+                    const speakerColor =
+                      speakerProfiles?.find((p) => p.name === currentSubtitle.speaker)?.color ||
+                      '#ffffff';
+
+                    return (
+                      <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none px-4 flex flex-col items-center gap-1 z-10 transition-all duration-200">
+                        {showSourceText && currentSubtitle.original && (
+                          <div className="inline-block bg-black/60 backdrop-blur-[2px] px-3 py-1 rounded-lg">
+                            <span className="text-white/90 text-sm font-medium drop-shadow-md">
+                              {currentSubtitle.original}
+                            </span>
+                          </div>
+                        )}
+                        <div className="inline-block bg-black/70 backdrop-blur-[2px] px-4 py-1.5 rounded-lg">
+                          <span
+                            className="text-lg font-bold drop-shadow-md transition-colors"
+                            style={{ color: speakerColor }}
+                          >
+                            {currentSubtitle.translated || currentSubtitle.original}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                {/* Loading overlay */}
+                {!ready && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-slate-500 text-sm gap-2">
+                {isTranscoding ? (
+                  <>
+                    <div className="w-6 h-6 border-2 border-slate-500/30 border-t-slate-500 rounded-full animate-spin" />
+                    {t('videoPreview.loading', '正在加载视频...')}
+                  </>
+                ) : (
+                  t('videoPreview.noVideo', '未加载视频')
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Controls */}
+          <div
+            className={cn(
+              'flex items-center gap-2 px-2 py-1.5 bg-slate-900/90 w-full z-20',
+              isFloating && 'absolute bottom-0 left-0 right-0' // Overlay controls in floating mode usually looks better or just stack them?
+              // Actually let's keep them stacked below video for consistency, unless it's floating where space is tight.
+              // For Rnd, simpler is just flex-col.
+            )}
+          >
+            {/* Play/Pause */}
+            <button
+              onClick={togglePlay}
+              disabled={!videoSrc}
+              className={cn(
+                'p-1 rounded transition-colors',
+                videoSrc ? 'text-white hover:text-indigo-400' : 'text-slate-600 cursor-not-allowed'
+              )}
+            >
+              {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            </button>
+
+            {/* Time */}
+            <span className="text-[10px] text-slate-400 font-mono min-w-[65px]">
+              {formatDuration(currentTime)} / {formatDuration(displayDuration)}
+            </span>
+
+            {/* Progress Bar */}
+            <div className="flex-1 relative h-1.5 group mx-1">
+              <div className="absolute inset-0 bg-slate-700 rounded" />
+              {transcodedDuration !== undefined && (
+                <div
+                  className="absolute h-full bg-indigo-500/40 rounded"
+                  style={{ width: `${transcodedProgress}%` }}
+                />
+              )}
+              <div
+                className="absolute h-full bg-indigo-500 rounded"
+                style={{ width: `${currentProgress}%` }}
+              />
+              <input
+                type="range"
+                min={0}
+                max={displayDuration || 100}
+                step={0.1}
+                value={currentTime}
+                onChange={handleSeek}
+                disabled={!videoSrc || isTranscoding}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                title={isTranscoding ? '转码完成后可跳转' : undefined}
+              />
+            </div>
+
+            {/* Volume */}
+            <div className="relative group/volume">
+              <button
+                onClick={toggleMute}
+                className="p-1 text-white hover:text-indigo-400 transition-colors"
+              >
+                {muted || volume === 0 ? (
+                  <VolumeX className="w-3.5 h-3.5" />
+                ) : (
+                  <Volume2 className="w-3.5 h-3.5" />
+                )}
+              </button>
+              {/* Vertical volume slider popup */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 pb-2 hidden group-hover/volume:flex flex-col items-center">
+                <div className="bg-slate-800/95 rounded-lg px-2 py-3 shadow-lg border border-slate-700/50">
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={muted ? 0 : volume}
+                    onChange={handleVolumeChange}
+                    className="h-16 w-1 bg-slate-600 rounded appearance-none cursor-pointer [writing-mode:vertical-lr] [direction:rtl] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Floating Toggle (only in docked mode here, in floating mode it is on top overlay) */}
+            {!isFloating && (
+              <button
+                onClick={() => setIsFloating(true)}
+                className="p-1 text-slate-400 hover:text-white transition-colors ml-1"
+                title={t('videoPreview.float', 'Picture in Picture')}
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      ),
+      [
+        isFloating,
+        isResizing,
+        videoSrc,
+        ready,
+        playing,
+        currentTime,
+        duration,
+        displayDuration,
+        currentSubtitle,
+        showSourceText,
+        transcodedDuration,
+        transcodedProgress,
+        currentProgress,
+        volume,
+        muted,
+        handleTimeUpdate,
+        handleSeek,
+        handleVolumeChange,
+        togglePlay,
+        toggleMute,
+        t,
+        speakerProfiles,
+        isTranscoding,
+      ]
+    ); // Removed dockedHeight dependency
+
+    // Collapsed state - just show expand button
+    if (isCollapsed) {
+      return (
+        <button
+          onClick={onToggleCollapse}
+          className="w-full p-2 bg-slate-900/50 border-b border-slate-800 flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+        >
+          <ChevronDown className="w-4 h-4" />
+          <span className="text-sm">{t('videoPreview.expand', '展开视频预览')}</span>
+          {isTranscoding && (
+            <span className="ml-auto text-xs text-amber-400">
+              {t('videoPreview.transcoding', '转码中...')} {transcodeProgress}%
+            </span>
+          )}
+        </button>
+      );
+    }
+
+    return (
+      <div className="bg-slate-900/50 border-b border-slate-800 select-none">
+        {/* Header - Only show in docked mode */}
+        {!isFloating && (
+          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800/50">
+            <button
+              onClick={onToggleCollapse}
+              className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+            >
+              <ChevronUp className="w-4 h-4" />
+              <span className="text-sm">{t('videoPreview.title', '视频预览')}</span>
+            </button>
+            <div className="flex items-center gap-2">
+              {isTranscoding && (
+                <span className="text-xs text-amber-400 animate-pulse">
+                  {t('videoPreview.transcoding', '转码中...')} {transcodeProgress}%
+                </span>
+              )}
+              {/* Helper Float Button in Header too */}
+              <button
+                onClick={() => setIsFloating(true)}
+                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white"
+                title={t('videoPreview.float', 'Picture in Picture')}
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Content Container */}
+        {isFloating ? (
+          <>
+            <div className="h-10 bg-slate-900/30 flex items-center justify-center text-xs text-slate-500 gap-2">
+              <span>{t('videoPreview.floatingMode', '视频正在悬浮窗口播放')}</span>
+              <button
+                onClick={() => setIsFloating(false)}
+                className="text-indigo-400 hover:underline flex items-center gap-1"
+              >
+                <Minimize2 className="w-3 h-3" />
+                {t('videoPreview.restore', '还原')}
+              </button>
+            </div>
+            {createPortal(
+              <Rnd
+                default={{
+                  x: window.innerWidth - 360,
+                  y: window.innerHeight - 280,
+                  width: 320,
+                  height: 220,
+                }}
+                minWidth={240}
+                minHeight={135}
+                bounds="window"
+                dragHandleClassName="drag-handle"
+                className="z-[9999]"
+                lockAspectRatio={false}
+                scale={rndScale}
+                onResizeStart={() => setIsResizing(true)}
+                onResizeStop={() => setIsResizing(false)}
+              >
+                {playerContent}
+              </Rnd>,
+              document.body
+            )}
+          </>
+        ) : (
+          /* Docked Mode - Centered with Resize Handle */
+          <div className="relative w-full bg-black/20 flex flex-col items-center pb-2">
+            <div
+              className="w-full transition-[height] duration-75 ease-out"
+              style={{ height: dockedHeight }}
+            >
+              {playerContent}
+            </div>
+
+            {/* Resize Handle - Static Position with larger hit area */}
+            <div
+              className="w-full h-4 flex items-center justify-center cursor-ns-resize hover:bg-white/5 transition-colors group/handle mt-[-1px] z-50"
+              onMouseDown={handleResizeStart}
+              title={t('videoPreview.resize', '拖动调整高度')}
+            >
+              <div className="w-12 h-1 bg-slate-700 rounded-full group-hover/handle:bg-indigo-500 transition-colors shadow-sm" />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+VideoPlayerPreview.displayName = 'VideoPlayerPreview';

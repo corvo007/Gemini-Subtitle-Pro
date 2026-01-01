@@ -1,5 +1,15 @@
 import { mainLogger } from './logger.ts'; // Must be first!
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell, session, screen } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  Menu,
+  shell,
+  session,
+  screen,
+  protocol,
+} from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -19,11 +29,88 @@ import type {
   AudioExtractionProgress,
 } from './services/ffmpegAudioExtractor.ts';
 import { storageService } from './services/storage.ts';
+import { Readable } from 'stream';
+
+// Helper class for reading growing files (tailing)
+class TailingReader extends Readable {
+  private filePath: string;
+  private fd: number | null = null;
+  private position: number;
+  private endPosition: number | undefined;
+  private pollingInterval: number = 200;
+  private idleTime: number = 0;
+  private maxIdleTime: number = 30000; // 30s timeout
+
+  constructor(filePath: string, start: number, end?: number) {
+    super();
+    this.filePath = filePath;
+    this.position = start;
+    this.endPosition = end;
+  }
+
+  _construct(callback: (error?: Error | null) => void) {
+    fs.open(this.filePath, 'r', (err, fd) => {
+      if (err) return callback(err);
+      this.fd = fd;
+      callback();
+    });
+  }
+
+  _read(size: number) {
+    if (this.fd === null) return;
+
+    const buffer = Buffer.alloc(64 * 1024); // 64KB chunks
+    fs.read(this.fd, buffer, 0, buffer.length, this.position, (err, bytesRead) => {
+      if (err) return this.destroy(err);
+
+      if (bytesRead > 0) {
+        this.idleTime = 0;
+        this.position += bytesRead;
+        this.push(buffer.subarray(0, bytesRead));
+      } else {
+        // EOF reached. Wait and retry if it's a growing file.
+        this.idleTime += this.pollingInterval;
+        if (this.idleTime > this.maxIdleTime) {
+          this.push(null); // Timeout (transcoding probably failed or finished long ago)
+        } else {
+          setTimeout(() => this._read(size), this.pollingInterval);
+        }
+      }
+    });
+  }
+
+  _destroy(err: Error | null, callback: (error?: Error | null) => void) {
+    if (this.fd !== null) {
+      fs.close(this.fd, (closeErr) => {
+        callback(err || closeErr);
+      });
+      this.fd = null;
+    } else {
+      callback(err);
+    }
+  }
+}
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (squirrelStartup) {
   app.quit();
 }
+
+// IMPORTANT: Must register custom protocol scheme BEFORE app.ready event!
+// The 'stream' privilege is required for <video> and <audio> elements to work correctly
+// See: https://www.electronjs.org/docs/latest/api/protocol#protocolregisterschemesasprivilegedcustomschemes
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'local-video',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true, // Required for video/audio streaming
+      bypassCSP: true, // Bypass Content Security Policy
+    },
+  },
+]);
 
 import { localWhisperService } from './services/localWhisper.ts';
 import { ytDlpService, classifyError } from './services/ytdlp.ts';
@@ -632,6 +719,81 @@ ipcMain.handle('video:hw-accel-info', async () => {
   }
 });
 
+// ============================================================================
+// Video Preview Transcoding IPC Handlers
+// ============================================================================
+import {
+  transcodeForPreview,
+  needsTranscode,
+  cleanupOldPreviews,
+  killAllTranscodes,
+  getCacheSize,
+  clearCache,
+  enforceCacheLimit,
+} from './services/videoPreviewTranscoder.ts';
+import { killActiveCompression } from './services/videoCompressor.ts';
+import { killAllAudioExtractions } from './services/ffmpegAudioExtractor.ts';
+
+// Kill all active FFmpeg and Whisper processes when app is quitting
+app.on('before-quit', () => {
+  killAllTranscodes();
+  killActiveCompression();
+  killAllAudioExtractions();
+  localWhisperService.abort();
+});
+
+// IPC Handler: Get preview cache size
+ipcMain.handle('cache:get-size', async () => {
+  return getCacheSize();
+});
+
+// IPC Handler: Clear preview cache
+ipcMain.handle('cache:clear', async () => {
+  return clearCache();
+});
+
+// IPC Handler: Transcode video for preview (fragmented MP4 for streaming)
+ipcMain.handle('video-preview:transcode', async (event, options: { filePath: string }) => {
+  try {
+    console.log(`[DEBUG] [Main] Transcoding for preview: ${options.filePath}`);
+
+    // Helper to safely send IPC messages (check if window is still valid)
+    const safeSend = (channel: string, data: any) => {
+      try {
+        if (!event.sender.isDestroyed()) {
+          event.sender.send(channel, data);
+        }
+      } catch (_e) {
+        // Ignore errors if window was destroyed
+      }
+    };
+
+    const result = await transcodeForPreview({
+      filePath: options.filePath,
+      onStart: (outputPath, duration) => {
+        safeSend('video-preview:transcode-start', { outputPath, duration });
+      },
+      onProgress: (percent, transcodedDuration) => {
+        safeSend('video-preview:transcode-progress', { percent, transcodedDuration });
+      },
+      onLog: (msg) => console.log(msg),
+    });
+    return { success: true, ...result };
+  } catch (error: any) {
+    console.error('[Main] Preview transcode failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC Handler: Check if file needs transcoding
+ipcMain.handle('video-preview:needs-transcode', async (_event, filePath: string) => {
+  return needsTranscode(filePath);
+});
+
+// Cleanup old preview files and enforce cache limit on app start
+void cleanupOldPreviews();
+void enforceCacheLimit();
+
 // IPC Handler: Show Item In Folder
 ipcMain.handle('shell:show-item-in-folder', async (_event, filePath: string) => {
   try {
@@ -868,9 +1030,9 @@ const createWindow = () => {
   });
 
   if (app.isPackaged) {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html')).catch(console.error);
   } else {
-    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.loadURL('http://localhost:3000').catch(console.error);
     mainWindow.webContents.openDevTools();
   }
 };
@@ -934,6 +1096,126 @@ const createMenu = () => {
 app.on('ready', async () => {
   // Initialize logger file system (requires app to be ready for getPath)
   mainLogger.init();
+
+  // Register custom protocol for streaming local video files
+  // This supports HTTP range requests for large files
+  protocol.handle('local-video', async (request) => {
+    try {
+      // URL format: local-video://file/<encoded-path>
+      // Extract and decode the file path
+      // Strip "local-video://file/" and decode
+      const rawUrl = request.url.replace('local-video://file/', '');
+
+      // Separate path and query
+      const [pathPart, queryPart] = rawUrl.split('?');
+      const searchParams = new URLSearchParams(queryPart || '');
+      const isStatic = searchParams.get('static') === 'true';
+
+      const decodedPath = decodeURIComponent(pathPart);
+      const filePath = path.normalize(decodedPath);
+
+      // Security check: ensure absolute path and no traversal if possible (though we normalized)
+      // Actually we just use it.
+
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        console.error('[local-video] File not found:', filePath);
+        return new Response('File not found: ' + filePath, { status: 404 });
+      }
+
+      const stat = fs.statSync(filePath);
+      const fileSize = stat.size;
+
+      // Handle empty files gracefully
+      if (fileSize === 0) {
+        return new Response(null, {
+          status: 200,
+          headers: {
+            'Content-Length': '0',
+            'Content-Type': 'video/mp4',
+            'Accept-Ranges': 'bytes',
+          },
+        });
+      }
+
+      // Special handling for preview files (growing files)
+      // We lie about the size to allow progressive playback of growing content
+      // BUT if 'static=true' is passed, we treat it as a finished file
+      const isPreview = !isStatic && filePath.replace(/\\/g, '/').includes('/preview/');
+
+      const rangeHeader = request.headers.get('range');
+
+      if (isPreview) {
+        // Use unknown total size (*) to support growing files properly
+        // This tells the browser "we have data from X onwards, but we don't know the end"
+
+        let start = 0;
+        // We don't define an end for the stream reader, it reads until timeout
+
+        if (rangeHeader) {
+          const parts = rangeHeader.replace(/bytes=/, '').split('-');
+          start = parseInt(parts[0], 10);
+          // Ignore requested end for growing files, we stream what we have/get
+        }
+
+        const stream = new TailingReader(filePath, start);
+
+        return new Response(stream as any, {
+          status: 206,
+          headers: {
+            'Content-Range': `bytes ${start}-/*`, // * indicates unknown total length
+            'Accept-Ranges': 'bytes',
+            'Content-Type': 'video/mp4',
+            // Omit Content-Length or keep it undefined to let streaming work?
+            // Electron might need it?
+            // Safe bet is usually to omit it for chunked/streamed,
+            // OR set it to a arbitrary large number if we want to pretend?
+            // Let's omit it and see if Response handles it (Transfer-Encoding: chunked)
+          },
+        });
+      }
+
+      // Normal static file handling
+      if (rangeHeader) {
+        // Handle range request for seeking in large files
+        const parts = rangeHeader.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+        // Ensure end is within bounds and valid
+        if (end < start) end = start;
+        if (end >= fileSize) end = fileSize - 1;
+
+        const chunkSize = end - start + 1;
+
+        const stream = fs.createReadStream(filePath, { start, end });
+
+        return new Response(stream as any, {
+          status: 206,
+          headers: {
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': String(chunkSize),
+            'Content-Type': 'video/mp4',
+          },
+        });
+      } else {
+        // No range request - return full file
+        const stream = fs.createReadStream(filePath);
+        return new Response(stream as any, {
+          status: 200,
+          headers: {
+            'Accept-Ranges': 'bytes',
+            'Content-Length': String(fileSize),
+            'Content-Type': 'video/mp4',
+          },
+        });
+      }
+    } catch (error) {
+      console.error('[local-video] Protocol error:', error);
+      return new Response('Internal Server Error', { status: 500 });
+    }
+  });
 
   // Intercept Bilibili image requests to add Referer header
   // This bypasses the 403 Forbidden error due to anti-hotlinking

@@ -112,6 +112,36 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
   },
 
+  // Video Preview Transcoding APIs (for streaming playback during transcode)
+  transcodeForPreview: (options: { filePath: string }) =>
+    ipcRenderer.invoke('video-preview:transcode', options),
+  needsTranscode: (filePath: string) =>
+    ipcRenderer.invoke('video-preview:needs-transcode', filePath),
+  onTranscodeProgress: (
+    callback: (data: { percent: number; transcodedDuration?: number }) => void
+  ) => {
+    const subscription = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('video-preview:transcode-progress', subscription);
+    return () => {
+      ipcRenderer.removeListener('video-preview:transcode-progress', subscription);
+    };
+  },
+  onTranscodeStart: (callback: (data: { outputPath: string }) => void) => {
+    const subscription = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('video-preview:transcode-start', subscription);
+    return () => {
+      ipcRenderer.removeListener('video-preview:transcode-start', subscription);
+    };
+  },
+
+  // Video Preview Cache APIs
+  cache: {
+    getSize: () =>
+      ipcRenderer.invoke('cache:get-size') as Promise<{ size: number; fileCount: number }>,
+    clear: () =>
+      ipcRenderer.invoke('cache:clear') as Promise<{ cleared: number; freedBytes: number }>,
+  },
+
   // History APIs
   history: {
     get: () => ipcRenderer.invoke('history-get'),

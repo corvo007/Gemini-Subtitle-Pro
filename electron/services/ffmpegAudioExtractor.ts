@@ -29,6 +29,24 @@ ffmpeg.setFfprobePath(getBinaryPath('ffprobe.exe'));
 export const getFFmpegPath = () => getBinaryPath('ffmpeg.exe');
 export const getFFprobePath = () => getBinaryPath('ffprobe.exe');
 
+// Track active audio extraction commands for cleanup on app quit
+const activeAudioCommands: Set<ReturnType<typeof ffmpeg>> = new Set();
+
+/**
+ * Kill all active audio extraction processes.
+ * Call this when the app is quitting to prevent orphaned processes.
+ */
+export function killAllAudioExtractions(): void {
+  for (const command of activeAudioCommands) {
+    try {
+      command.kill('SIGKILL');
+    } catch (_e) {
+      // Ignore errors if process already exited
+    }
+  }
+  activeAudioCommands.clear();
+}
+
 export interface AudioExtractionOptions {
   format?: 'wav' | 'mp3' | 'flac';
   sampleRate?: number;
@@ -130,11 +148,13 @@ export async function extractAudioFromVideo(
 
     // 监听完成
     command.on('end', () => {
+      activeAudioCommands.delete(command);
       resolve(outputPath);
     });
 
     // 监听错误
     command.on('error', (err) => {
+      activeAudioCommands.delete(command);
       // 清理可能生成的临时文件
       if (fs.existsSync(outputPath)) {
         fs.unlinkSync(outputPath);
@@ -144,6 +164,9 @@ export async function extractAudioFromVideo(
 
     // 开始处理
     command.run();
+
+    // Track this command for cleanup on app quit
+    activeAudioCommands.add(command);
   });
 }
 

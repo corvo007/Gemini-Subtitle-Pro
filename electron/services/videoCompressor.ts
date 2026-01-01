@@ -540,3 +540,20 @@ export class VideoCompressorService {
     });
   }
 }
+
+// Singleton instance for app-wide cleanup
+let compressorInstance: VideoCompressorService | null = null;
+
+export function getCompressorInstance(): VideoCompressorService {
+  if (!compressorInstance) {
+    compressorInstance = new VideoCompressorService();
+  }
+  return compressorInstance;
+}
+
+/**
+ * Kill active compression process (call on app quit).
+ */
+export function killActiveCompression(): void {
+  compressorInstance?.cancel();
+}
