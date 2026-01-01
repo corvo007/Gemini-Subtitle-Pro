@@ -24,6 +24,7 @@ flowchart TB
         LUCIDE["Lucide React<br/>Icon Library"]
         UI_LIB["Unified UI Components<br/>(Button, Modal, Input)"]
         ASSJS["assjs<br/>WYSIWYG Subtitle Rendering"]
+        VIDEO_PLAYER["VideoPlayerPreview<br/>Progressive Video Playback"]
     end
 
     subgraph BUILD["🔧 Build Toolchain"]
@@ -46,6 +47,7 @@ flowchart TB
             ELECTRON["Electron 39<br/>Desktop Container"]
             NODE["Node.js<br/>Local API"]
             IPC["IPC<br/>Process Communication"]
+            LOCAL_VIDEO["local-video:// Protocol<br/>Streaming Media Access"]
         end
     end
 
@@ -167,6 +169,7 @@ flowchart TB
             USE_DOWNLOAD["useDownload<br/>Download Logic"]
             USE_TOAST["useToast<br/>Notification System"]
             USE_E2E["useEndToEnd<br/>Pipeline State"]
+            USE_VIDEO_PREVIEW["useVideoPreview<br/>Video Playback & Transcoding"]
         end
     end
 
@@ -345,7 +348,9 @@ Gemini-Subtitle-Pro/
 │   │
 │   ├── 📂 components/               # UI Components
 │   │   ├── 📂 common/               # Common Business Components (Header, PageHeader, etc.)
-│   │   ├── 📂 editor/               # Subtitle Editor Components (SubtitleRow, Batch, etc.)
+│   │   ├── 📂 editor/               # Subtitle Editor & Video Preview Components
+│   │   │   ├── 📄 VideoPlayerPreview.tsx  # [NEW] Progressive Video Player with ASS Rendering
+│   │   │   └── 📄 ...               # SubtitleRow, Batch, etc.
 │   │   ├── 📂 pages/                # Page-level Components (HomePage, WorkspacePage, etc.)
 │   │   ├── 📂 ui/                   # Base UI Component Library (Modal, Toggle, TextInput...)
 │   │   ├── 📂 settings/             # Settings-related Components (SettingsModal, SettingsPanel, etc.)
@@ -361,6 +366,7 @@ Gemini-Subtitle-Pro/
 │   │   ├── 📄 useHardwareAcceleration.ts # Hardware Acceleration State
 │   │   ├── 📄 useSettings.ts        # Settings Management
 │   │   ├── 📄 useDownload.ts        # Download Logic
+│   │   ├── 📄 useVideoPreview.ts    # [NEW] Video Preview & Transcoding State
 │   │   └── ...                      # Other Feature Hooks
 │   │
 │   ├── 📂 locales/                  # [NEW] Internationalization Resources
@@ -710,6 +716,8 @@ flowchart LR
         LOCAL_FILE --> IMPORT["Import/Decode"]
         IMPORT --> GEN["AI Subtitle Generation<br/>(Whisper + Gemini)"]
         GEN --> EDIT["Workspace Edit/Proofread"]
+        LOCAL_FILE -.-> PREVIEW["Video Preview<br/>(WYSIWYG Playback)"]
+        EDIT <-.-> PREVIEW
 
         EDIT --> SRT_ASS["Export Subtitle File<br/>(.srt / .ass)"]
     end
@@ -830,7 +838,17 @@ To bypass browser security restrictions (CSP, Sandbox) and support large file st
 
 ## 📺 Video Preview & Caching Strategy
 
-The system uses a fragmented MP4 (fMP4) transcoding strategy to balance compatibility and performance.
+The system uses a fragmented MP4 (fMP4) transcoding strategy to balance compatibility and performance, enabling **play-while-transcoding** for immediate video preview.
+
+### Architecture Overview
+
+The video preview system consists of three main components:
+
+| Component                | Location                 | Purpose                                                               |
+| :----------------------- | :----------------------- | :-------------------------------------------------------------------- |
+| `VideoPlayerPreview`     | `src/components/editor/` | React video player with ASS subtitle overlay                          |
+| `useVideoPreview`        | `src/hooks/`             | State management for transcoding progress, video source, and playback |
+| `videoPreviewTranscoder` | `electron/services/`     | FFmpeg-based transcoding service with GPU acceleration and caching    |
 
 ### Process Flow
 
@@ -841,7 +859,7 @@ sequenceDiagram
     participant F as FFmpeg
     participant C as Disk Cache
 
-    R->>M: IPC (video-preview:transcode)
+    R->>M: IPC (transcode-for-preview)
     M->>M: Check if transcode needed (codec check)
     alt Cached & Recent
         M-->>R: Return cached path
@@ -851,20 +869,39 @@ sequenceDiagram
         M-->>R: IPC (transcode-start)
         R->>R: Load local-video://cache_path
         Note over R,C: TailingReader streams from cache
+        loop Progressive Update
+            M-->>R: IPC (transcode-progress)
+            R->>R: Update progress bar
+        end
+        M-->>R: IPC (transcode complete)
     end
 ```
+
+### Key Features
+
+| Feature                   | Description                                                         |
+| :------------------------ | :------------------------------------------------------------------ |
+| **Progressive Playback**  | Start playing before transcoding completes via fMP4 + TailingReader |
+| **GPU Acceleration**      | Auto-detects NVENC/QSV/VCE for faster transcoding                   |
+| **Format Detection**      | Skips transcoding for browser-compatible formats (mp4, webm, m4v)   |
+| **WYSIWYG Subtitles**     | Renders ASS subtitles using assjs in sync with video                |
+| **Floating/Docked Modes** | Supports resizable floating window or docked panel                  |
 
 ### Cache Lifecycle
 
 - **Storage**: User data directory (`/preview_cache/`).
-- **Limit**: Automatically enforces a total size limit (e.g., 2GB).
-- **Cleanup**: Enforced on app startup and via manual UI action.
-  | `video-preview:transcode` | Renderer -> Main | `{ filePath }` | Request video transcoding for preview |
-  | `video-preview:transcode-start` | Main -> Renderer | `{ outputPath }` | Transcoding started |
-  | `video-preview:transcode-progress` | Main -> Renderer | `{ percent }` | Transcoding progress update |
-  | `video-preview:needs-transcode` | Renderer -> Main | `filePath` | Check if video needs transcoding |
-  | `cache:get-size` | Renderer -> Main | - | Get preview cache size |
-  | `cache:clear` | Renderer -> Main | - | Clear preview cache |
+- **Limit**: Automatically enforces a total size limit (3GB default).
+- **Cleanup**: Enforced on app startup (oldest files first) and via manual UI action.
+
+### IPC Channels
+
+| Channel Name            | Direction       | Payload                           | Purpose                                         |
+| :---------------------- | :-------------- | :-------------------------------- | :---------------------------------------------- |
+| `transcode-for-preview` | Renderer → Main | `{ filePath }`                    | Request video transcoding                       |
+| `transcode-start`       | Main → Renderer | `{ outputPath, duration }`        | Transcoding started, begin progressive playback |
+| `transcode-progress`    | Main → Renderer | `{ percent, transcodedDuration }` | Real-time progress update                       |
+| `cache:get-size`        | Renderer → Main | -                                 | Get preview cache size                          |
+| `cache:clear`           | Renderer → Main | -                                 | Clear preview cache                             |
 
 ---
 
@@ -925,16 +962,17 @@ Retains only the most basic API interaction capabilities:
 
 ### 6. Electron Desktop (`electron/`)
 
-| File                               | Function Description                                                      |
-| :--------------------------------- | :------------------------------------------------------------------------ |
-| `main.ts`                          | Electron Main Process, Window Management, IPC Communication               |
-| `preload.ts`                       | Preload Script, Exposes Secure Node.js API                                |
-| `logger.ts`                        | **Unified Logging System**, Supports File Rotation and Multi-level Logs   |
-| `services/localWhisper.ts`         | Local Whisper Model Call (whisper.cpp)                                    |
-| `services/ffmpegAudioExtractor.ts` | FFmpeg Audio Extraction, Supports Video Files                             |
-| `services/ytdlp.ts`                | Video Download Service (YouTube/Bilibili)                                 |
-| `services/videoCompressor.ts`      | Video Encoding Service (Supports GPU Acceleration)                        |
-| `services/endToEndPipeline.ts`     | **Full Auto Pipeline**, Orchestrates Download-Transcribe-Encode Full Flow |
+| File                                 | Function Description                                                                 |
+| :----------------------------------- | :----------------------------------------------------------------------------------- |
+| `main.ts`                            | Electron Main Process, Window Management, IPC Communication                          |
+| `preload.ts`                         | Preload Script, Exposes Secure Node.js API                                           |
+| `logger.ts`                          | **Unified Logging System**, Supports File Rotation and Multi-level Logs              |
+| `services/localWhisper.ts`           | Local Whisper Model Call (whisper.cpp)                                               |
+| `services/ffmpegAudioExtractor.ts`   | FFmpeg Audio Extraction, Supports Video Files                                        |
+| `services/ytdlp.ts`                  | Video Download Service (YouTube/Bilibili)                                            |
+| `services/videoCompressor.ts`        | Video Encoding Service (Supports GPU Acceleration)                                   |
+| `services/videoPreviewTranscoder.ts` | **[NEW] Video Preview Transcoding**, fMP4 for progressive playback, cache management |
+| `services/endToEndPipeline.ts`       | **Full Auto Pipeline**, Orchestrates Download-Transcribe-Encode Full Flow            |
 
 ### 7. Internationalization Module (`src/locales/`, `src/i18n.ts`) [NEW]
 
@@ -1095,6 +1133,7 @@ flowchart TB
         MERGE --> SRT_OUT["SRT File<br/>(Mono/Bilingual)"]
         MERGE --> ASS_OUT["ASS File<br/>(Styled Subtitles)"]
         MERGE --> EDITOR["Editor Display"]
+        MERGE --> VIDEO_PREVIEW["Video Preview<br/>(WYSIWYG Playback)"]
         FINAL_GLOSSARY --> GLOSSARY_OUT["Update Glossary<br/>(JSON)"]
 
         SRT_OUT -.-> VIDEO_OUT["Encoded Video<br/>(MP4/Hardsub)"]

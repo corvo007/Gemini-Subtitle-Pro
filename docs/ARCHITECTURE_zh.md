@@ -24,6 +24,7 @@ flowchart TB
         LUCIDE["Lucide React<br/>图标库"]
         UI_LIB["Unified UI Components<br/>(Button, Modal, Input)"]
         ASSJS["assjs<br/>所见即所得字幕渲染"]
+        VIDEO_PLAYER["VideoPlayerPreview<br/>渐进式视频播放"]
     end
 
     subgraph BUILD["🔧 构建层 (Build Toolchain)"]
@@ -46,6 +47,7 @@ flowchart TB
             ELECTRON["Electron 39<br/>桌面容器"]
             NODE["Node.js<br/>本地 API"]
             IPC["IPC<br/>进程通信"]
+            LOCAL_VIDEO["local-video:// 协议<br/>流媒体访问"]
         end
     end
 
@@ -167,6 +169,7 @@ flowchart TB
             USE_DOWNLOAD["useDownload<br/>下载逻辑"]
             USE_TOAST["useToast<br/>通知系统"]
             USE_E2E["useEndToEnd<br/>流水线状态"]
+            USE_VIDEO_PREVIEW["useVideoPreview<br/>视频播放与转码"]
         end
     end
 
@@ -345,7 +348,9 @@ Gemini-Subtitle-Pro/
 │   │
 │   ├── 📂 components/               # UI 组件
 │   │   ├── 📂 common/               # 通用业务组件 (Header, PageHeader 等)
-│   │   ├── 📂 editor/               # 字幕编辑器组件 (SubtitleRow, Batch 等)
+│   │   ├── 📂 editor/               # 字幕编辑器与视频预览组件
+│   │   │   ├── 📄 VideoPlayerPreview.tsx  # [NEW] 渐进式视频播放器，支持 ASS 字幕渲染
+│   │   │   └── 📄 ...               # SubtitleRow, Batch 等
 │   │   ├── 📂 pages/                # 页面级组件 (HomePage, WorkspacePage 等)
 │   │   ├── 📂 ui/                   # 基础 UI 组件库 (Modal, Toggle, TextInput...)
 │   │   ├── 📂 settings/             # 设置相关组件 (SettingsModal, SettingsPanel 等)
@@ -361,6 +366,7 @@ Gemini-Subtitle-Pro/
 │   │   ├── 📄 useHardwareAcceleration.ts # 硬件加速状态
 │   │   ├── 📄 useSettings.ts        # 设置管理
 │   │   ├── 📄 useDownload.ts        # 下载逻辑
+│   │   ├── 📄 useVideoPreview.ts    # [NEW] 视频预览与转码状态
 │   │   └── ...                      # 其他功能 Hooks
 │   │
 │   ├── 📂 locales/                  # [NEW] 国际化资源目录
@@ -710,6 +716,8 @@ flowchart LR
         LOCAL_FILE --> IMPORT["导入/解码"]
         IMPORT --> GEN["AI 字幕生成<br/>(Whisper + Gemini)"]
         GEN --> EDIT["工作区编辑/校对"]
+        LOCAL_FILE -.-> PREVIEW["视频预览<br/>(所见即所得播放)"]
+        EDIT <-.-> PREVIEW
 
         EDIT --> SRT_ASS["导出字幕文件<br/>(.srt / .ass)"]
     end
@@ -830,7 +838,17 @@ sequenceDiagram
 
 ## 📺 视频预览与缓存策略
 
-系统采用分片 MP4 (fragmented MP4) 转码策略，平衡兼容性与性能。
+系统采用分片 MP4 (fragmented MP4) 转码策略，平衡兼容性与性能，实现**边转码边播放**的即时视频预览。
+
+### 架构概览
+
+视频预览系统由三个核心组件组成：
+
+| 组件                     | 位置                     | 功能                                    |
+| :----------------------- | :----------------------- | :-------------------------------------- |
+| `VideoPlayerPreview`     | `src/components/editor/` | React 视频播放器，支持 ASS 字幕叠加渲染 |
+| `useVideoPreview`        | `src/hooks/`             | 转码进度、视频源、播放状态管理          |
+| `videoPreviewTranscoder` | `electron/services/`     | FFmpeg 转码服务，支持 GPU 加速与缓存    |
 
 ### 流程图
 
@@ -841,7 +859,7 @@ sequenceDiagram
     participant F as FFmpeg
     participant C as 磁盘缓存 (Disk Cache)
 
-    R->>M: IPC (video-preview:transcode)
+    R->>M: IPC (transcode-for-preview)
     M->>M: 检查是否需要转码 (编码格式检查)
     alt 已缓存且有效
         M-->>R: 返回缓存路径
@@ -851,20 +869,39 @@ sequenceDiagram
         M-->>R: IPC (transcode-start)
         R->>R: 加载 local-video://缓存路径
         Note over R,C: TailingReader 从缓存流式读取
+        loop 渐进式更新
+            M-->>R: IPC (transcode-progress)
+            R->>R: 更新进度条
+        end
+        M-->>R: IPC (转码完成)
     end
 ```
+
+### 核心特性
+
+| 特性               | 说明                                             |
+| :----------------- | :----------------------------------------------- |
+| **渐进式播放**     | 通过 fMP4 + TailingReader 实现转码未完成即可播放 |
+| **GPU 加速**       | 自动检测 NVENC/QSV/VCE 以加快转码                |
+| **格式检测**       | 对浏览器兼容格式 (mp4, webm, m4v) 跳过转码       |
+| **所见即所得字幕** | 使用 assjs 渲染 ASS 字幕，与视频同步             |
+| **浮动/停靠模式**  | 支持可调整大小的浮动窗口或停靠面板               |
 
 ### 缓存生命周期
 
 - **存储位置**：用户数据目录 (`/preview_cache/`)。
-- **限制**：自动执行总大小限制（如 2GB）。
-- **清理**：应用启动时自动检测，并支持 UI 手动清理。
-  | `video-preview:transcode` | Renderer -> Main | `{ filePath }` | 请求视频预览转码 |
-  | `video-preview:transcode-start` | Main -> Renderer | `{ outputPath }` | 转码已开始 |
-  | `video-preview:transcode-progress` | Main -> Renderer | `{ percent }` | 转码进度更新 |
-  | `video-preview:needs-transcode` | Renderer -> Main | `filePath` | 检查视频是否需要转码 |
-  | `cache:get-size` | Renderer -> Main | - | 获取预览缓存大小 |
-  | `cache:clear` | Renderer -> Main | - | 清理预览缓存 |
+- **限制**：自动执行总大小限制（默认 3GB）。
+- **清理**：应用启动时自动检测（最旧文件优先），并支持 UI 手动清理。
+
+### IPC 通道
+
+| 通道名 (Channel)        | 方向            | 载荷 (Payload)                    | 作用                       |
+| :---------------------- | :-------------- | :-------------------------------- | :------------------------- |
+| `transcode-for-preview` | Renderer → Main | `{ filePath }`                    | 请求视频转码               |
+| `transcode-start`       | Main → Renderer | `{ outputPath, duration }`        | 转码已开始，开启渐进式播放 |
+| `transcode-progress`    | Main → Renderer | `{ percent, transcodedDuration }` | 实时进度更新               |
+| `cache:get-size`        | Renderer → Main | -                                 | 获取预览缓存大小           |
+| `cache:clear`           | Renderer → Main | -                                 | 清理预览缓存               |
 
 ---
 
@@ -925,16 +962,17 @@ sequenceDiagram
 
 ### 6. Electron 桌面端 (`electron/`)
 
-| 文件                               | 功能描述                                   |
-| ---------------------------------- | ------------------------------------------ |
-| `main.ts`                          | Electron 主进程，窗口管理、IPC 通信        |
-| `preload.ts`                       | 预加载脚本，暴露安全的 Node.js API         |
-| `logger.ts`                        | **统一日志系统**，支持文件轮转和多级别日志 |
-| `services/localWhisper.ts`         | 本地 Whisper 模型调用 (whisper.cpp)        |
-| `services/ffmpegAudioExtractor.ts` | FFmpeg 音频提取，支持视频文件              |
-| `services/ytdlp.ts`                | 视频下载服务 (YouTube/Bilibili)            |
-| `services/videoCompressor.ts`      | 视频压制服务 (支持 GPU 加速)               |
-| `services/endToEndPipeline.ts`     | **全自动流水线**，编排下载-转写-压制全流程 |
+| 文件                                 | 功能描述                                          |
+| ------------------------------------ | ------------------------------------------------- |
+| `main.ts`                            | Electron 主进程，窗口管理、IPC 通信               |
+| `preload.ts`                         | 预加载脚本，暴露安全的 Node.js API                |
+| `logger.ts`                          | **统一日志系统**，支持文件轮转和多级别日志        |
+| `services/localWhisper.ts`           | 本地 Whisper 模型调用 (whisper.cpp)               |
+| `services/ffmpegAudioExtractor.ts`   | FFmpeg 音频提取，支持视频文件                     |
+| `services/ytdlp.ts`                  | 视频下载服务 (YouTube/Bilibili)                   |
+| `services/videoCompressor.ts`        | 视频压制服务 (支持 GPU 加速)                      |
+| `services/videoPreviewTranscoder.ts` | **[NEW] 视频预览转码**，fMP4 渐进式播放、缓存管理 |
+| `services/endToEndPipeline.ts`       | **全自动流水线**，编排下载-转写-压制全流程        |
 
 ### 7. 国际化模块 (`src/locales/`, `src/i18n.ts`) [NEW]
 
@@ -1095,6 +1133,7 @@ flowchart TB
         MERGE --> SRT_OUT["SRT 文件<br/>(单语/双语)"]
         MERGE --> ASS_OUT["ASS 文件<br/>(样式化字幕)"]
         MERGE --> EDITOR["编辑器显示"]
+        MERGE --> VIDEO_PREVIEW["视频预览<br/>(所见即所得播放)"]
         FINAL_GLOSSARY --> GLOSSARY_OUT["更新术语表<br/>(JSON)"]
 
         SRT_OUT -.-> VIDEO_OUT["压制视频<br/>(MP4/Hardsub)"]
