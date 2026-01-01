@@ -109,6 +109,9 @@ interface SubtitleRowProps {
   onToggleDeleteSelection?: (id: string) => void;
   // Add subtitle
   addSubtitle?: (referenceId: string, position: 'before' | 'after', defaultTime: string) => void;
+  // Video sync
+  currentPlayTime?: number;
+  onRowClick?: (startTime: string) => void;
 }
 
 export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
@@ -132,6 +135,9 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
     onToggleDeleteSelection,
     // Add subtitle
     addSubtitle,
+    // Playback
+    currentPlayTime,
+    onRowClick,
   }) => {
     const { t } = useTranslation('editor');
     const [editing, setEditing] = React.useState(false);
@@ -139,8 +145,7 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
     const [tempOriginal, setTempOriginal] = React.useState('');
     const [tempStartTime, setTempStartTime] = React.useState('');
     const [tempEndTime, setTempEndTime] = React.useState('');
-    const [editingSpeaker, setEditingSpeaker] = React.useState(false);
-    const [tempSpeaker, setTempSpeaker] = React.useState('');
+
     const [showAddMenu, setShowAddMenu] = React.useState(false);
     const [showAddSubmenu, setShowAddSubmenu] = React.useState(false);
     const [menuDropUp, setMenuDropUp] = React.useState(false);
@@ -148,6 +153,15 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
     const [menuStyle, setMenuStyle] = React.useState<React.CSSProperties>({});
     const { ref: addMenuRef, getDirection } = useDropdownDirection<HTMLDivElement>();
     const menuRef = React.useRef<HTMLDivElement>(null);
+
+    // Check if this row is currently active based on play time
+    const isActive = React.useMemo(() => {
+      if (currentPlayTime === undefined) return false;
+      // Parse current start/end times
+      const start = timeToSeconds(sub.startTime);
+      const end = timeToSeconds(sub.endTime);
+      return currentPlayTime >= start && currentPlayTime <= end;
+    }, [currentPlayTime, sub.startTime, sub.endTime]);
 
     // Close add menu when clicking outside
     React.useEffect(() => {
@@ -301,23 +315,6 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
       }
     };
 
-    const handleSpeakerSave = () => {
-      if (updateSpeaker && tempSpeaker.trim() !== (sub.speaker || '')) {
-        updateSpeaker(sub.id, tempSpeaker.trim());
-      }
-      setEditingSpeaker(false);
-    };
-
-    const handleSpeakerEdit = () => {
-      setTempSpeaker(sub.speaker || '');
-      setEditingSpeaker(true);
-    };
-
-    const handleSpeakerCancel = () => {
-      setTempSpeaker('');
-      setEditingSpeaker(false);
-    };
-
     // Handle blur for the entire editing row
     const handleRowBlur = (e: React.FocusEvent<HTMLDivElement>) => {
       if (!editing) return;
@@ -337,9 +334,25 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
         className={cn(
           'p-2 sm:p-3 md:p-4 hover:bg-slate-800/30 transition-colors flex items-start space-x-2 sm:space-x-4 group/row',
           getRowBackgroundClass(),
-          isDeleteMode && isSelectedForDelete && 'bg-red-900/20'
+          isDeleteMode && isSelectedForDelete && 'bg-red-900/20',
+          // Active state styling
+          isActive &&
+            !isDeleteMode &&
+            'bg-indigo-500/10 border-l-4 border-indigo-500 pl-[calc(0.75rem-4px)] sm:pl-[calc(0.75rem-4px)] md:pl-[calc(1rem-4px)]'
         )}
         onBlur={editing ? handleRowBlur : undefined}
+        onClick={(e) => {
+          // Only trigger if not editing and not clicking interactive elements
+          if (editing || isDeleteMode) return;
+
+          // Check if click target is interactive (button, input, etc)
+          const target = e.target as HTMLElement;
+          if (target.closest('button') || target.closest('input')) return;
+
+          onRowClick?.(sub.startTime);
+        }}
+        // Add ID for auto-scrolling
+        id={`subtitle-row-${sub.id}`}
       >
         {/* Delete mode checkbox */}
         {isDeleteMode && (
@@ -374,7 +387,9 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
             </>
           ) : (
             <>
-              <span className="leading-tight">{(sub.startTime || '').split(',')[0]}</span>
+              <span className={cn('leading-tight', isActive && 'text-indigo-300 font-bold')}>
+                {(sub.startTime || '').split(',')[0]}
+              </span>
               <span className="leading-tight opacity-70">{(sub.endTime || '').split(',')[0]}</span>
             </>
           )}
@@ -483,7 +498,12 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
                   {sub.original}
                 </p>
               )}
-              <p className="text-base sm:text-lg text-indigo-300 leading-relaxed font-medium">
+              <p
+                className={cn(
+                  'text-base sm:text-lg leading-relaxed font-medium transition-colors',
+                  isActive ? 'text-white' : 'text-indigo-300'
+                )}
+              >
                 {sub.translated}
               </p>
             </>
@@ -506,7 +526,10 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
         <div className="flex items-center">
           <div className="relative" ref={addMenuRef}>
             <button
-              onClick={toggleMenu}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent row click
+                toggleMenu();
+              }}
               className={cn(
                 'p-1.5 rounded hover:bg-slate-700 transition-colors',
                 showAddMenu
@@ -526,6 +549,7 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
                     'bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 animate-fade-in',
                     menuDropUp ? 'origin-bottom-right' : 'origin-top-right'
                   )}
+                  onClick={(e) => e.stopPropagation()} // Prevent row click
                 >
                   {/* 1. Edit Row */}
                   <button
@@ -626,10 +650,25 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
       prev.addSubtitle === next.addSubtitle &&
       prev.isDeleteMode === next.isDeleteMode &&
       prev.isSelectedForDelete === next.isSelectedForDelete &&
-      // Functions are usually stable if from useWorkspaceLogic, but if not, this might cause issues.
-      // However, since we plan to memoize handlers in useWorkspaceLogic, strict equality check is fine.
-      // But for editingCommentId, we only care if it matches THIS row's ID.
+      // Check if current play time affects this row's active state
+      // This is a bit complex, but crucial for performance.
+      // We only need to re-render if:
+      // 1. The previous time made this row active/inactive AND the new time flips that state.
+      // OR
+      // 2. We just always re-render on time update? No, that's too heavy.
+      // Better: Check if prevTime was in range AND currTime is NOT in range (or vice versa).
+      // Or just simply:
+      (prev.sub.startTime === next.sub.startTime && prev.sub.endTime === next.sub.endTime // Time didn't change (usually)
+        ? // Did active state change?
+          (!prev.currentPlayTime || !isTimeInRange(prev.currentPlayTime, prev.sub)) ===
+          (!next.currentPlayTime || !isTimeInRange(next.currentPlayTime, next.sub))
+        : true) &&
       (prev.editingCommentId === prev.sub.id) === (next.editingCommentId === next.sub.id)
     );
   }
 );
+
+// Helper for memo
+function isTimeInRange(time: number, sub: SubtitleItem): boolean {
+  return time >= timeToSeconds(sub.startTime) && time <= timeToSeconds(sub.endTime);
+}

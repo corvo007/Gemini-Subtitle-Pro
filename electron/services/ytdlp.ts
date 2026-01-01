@@ -579,7 +579,10 @@ export function classifyError(stderr: string): DownloadError {
 
   // Bilibili API status codes (from Bili23-Downloader)
   // Code 600: VIP required
-  if (stderr.includes('"code":600') || stderr.includes('"code": 600')) {
+  if (
+    stderr.includes(`"code":${BILIBILI_STATUS_CODES.Vip}`) ||
+    stderr.includes(`"code": ${BILIBILI_STATUS_CODES.Vip}`)
+  ) {
     return {
       type: 'paid',
       message: t('ytdlp.vipRequired'),
@@ -589,7 +592,10 @@ export function classifyError(stderr: string): DownloadError {
   }
 
   // Code 601: Payment required
-  if (stderr.includes('"code":601') || stderr.includes('"code": 601')) {
+  if (
+    stderr.includes(`"code":${BILIBILI_STATUS_CODES.Pay}`) ||
+    stderr.includes(`"code": ${BILIBILI_STATUS_CODES.Pay}`)
+  ) {
     return {
       type: 'paid',
       message: t('ytdlp.paymentRequired'),
@@ -600,8 +606,8 @@ export function classifyError(stderr: string): DownloadError {
 
   // Code 614: DRM protected
   if (
-    stderr.includes('"code":614') ||
-    stderr.includes('"code": 614') ||
+    stderr.includes(`"code":${BILIBILI_STATUS_CODES.DRM}`) ||
+    stderr.includes(`"code": ${BILIBILI_STATUS_CODES.DRM}`) ||
     lowerError.includes('drm')
   ) {
     return {
@@ -613,7 +619,10 @@ export function classifyError(stderr: string): DownloadError {
   }
 
   // Code -10403: Region restricted
-  if (stderr.includes('"code":-10403') || stderr.includes('"code": -10403')) {
+  if (
+    stderr.includes(`"code":${BILIBILI_STATUS_CODES.Area_Limit}`) ||
+    stderr.includes(`"code": ${BILIBILI_STATUS_CODES.Area_Limit}`)
+  ) {
     return {
       type: 'geo_blocked',
       message: t('ytdlp.regionRestricted'),
@@ -623,7 +632,10 @@ export function classifyError(stderr: string): DownloadError {
   }
 
   // Code -101: Not logged in
-  if (stderr.includes('"code":-101') || stderr.includes('"code": -101')) {
+  if (
+    stderr.includes(`"code":${BILIBILI_STATUS_CODES.NotLogin}`) ||
+    stderr.includes(`"code": ${BILIBILI_STATUS_CODES.NotLogin}`)
+  ) {
     return {
       type: 'login_required',
       message: t('ytdlp.biliLoginRequired'),

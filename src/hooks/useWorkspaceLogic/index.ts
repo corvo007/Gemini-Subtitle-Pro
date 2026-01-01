@@ -303,7 +303,7 @@ export const useWorkspaceLogic = ({
             } else {
               setDuration(0);
             }
-          } catch (_e) {
+          } catch {
             setDuration(0);
           }
         } else {
@@ -332,6 +332,7 @@ export const useWorkspaceLogic = ({
     return () => {
       cleanup();
       audioCacheRef.current = null;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       abortControllerRef.current?.abort();
     };
   }, [cleanup]);
