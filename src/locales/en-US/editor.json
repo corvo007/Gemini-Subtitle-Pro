@@ -74,6 +74,10 @@
     "hideSource": "Hide Source",
     "showSource": "Show Source",
     "batchDelete": "Batch Delete",
-    "selectedCount": "{{count}} selected"
+    "selectedCount": "{{count}} selected",
+    "enableAutoScroll": "Enable Auto Scroll",
+    "disableAutoScroll": "Disable Auto Scroll",
+    "autoScrollOn": "Auto Scroll: On",
+    "autoScrollOff": "Auto Scroll: Off"
   }
 }

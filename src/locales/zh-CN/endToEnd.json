@@ -214,6 +214,7 @@
     "cancelled": "操作已取消",
     "noSpeech": "未生成任何字幕，音频可能无语音内容",
     "apiKeyError": "API KEY 错误: {{error}}",
+    "invalidApiKey": "API密钥无效，请检查设置。",
     "rateLimited": "API 请求频率限制，请稍后重试",
     "timeout": "请求超时，请检查网络连接",
     "unknown": "字幕生成失败"

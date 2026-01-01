@@ -307,7 +307,7 @@ export function useEndToEndSubtitleGeneration({
         }
 
         if (error.message?.includes('API key') || error.message?.includes('密钥')) {
-          return { success: false, error: error.message, errorCode: 'API_KEY_ERROR' };
+          return { success: false, error: t('errors.invalidApiKey'), errorCode: 'API_KEY_ERROR' };
         }
 
         if (error.message?.includes('rate limit') || error.message?.includes('429')) {
@@ -333,7 +333,7 @@ export function useEndToEndSubtitleGeneration({
         abortControllerRef.current = null;
       }
     },
-    [loadAudioFromPath] // Only depends on loadAudioFromPath; settings/updateSetting accessed via refs
+    [loadAudioFromPath, t] // Only depends on loadAudioFromPath; settings/updateSetting accessed via refs
   );
 
   /**

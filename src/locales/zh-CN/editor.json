@@ -74,6 +74,10 @@
     "hideSource": "隐藏原文",
     "showSource": "显示原文",
     "batchDelete": "批量删除",
-    "selectedCount": "已选 {{count}} 项"
+    "selectedCount": "已选 {{count}} 项",
+    "enableAutoScroll": "启用自动滚动",
+    "disableAutoScroll": "禁用自动滚动",
+    "autoScrollOn": "自动滚动: 开",
+    "autoScrollOff": "自动滚动: 关"
   }
 }

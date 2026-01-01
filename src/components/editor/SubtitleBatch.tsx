@@ -7,11 +7,13 @@ import { SubtitleRow } from '@/components/editor/SubtitleRow';
 import { GenerationStatus } from '@/types/api';
 import { cn } from '@/lib/cn';
 
+import { timeToSeconds } from '@/services/subtitle/time';
+
 interface SubtitleBatchProps {
   chunk: SubtitleItem[];
   chunkIdx: number;
   isSelected: boolean;
-  status: GenerationStatus; // We need to import this enum or use string
+  status: GenerationStatus;
   batchComment: string;
   toggleBatch: (index: number) => void;
   updateBatchComment: (index: number, comment: string) => void;
@@ -25,7 +27,7 @@ interface SubtitleBatchProps {
   updateSpeaker?: (id: string, speaker: string, applyToAll?: boolean) => void;
   updateSubtitleTime?: (id: string, startTime: string, endTime: string) => void;
   deleteSubtitle?: (id: string) => void;
-  subtitles?: SubtitleItem[]; // Full subtitles array for overlap detection
+  subtitles?: SubtitleItem[];
   batchSize?: number;
   speakerProfiles?: SpeakerUIProfile[];
   onManageSpeakers?: () => void;
@@ -35,6 +37,9 @@ interface SubtitleBatchProps {
   onToggleDeleteSelection?: (id: string) => void;
   // Add subtitle
   addSubtitle?: (referenceId: string, position: 'before' | 'after', defaultTime: string) => void;
+  // Video sync
+  currentPlayTime?: number;
+  onRowClick?: (startTime: string) => void;
 }
 
 export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(
@@ -66,6 +71,9 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(
     onToggleDeleteSelection,
     // Add subtitle
     addSubtitle,
+    // Video sync
+    currentPlayTime,
+    onRowClick,
   }) => {
     const { t } = useTranslation('workspace');
     const startTime = chunk[0].startTime.split(',')[0];
@@ -166,6 +174,8 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(
                 isSelectedForDelete={selectedForDelete?.has(sub.id)}
                 onToggleDeleteSelection={onToggleDeleteSelection}
                 addSubtitle={addSubtitle}
+                currentPlayTime={currentPlayTime}
+                onRowClick={onRowClick}
               />
             );
           })}
@@ -174,7 +184,8 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(
     );
   },
   (prev, next) => {
-    return (
+    // Basic props comparison
+    const propsEqual =
       prev.chunk === next.chunk &&
       prev.isSelected === next.isSelected &&
       prev.status === next.status &&
@@ -186,7 +197,35 @@ export const SubtitleBatch: React.FC<SubtitleBatchProps> = React.memo(
       prev.deleteSubtitle === next.deleteSubtitle &&
       prev.addSubtitle === next.addSubtitle &&
       prev.isDeleteMode === next.isDeleteMode &&
-      prev.selectedForDelete === next.selectedForDelete
-    );
+      prev.selectedForDelete === next.selectedForDelete;
+
+    if (!propsEqual) return false;
+
+    // Time update optimization:
+    // Only re-render if the time update affects this batch (is within range or was within range)
+    if (prev.currentPlayTime === next.currentPlayTime) return true;
+
+    // If we have no subtitles or invalid times, default to re-render if time changed (safest)
+    if (!prev.chunk || prev.chunk.length === 0) return false;
+
+    // Parse start/end of the batch
+    const start = timeToSeconds(prev.chunk[0].startTime);
+    const end = timeToSeconds(prev.chunk[prev.chunk.length - 1].endTime);
+
+    // Check if time is/was relevant to this batch
+    const wasInRange =
+      prev.currentPlayTime !== undefined &&
+      prev.currentPlayTime >= start &&
+      prev.currentPlayTime <= end;
+    const isInRange =
+      next.currentPlayTime !== undefined &&
+      next.currentPlayTime >= start &&
+      next.currentPlayTime <= end;
+
+    // If either is true, we need to render to update the highlighted row inside
+    if (wasInRange || isInRange) return false;
+
+    // Both are outside range -> No visual change -> No re-render
+    return true;
   }
 );

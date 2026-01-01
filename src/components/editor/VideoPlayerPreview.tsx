@@ -72,7 +72,7 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
     },
     ref
   ) => {
-    const { t } = useTranslation('workspace');
+    const { t } = useTranslation(['workspace', 'editor']);
     const videoRef = useRef<HTMLVideoElement>(null);
     const [playing, setPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -359,7 +359,7 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
               <button
                 onClick={() => setIsFloating(false)}
                 className="p-1 bg-black/60 hover:bg-black/80 text-white rounded cursor-pointer pointer-events-auto"
-                title={t('videoPreview.dock', 'Restore to dock')}
+                title={t('videoPreview.dock')}
               >
                 <Minimize2 className="w-3.5 h-3.5" />
               </button>
@@ -423,10 +423,10 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
                 {isTranscoding ? (
                   <>
                     <div className="w-6 h-6 border-2 border-slate-500/30 border-t-slate-500 rounded-full animate-spin" />
-                    {t('videoPreview.loading', '正在加载视频...')}
+                    {t('videoPreview.loading')}
                   </>
                 ) : (
-                  t('videoPreview.noVideo', '未加载视频')
+                  t('videoPreview.noVideo')
                 )}
               </div>
             )}
@@ -524,8 +524,8 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
                 )}
                 title={
                   showSourceText
-                    ? t('batchHeader.hideSource', '隐藏原文')
-                    : t('batchHeader.showSource', '显示原文')
+                    ? t('batchHeader.hideSource', { ns: 'editor' })
+                    : t('batchHeader.showSource', { ns: 'editor' })
                 }
               >
                 <Languages className="w-3.5 h-3.5" />
@@ -537,7 +537,7 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
               <button
                 onClick={() => setIsFloating(true)}
                 className="p-1 text-slate-400 hover:text-white transition-colors ml-1"
-                title={t('videoPreview.float', 'Picture in Picture')}
+                title={t('videoPreview.float')}
               >
                 <Maximize2 className="w-3.5 h-3.5" />
               </button>
@@ -578,10 +578,10 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
           className="w-full p-2 bg-slate-900/50 border-b border-slate-800 flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
         >
           <ChevronDown className="w-4 h-4" />
-          <span className="text-sm">{t('videoPreview.expand', '展开视频预览')}</span>
+          <span className="text-sm">{t('videoPreview.expand')}</span>
           {isTranscoding && (
             <span className="ml-auto text-xs text-amber-400">
-              {t('videoPreview.transcoding', '转码中...')} {transcodeProgress}%
+              {t('videoPreview.transcoding')} {transcodeProgress}%
             </span>
           )}
         </button>
@@ -598,19 +598,19 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
               className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
             >
               <ChevronUp className="w-4 h-4" />
-              <span className="text-sm">{t('videoPreview.title', '视频预览')}</span>
+              <span className="text-sm">{t('videoPreview.title')}</span>
             </button>
             <div className="flex items-center gap-2">
               {isTranscoding && (
                 <span className="text-xs text-amber-400 animate-pulse">
-                  {t('videoPreview.transcoding', '转码中...')} {transcodeProgress}%
+                  {t('videoPreview.transcoding')} {transcodeProgress}%
                 </span>
               )}
               {/* Helper Float Button in Header too */}
               <button
                 onClick={() => setIsFloating(true)}
                 className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white"
-                title={t('videoPreview.float', 'Picture in Picture')}
+                title={t('videoPreview.float')}
               >
                 <Maximize2 className="w-3.5 h-3.5" />
               </button>
@@ -622,13 +622,13 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
         {isFloating ? (
           <>
             <div className="h-10 bg-slate-900/30 flex items-center justify-center text-xs text-slate-500 gap-2">
-              <span>{t('videoPreview.floatingMode', '视频正在悬浮窗口播放')}</span>
+              <span>{t('videoPreview.floatingMode')}</span>
               <button
                 onClick={() => setIsFloating(false)}
                 className="text-indigo-400 hover:underline flex items-center gap-1"
               >
                 <Minimize2 className="w-3 h-3" />
-                {t('videoPreview.restore', '还原')}
+                {t('videoPreview.restore')}
               </button>
             </div>
             {createPortal(
@@ -668,7 +668,7 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
             <div
               className="w-full h-4 flex items-center justify-center cursor-ns-resize hover:bg-white/5 transition-colors group/handle mt-[-1px] z-50"
               onMouseDown={handleResizeStart}
-              title={t('videoPreview.resize', '拖动调整高度')}
+              title={t('videoPreview.resize')}
             >
               <div className="w-12 h-1 bg-slate-700 rounded-full group-hover/handle:bg-indigo-500 transition-colors shadow-sm" />
             </div>

@@ -18,6 +18,7 @@ import {
   Users,
   Trash2,
   Shield,
+  ArrowDownCircle,
 } from 'lucide-react';
 import { type SubtitleItem } from '@/types';
 import { type SpeakerUIProfile } from '@/types/speaker';
@@ -67,6 +68,9 @@ interface BatchHeaderProps {
   // Conservative mode
   conservativeBatchMode?: boolean;
   onToggleConservativeMode?: () => void;
+  // Auto-scroll logic
+  autoScrollEnabled?: boolean;
+  onToggleAutoScroll?: () => void;
 }
 
 export const BatchHeader: React.FC<BatchHeaderProps> = ({
@@ -96,6 +100,8 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
   // Conservative mode
   conservativeBatchMode,
   onToggleConservativeMode,
+  autoScrollEnabled,
+  onToggleAutoScroll,
 }) => {
   const { t } = useTranslation('editor');
   const [isIssueFilterOpen, setIsIssueFilterOpen] = React.useState(false);
@@ -585,6 +591,31 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                 </span>
               </button>
             </>
+          )}
+
+          <div className="h-4 w-px bg-slate-700/50 hidden sm:block"></div>
+
+          {/* Auto Scroll Toggle */}
+          {onToggleAutoScroll && (
+            <button
+              onClick={onToggleAutoScroll}
+              className="flex items-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm text-slate-400 hover:text-white transition-colors"
+              title={
+                autoScrollEnabled
+                  ? t('batchHeader.disableAutoScroll')
+                  : t('batchHeader.enableAutoScroll')
+              }
+            >
+              <ArrowDownCircle
+                className={cn(
+                  'w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors',
+                  autoScrollEnabled ? 'text-indigo-400' : 'text-slate-500'
+                )}
+              />
+              <span className="hidden sm:inline">
+                {autoScrollEnabled ? t('batchHeader.autoScrollOn') : t('batchHeader.autoScrollOff')}
+              </span>
+            </button>
           )}
         </div>
 

@@ -34,6 +34,7 @@ interface SubtitleEditorProps {
   updateSubtitleTime?: (id: string, startTime: string, endTime: string) => void;
   deleteSubtitle?: (id: string) => void;
   deleteMultipleSubtitles?: (ids: string[]) => void;
+  // Add subtitle
   addSubtitle?: (referenceId: string, position: 'before' | 'after', defaultTime: string) => void;
   speakerProfiles?: SpeakerUIProfile[];
   onManageSpeakers?: () => void;
@@ -41,6 +42,9 @@ interface SubtitleEditorProps {
   // Conservative mode
   conservativeBatchMode?: boolean;
   onToggleConservativeMode?: () => void;
+  // Video sync
+  currentPlayTime?: number;
+  onRowClick?: (startTime: string) => void;
 }
 
 export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
@@ -72,16 +76,24 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
     speakerProfiles,
 
     onManageSpeakers,
-    scrollContainerRef,
+    scrollContainerRef: _scrollContainerRef, // Unused but kept for interface consistency
     // Conservative mode
     conservativeBatchMode,
     onToggleConservativeMode,
+    // Video sync
+    currentPlayTime,
+    onRowClick,
   }) => {
     const { t } = useTranslation('workspace');
     const [searchQuery, setSearchQuery] = React.useState('');
     const [filters, setFilters] = React.useState<SubtitleFilters>(defaultFilters);
     const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
     const [deleteCandidateId, setDeleteCandidateId] = React.useState<string | null>(null);
+
+    // Virtuoso ref for auto-scrolling
+    const virtuosoRef = React.useRef<any>(null);
+    const lastScrollTimeRef = React.useRef<number>(0);
+    const activeBatchIndexRef = React.useRef<number>(-1);
 
     const checkDelete = React.useCallback((id: string) => {
       setDeleteCandidateId(id);
@@ -238,8 +250,115 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
       return c;
     }, [subtitles, settings.proofreadBatchSize]);
 
+    // Reset auto-scroll memory if data changes drastically
+    React.useEffect(() => {
+      activeBatchIndexRef.current = -1;
+    }, [chunks.length]);
+
     // We need batchSize later for rendering
     const batchSize = settings.proofreadBatchSize || 20;
+
+    // Use a helper function for parsing time to avoid cyclical dependencies if imported from utils
+    const parseTime = (timeStr: string) => {
+      if (!timeStr) return 0;
+      // Simple parser for HH:MM:SS,mmm or HH:MM:SS.mmm
+      const [hms, ms] = timeStr.replace(',', '.').split('.');
+      const parts = hms.split(':').map(Number);
+      let seconds = 0;
+      if (parts.length === 3) seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+      else if (parts.length === 2) seconds = parts[0] * 60 + parts[1];
+
+      if (ms) seconds += Number('0.' + ms);
+      return seconds;
+    };
+
+    // Auto-scroll logic
+    const [autoScrollEnabled, setAutoScrollEnabled] = React.useState(true);
+    const isUserScrollingRef = React.useRef(false);
+    const userScrollTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
+
+    // Handle scroll events to detect manual scrolling
+    const handleUserInteraction = React.useCallback(() => {
+      isUserScrollingRef.current = true;
+
+      if (userScrollTimeoutRef.current) {
+        clearTimeout(userScrollTimeoutRef.current);
+      }
+
+      // Reset lock after 3 seconds of no interaction
+      userScrollTimeoutRef.current = setTimeout(() => {
+        isUserScrollingRef.current = false;
+      }, 3000);
+    }, []);
+
+    React.useEffect(() => {
+      if (currentPlayTime === undefined || !virtuosoRef.current) return;
+
+      // Don't auto-scroll if disabled
+      if (!autoScrollEnabled) return;
+
+      // Don't auto-scroll if user is actively investigating other parts
+      // Or if we haven't scrolled in a while (lock expired)
+      if (isUserScrollingRef.current) return;
+
+      // Throttle scrolling to avoid jitter (e.g., 60fps updates vs scroll behavior)
+      const now = Date.now();
+      if (now - lastScrollTimeRef.current < 800) return;
+
+      // 1. Determine active item index
+      if (filteredSubtitles) {
+        const activeIndex = filteredSubtitles.findIndex((sub) => {
+          const start = parseTime(sub.startTime);
+          const end = parseTime(sub.endTime);
+          return currentPlayTime >= start && currentPlayTime <= end;
+        });
+
+        if (activeIndex !== -1) {
+          virtuosoRef.current.scrollToIndex({
+            index: activeIndex,
+            align: 'center',
+            behavior: 'smooth',
+          });
+          lastScrollTimeRef.current = now;
+        }
+      } else {
+        // 2. Batch Mode Logic
+        const activeBatchIndex = chunks.findIndex((chunk) => {
+          const start = parseTime(chunk[0].startTime);
+          const end = parseTime(chunk[chunk.length - 1].endTime);
+          return currentPlayTime >= start && currentPlayTime <= end;
+        });
+
+        if (activeBatchIndex !== -1) {
+          // Hybrid Approach:
+          // First, ensure the batch is generally visible using Virtuoso
+          if (activeBatchIndex !== activeBatchIndexRef.current) {
+            virtuosoRef.current.scrollToIndex({
+              index: activeBatchIndex,
+              align: 'start',
+              behavior: 'smooth',
+            });
+            activeBatchIndexRef.current = activeBatchIndex;
+          }
+
+          // Second, try to find the specific active subtitle row in the DOM
+          // and scroll it into view for granular precision
+          const activeSub = chunks[activeBatchIndex].find((sub) => {
+            const start = parseTime(sub.startTime);
+            const end = parseTime(sub.endTime);
+            return currentPlayTime >= start && currentPlayTime <= end;
+          });
+
+          if (activeSub) {
+            const element = document.getElementById(`subtitle-row-${activeSub.id}`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              lastScrollTimeRef.current = now;
+            }
+          }
+        }
+      }
+    }, [currentPlayTime, filteredSubtitles, chunks, autoScrollEnabled]);
 
     if (chunks.length === 0) {
       return (
@@ -268,7 +387,12 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
     };
 
     return (
-      <div className="p-4 space-y-6 h-full flex flex-col">
+      <div
+        className="p-4 space-y-6 h-full flex flex-col"
+        onWheel={handleUserInteraction}
+        onTouchMove={handleUserInteraction}
+        onKeyDown={handleUserInteraction}
+      >
         {/* Always show BatchHeader when completed */}
         {status === GenerationStatus.COMPLETED && (
           <BatchHeader
@@ -296,6 +420,8 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
             totalVisibleCount={visibleSubtitles.length}
             conservativeBatchMode={conservativeBatchMode}
             onToggleConservativeMode={onToggleConservativeMode}
+            autoScrollEnabled={autoScrollEnabled}
+            onToggleAutoScroll={() => setAutoScrollEnabled((prev) => !prev)}
           />
         )}
 
@@ -316,6 +442,7 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
             {filteredSubtitles.length > 0 ? (
               <div className="border border-slate-700/50 bg-slate-900/40 rounded-xl overflow-hidden flex-1 min-h-0">
                 <Virtuoso
+                  ref={virtuosoRef}
                   style={{ height: '100%' }}
                   data={filteredSubtitles}
                   itemContent={(index, sub) => {
@@ -343,6 +470,8 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
                           isSelectedForDelete={selectedForDelete.has(sub.id)}
                           onToggleDeleteSelection={toggleDeleteSelection}
                           addSubtitle={addSubtitle}
+                          currentPlayTime={currentPlayTime}
+                          onRowClick={onRowClick}
                         />
                       </div>
                     );
@@ -360,6 +489,7 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
           // Normal Batch View
           <div className="flex-1 min-h-0">
             <Virtuoso
+              ref={virtuosoRef}
               style={{ height: '100%' }}
               data={chunks}
               itemContent={(chunkIdx, chunk) => (
@@ -391,6 +521,8 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
                     selectedForDelete={selectedForDelete}
                     onToggleDeleteSelection={toggleDeleteSelection}
                     addSubtitle={addSubtitle}
+                    currentPlayTime={currentPlayTime}
+                    onRowClick={onRowClick}
                   />
                 </div>
               )}
@@ -431,7 +563,8 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
       prev.file === next.file &&
       prev.batchComments === next.batchComments &&
       prev.editingCommentId === next.editingCommentId &&
-      prev.speakerProfiles === next.speakerProfiles
+      prev.speakerProfiles === next.speakerProfiles &&
+      prev.currentPlayTime === next.currentPlayTime // Check play time for sync
     );
   }
 );

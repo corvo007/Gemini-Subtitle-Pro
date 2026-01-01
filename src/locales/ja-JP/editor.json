@@ -74,6 +74,10 @@
     "hideSource": "原文を非表示",
     "showSource": "原文を表示",
     "batchDelete": "一括削除",
-    "selectedCount": "{{count}} 件選択済み"
+    "selectedCount": "{{count}} 件選択済み",
+    "enableAutoScroll": "自動スクロールを有効にする",
+    "disableAutoScroll": "自動スクロールを無効にする",
+    "autoScrollOn": "自動スクロール: オン",
+    "autoScrollOff": "自動スクロール: オフ"
   }
 }
