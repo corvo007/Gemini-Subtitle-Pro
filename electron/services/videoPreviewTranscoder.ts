@@ -39,7 +39,7 @@ export function killAllTranscodes(): void {
   for (const command of activeCommands) {
     try {
       command.kill('SIGKILL');
-    } catch (_e) {
+    } catch {
       // Ignore errors if process already exited
     }
   }
@@ -524,28 +524,4 @@ async function getVideoDuration(filePath: string): Promise<number> {
       resolve(metadata.format.duration || 0);
     });
   });
-}
-
-/**
- * Clean up old preview files (older than 1 hour)
- */
-export function cleanupOldPreviews(): void {
-  const tempDir = getPreviewTempDir();
-  const oneHourAgo = Date.now() - 60 * 60 * 1000;
-
-  try {
-    const files = fs.readdirSync(tempDir);
-    for (const file of files) {
-      if (file.startsWith('preview_') && file.endsWith('.mp4')) {
-        const filePath = path.join(tempDir, file);
-        const stats = fs.statSync(filePath);
-        if (stats.mtimeMs < oneHourAgo) {
-          fs.unlinkSync(filePath);
-          console.log(`[PreviewTranscoder] Cleaned up: ${file}`);
-        }
-      }
-    }
-  } catch (error) {
-    console.error('[PreviewTranscoder] Cleanup error:', error);
-  }
 }

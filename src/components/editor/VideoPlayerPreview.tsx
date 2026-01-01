@@ -16,6 +16,7 @@ import {
   VolumeX,
   Maximize2,
   Minimize2,
+  Languages,
 } from 'lucide-react';
 import { Rnd } from 'react-rnd';
 import { createPortal } from 'react-dom';
@@ -37,6 +38,7 @@ interface VideoPlayerPreviewProps {
   subtitles: SubtitleItem[];
   speakerProfiles?: SpeakerUIProfile[];
   showSourceText: boolean;
+  onToggleSourceText?: () => void;
   isCollapsed: boolean;
   isTranscoding?: boolean;
   transcodeProgress?: number;
@@ -53,6 +55,7 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
       subtitles,
       speakerProfiles,
       showSourceText,
+      onToggleSourceText,
       isCollapsed,
       isTranscoding,
       transcodeProgress,
@@ -447,6 +450,26 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
               </div>
             </div>
 
+            {/* Source Text Toggle */}
+            {onToggleSourceText && (
+              <button
+                onClick={onToggleSourceText}
+                className={cn(
+                  'p-1 transition-colors ml-1',
+                  showSourceText
+                    ? 'text-indigo-400 hover:text-indigo-300'
+                    : 'text-slate-400 hover:text-white'
+                )}
+                title={
+                  showSourceText
+                    ? t('batchHeader.hideSource', '隐藏原文')
+                    : t('batchHeader.showSource', '显示原文')
+                }
+              >
+                <Languages className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             {/* Floating Toggle (only in docked mode here, in floating mode it is on top overlay) */}
             {!isFloating && (
               <button
@@ -467,7 +490,6 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
         ready,
         playing,
         currentTime,
-        duration,
         displayDuration,
         currentSubtitle,
         showSourceText,
@@ -484,6 +506,7 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
         t,
         speakerProfiles,
         isTranscoding,
+        onToggleSourceText,
       ]
     ); // Removed dockedHeight dependency
 

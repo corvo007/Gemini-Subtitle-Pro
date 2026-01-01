@@ -725,7 +725,6 @@ ipcMain.handle('video:hw-accel-info', async () => {
 import {
   transcodeForPreview,
   needsTranscode,
-  cleanupOldPreviews,
   killAllTranscodes,
   getCacheSize,
   clearCache,
@@ -763,7 +762,7 @@ ipcMain.handle('video-preview:transcode', async (event, options: { filePath: str
         if (!event.sender.isDestroyed()) {
           event.sender.send(channel, data);
         }
-      } catch (_e) {
+      } catch {
         // Ignore errors if window was destroyed
       }
     };
@@ -791,7 +790,7 @@ ipcMain.handle('video-preview:needs-transcode', async (_event, filePath: string)
 });
 
 // Cleanup old preview files and enforce cache limit on app start
-void cleanupOldPreviews();
+// void cleanupOldPreviews(); // Removed
 void enforceCacheLimit();
 
 // IPC Handler: Show Item In Folder

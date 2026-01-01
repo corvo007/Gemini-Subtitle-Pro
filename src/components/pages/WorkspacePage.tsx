@@ -734,6 +734,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                       transcodedDuration={transcodedDuration}
                       fullVideoDuration={fullVideoDuration}
                       showSourceText={showSourceText}
+                      onToggleSourceText={() => setShowSourceText(!showSourceText)}
                       isCollapsed={videoPreviewCollapsed}
                       onTimeUpdate={updateTime}
                       onToggleCollapse={() => setVideoPreviewCollapsed(!videoPreviewCollapsed)}
