@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.11.0] - 2026-01-01 🎆
+
+### Features
+
+- **Video Preview**: Implemented comprehensive video preview system with smart caching and cache management UI.
+- **Rendering**: Added WYSIWYG subtitle rendering using `assjs` for accurate style representation (font, size, color, etc.).
+- **UI**: Added source text toggle in video preview and improved internationalization support.
+
+### Fixes
+
+- **i18n**: Added missing translations for auto-scroll toggle and API key error messages.
+- **Cache**: Fixed i18n and cleanup logic in cache management.
+
+### Chore
+
+- **Deps**: Removed `react-player` in favor of native video handling and updated dependencies.
+- **Cleanup**: Removed unused code in `ytdlp` module and fixed lint warnings.
+
 ## [2.10.2] - 2025-12-28
 
 ### Features
