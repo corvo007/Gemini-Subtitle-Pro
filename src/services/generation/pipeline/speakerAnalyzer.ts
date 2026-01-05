@@ -24,7 +24,8 @@ export class SpeakerAnalyzer {
     });
 
     try {
-      if (isDebug && settings.debug?.mockGemini) {
+      // Mock speaker profiles if any mock stage is enabled
+      if (isDebug && settings.debug?.mockStage) {
         return MockFactory.getMockSpeakerProfiles();
       }
 

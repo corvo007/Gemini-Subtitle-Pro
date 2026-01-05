@@ -191,15 +191,15 @@ async function processBatch(
     let processedBatch = parseGeminiResponse(text, totalVideoDuration);
 
     if (processedBatch.length > 0) {
+      // Log diarization info before returning
+      if (settings.enableDiarization) {
+        logger.debug(
+          `[Batch ${batchLabel}] Processed first item speaker: ${processedBatch[0].speaker}`
+        );
+      }
       // Adjust timestamp offset if needed (Gemini may return relative or absolute timestamps)
       processedBatch = adjustTimestampOffset(processedBatch, audioOffset, startSec);
       return processedBatch;
-    }
-
-    if (processedBatch.length > 0 && settings.enableDiarization) {
-      logger.debug(
-        `[Batch ${batchLabel}] Processed first item speaker: ${processedBatch[0].speaker}`
-      );
     }
   } catch (e) {
     logger.error(`Batch ${batchLabel} processing failed (${mode}).`, e);
@@ -467,9 +467,7 @@ export const runBatchOperation = async (
         );
 
         // Create a map of translations
-        const transMap = new Map(
-          translationResults.map((t: any) => [String(t.id), t.text_translated])
-        );
+        const transMap = new Map(translationResults.map((t: any) => [String(t.id), t.translated]));
 
         // Apply translations to currentSubtitles
         for (const sub of currentSubtitles) {

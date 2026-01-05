@@ -80,7 +80,7 @@ export async function preprocessAudio(
       status: 'processing',
       message: i18n.t('services:pipeline.status.segmenting'),
     });
-    const segmenter = new SmartSegmenter();
+    const segmenter = SmartSegmenter.getInstance();
     const result = await segmenter.segmentAudio(audioBuffer, chunkDuration, signal);
     logger.info('Smart Segmentation Results', {
       count: result.chunks.length,
@@ -98,6 +98,8 @@ export async function preprocessAudio(
     // Cache VAD segments for reuse in speaker sampling
     vadSegments = result.vadSegments;
     logger.info(`Cached ${vadSegments.length} VAD segments for speaker profile extraction`);
+
+    // Note: Singleton will be disposed at pipeline end via SmartSegmenter.disposeInstance()
 
     onProgress?.({
       id: 'segmenting',

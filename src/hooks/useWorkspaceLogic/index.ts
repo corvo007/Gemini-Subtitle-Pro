@@ -276,10 +276,8 @@ export const useWorkspaceLogic = ({
 
         // Create a File object
         const filename = getFilename(path) || 'video.mp4';
-        // Determine mime type based on extension
-        const ext = filename.split('.').pop()?.toLowerCase();
-        const type =
-          ext === 'mp4' ? 'video/mp4' : ext === 'mkv' ? 'video/x-matroska' : 'video/webm';
+        // Use generic binary type - file type detection relies on extension, not MIME
+        const type = 'application/octet-stream';
 
         const fileObj = new File([buffer], filename, { type });
         // Manually attach path for Electron/FFmpeg usage

@@ -25,6 +25,19 @@ export class SmartSegmenter {
   }
 
   /**
+   * Dispose the singleton instance and release resources.
+   * Should be called at the end of processing pipeline.
+   */
+  public static disposeInstance(): void {
+    if (SmartSegmenter.instance) {
+      SmartSegmenter.instance.dispose();
+      // Clear the static reference to allow garbage collection
+      SmartSegmenter.instance = undefined as unknown as SmartSegmenter;
+      logger.debug('SmartSegmenter singleton instance disposed');
+    }
+  }
+
+  /**
    * Segment audio into chunks of approximately targetDuration seconds,
    * trying to cut at silence/natural pauses.
    *
@@ -107,7 +120,6 @@ export class SmartSegmenter {
 
         // Check gap before first segment if it starts after searchStart
         if (relevantSegments[0].start > searchStart) {
-          const gapMid = (searchStart + relevantSegments[0].start) / 2; // Rough approx
           // Actually, we can cut anywhere before the segment starts.
           // Let's cut right before the segment starts.
           const split = relevantSegments[0].start - 0.1;
@@ -422,5 +434,13 @@ export class SmartSegmenter {
     }
 
     return segments;
+  }
+  public dispose(): void {
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+      this.workerReadyPromise = null;
+      logger.debug('SmartSegmenter disposed and worker terminated');
+    }
   }
 }

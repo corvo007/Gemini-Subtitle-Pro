@@ -3,6 +3,7 @@ import { logger } from '@/services/utils/logger';
 import i18n from '@/i18n';
 import { transcribeWithWhisper } from '@/services/api/openai/whisper';
 import { transcribeWithOpenAIChat } from '@/services/api/openai/chat';
+import { transcribeWithLocalWhisper } from '@/services/api/whisper-local/transcribe';
 
 export const transcribeAudio = async (
   audioBlob: Blob,
@@ -27,27 +28,14 @@ export const transcribeAudio = async (
       throw new Error(i18n.t('services:api.whisperLocal.errors.noModelPath'));
     }
     try {
-      logger.debug('Attempting local whisper');
-      const segments = await window.electronAPI.transcribeLocal({
-        audioData: await audioBlob.arrayBuffer(),
-        modelPath: localModelPath,
-        language: 'auto', // TODO: Make configurable
-        threads: localThreads || 4,
-        customBinaryPath: customBinaryPath,
-      });
-
-      if (segments.success && segments.segments) {
-        return segments.segments.map((seg, index) => ({
-          id: String(index + 1),
-          startTime: seg.start,
-          endTime: seg.end,
-          original: seg.text.trim(),
-          translated: '',
-        }));
-      }
-
-      throw new Error(
-        segments.error || i18n.t('services:api.whisperLocal.errors.transcriptionFailed')
+      logger.debug('Attempting local whisper via unified implementation');
+      return await transcribeWithLocalWhisper(
+        audioBlob,
+        localModelPath,
+        'auto',
+        localThreads,
+        signal,
+        customBinaryPath
       );
     } catch (error: any) {
       logger.warn('Local failed, fallback to API:', error.message);

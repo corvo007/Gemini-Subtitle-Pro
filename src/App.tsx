@@ -119,9 +119,12 @@ export default function App() {
     const unsubscribe = logger.subscribe((log) => {
       setLogs((prev) => [...prev, log]);
 
-      // Auto-toast for errors
+      // Auto-toast for errors or explicit toast request
       if (log.level === 'ERROR') {
         addToast(log.message, 'error', 5000);
+      } else if (log.data?.toast) {
+        const type = log.data.toastType || (log.level === 'WARN' ? 'warning' : 'info');
+        addToast(log.message, type, 5000);
       }
     });
 

@@ -77,7 +77,7 @@ export class ArtifactSaver {
    */
   static saveChunkArtifact(
     chunkIndex: number,
-    stage: 'whisper' | 'refinement' | 'translation',
+    stage: 'whisper' | 'refinement' | 'alignment' | 'translation',
     data: SubtitleItem[],
     settings: AppSettings
   ): void {
@@ -97,6 +97,7 @@ export class ArtifactSaver {
   static async saveFullIntermediateSrts(
     whisperChunksMap: Map<number, SubtitleItem[]>,
     refinedChunksMap: Map<number, SubtitleItem[]>,
+    alignedChunksMap: Map<number, SubtitleItem[]>,
     translatedChunksMap: Map<number, SubtitleItem[]>,
     settings: AppSettings
   ): Promise<void> {
@@ -111,6 +112,7 @@ export class ArtifactSaver {
 
       const allWhisper = getSortedSegments(whisperChunksMap);
       const allRefined = getSortedSegments(refinedChunksMap);
+      const allAligned = getSortedSegments(alignedChunksMap);
       const allTranslated = getSortedSegments(translatedChunksMap);
 
       if (allWhisper.length > 0) {
@@ -129,6 +131,17 @@ export class ArtifactSaver {
           'full_refinement.srt',
           generateSrtContent(
             allRefined.map((s) => ({ ...s, translated: s.original })),
+            false,
+            settings.enableDiarization
+          )
+        );
+      }
+
+      if (allAligned.length > 0) {
+        await window.electronAPI!.saveDebugArtifact(
+          'full_aligned.srt',
+          generateSrtContent(
+            allAligned.map((s) => ({ ...s, translated: s.original })),
             false,
             settings.enableDiarization
           )

@@ -3,6 +3,7 @@ import { MockFactory } from '@/services/generation/debug/mockFactory';
 import { ArtifactSaver } from '@/services/generation/debug/artifactSaver';
 import { UsageReporter } from './usageReporter';
 import { preprocessAudio } from './preprocessor';
+import { SmartSegmenter } from '@/services/audio/segmenter';
 import { SpeakerAnalyzer } from './speakerAnalyzer';
 import { GlossaryHandler } from './glossaryHandler';
 import { type PipelineContext } from './types';
@@ -76,6 +77,7 @@ export const generateSubtitles = async (
   // Intermediate results storage for full recording
   const whisperChunksMap = new Map<number, SubtitleItem[]>();
   const refinedChunksMap = new Map<number, SubtitleItem[]>();
+  const alignedChunksMap = new Map<number, SubtitleItem[]>();
   const translatedChunksMap = new Map<number, SubtitleItem[]>();
 
   // PIPELINE CONCURRENCY CONFIGURATION
@@ -88,21 +90,27 @@ export const generateSubtitles = async (
 
   // 2. Transcription Concurrency (Local Whisper limit or Cloud limit)
   const transcriptionLimit = settings.useLocalWhisper
-    ? settings.whisperConcurrency || 1
+    ? settings.localConcurrency || 1 // Use local concurrency for Local Whisper (heavy cpu)
     : pipelineConcurrency; // For cloud whisper, we can match pipeline concurrency
 
   const transcriptionSemaphore = new Semaphore(transcriptionLimit);
   const refinementSemaphore = new Semaphore(pipelineConcurrency);
 
+  // 3. Alignment Concurrency (Heavy Local Process)
+  // Limit to 1 or 2 to avoid memory spike (each aligned uses PyTorch + Model)
+  const localConcurrency = settings.localConcurrency || 1;
+  const alignmentSemaphore = new Semaphore(localConcurrency);
+
   logger.info(
-    `Pipeline Config: Overall Concurrency=${pipelineConcurrency}, Transcription Limit=${transcriptionLimit}`
+    `Pipeline Config: Overall Concurrency=${pipelineConcurrency}, Transcription Limit=${transcriptionLimit}, Alignment Limit=${localConcurrency}`
   );
 
   // --- GLOSSARY EXTRACTION (Parallel) ---
   let glossaryPromise: Promise<GlossaryExtractionResult[]> | null = null;
   let glossaryChunks: { index: number; start: number; end: number }[] | undefined;
 
-  if (isDebug && settings.debug?.mockGemini) {
+  // Mock glossary if any mock stage is enabled (but only if glossary is enabled)
+  if (isDebug && settings.debug?.mockStage && settings.enableAutoGlossary !== false) {
     logger.info('⚠️ [MOCK] Glossary Extraction ENABLED. Using MockFactory.');
     glossaryPromise = MockFactory.getMockGlossary(0);
   } else if (settings.enableAutoGlossary !== false) {
@@ -199,9 +207,10 @@ export const generateSubtitles = async (
 
   // Use a high concurrency limit for the main loop (buffer)
   // The actual resource usage is controlled by semaphores inside
-  // We use totalChunks to ensure all chunks can enter the "waiting room" (semaphore queue)
-  // preventing the pipeline from stalling due to loop limits.
-  const mainLoopConcurrency = Math.max(totalChunks, pipelineConcurrency, 20);
+  // We use a reasonable upper bound to prevent excessive Promise creation for long videos
+  // while still allowing enough concurrency for the pipeline to work efficiently.
+  // Cap at 50 to balance memory usage vs pipeline throughput.
+  const mainLoopConcurrency = Math.min(Math.max(totalChunks, pipelineConcurrency, 20), 50);
 
   await mapInParallel(chunksParams, mainLoopConcurrency, async (chunk, i) => {
     try {
@@ -211,6 +220,7 @@ export const generateSubtitles = async (
         speakerProfilePromise,
         transcriptionSemaphore,
         refinementSemaphore,
+        alignmentSemaphore,
         audioBuffer,
         chunkDuration,
         totalChunks,
@@ -219,6 +229,7 @@ export const generateSubtitles = async (
       // Update maps for artifact saving
       if (result.whisper.length > 0) whisperChunksMap.set(chunk.index, result.whisper);
       if (result.refined.length > 0) refinedChunksMap.set(chunk.index, result.refined);
+      if (result.aligned.length > 0) alignedChunksMap.set(chunk.index, result.aligned);
       if (result.translated.length > 0) translatedChunksMap.set(chunk.index, result.translated);
 
       // Store final result (Uses 'final' which includes fallback logic: Translated > Refined > Whisper)
@@ -241,9 +252,13 @@ export const generateSubtitles = async (
   await ArtifactSaver.saveFullIntermediateSrts(
     whisperChunksMap,
     refinedChunksMap,
+    alignedChunksMap,
     translatedChunksMap,
     settings
   );
+
+  // Cleanup: Dispose SmartSegmenter singleton to free VAD Worker resources
+  SmartSegmenter.disposeInstance();
 
   return { subtitles: finalSubtitles, glossaryResults: (await glossaryTask).raw };
 };
