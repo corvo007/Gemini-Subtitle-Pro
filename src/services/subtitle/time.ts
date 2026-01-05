@@ -93,8 +93,11 @@ export const normalizeTimestamp = (timeStr: string, maxDuration?: number): strin
       // Try to recover if it looks like hours were confused for minutes
       if (h > 0 && maxDuration < 3600) {
         // Heuristic: If video < 1 hour but we have hours, maybe shift down
-        m += h * 60; // Wait, usually it's just wrong mapping.
+        m += h * 60;
         h = 0;
+        // Re-normalize after heuristic fix (minutes may now exceed 59)
+        h += Math.floor(m / 60);
+        m = m % 60;
       }
     }
   }

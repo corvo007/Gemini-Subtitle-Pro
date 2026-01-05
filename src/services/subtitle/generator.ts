@@ -64,8 +64,13 @@ export const generateAssContent = (
       }
       const bgrColor = hexToAssBgr(color);
       // Inherit from Default but change PrimaryColour
-      // Sanitize speaker name for style name
-      const styleName = `Speaker_${speaker.replace(/\s+/g, '_')}`;
+      // Sanitize speaker name for style name - remove all ASS-illegal characters
+      // ASS style names should only contain alphanumeric, underscore, and safe Unicode chars
+      const sanitizedSpeaker = speaker
+        .replace(/[\s,;:[\](){}\\/&]+/g, '_') // Replace whitespace and special chars with underscore
+        .replace(/_+/g, '_') // Collapse multiple underscores
+        .replace(/^_|_$/g, ''); // Trim leading/trailing underscores
+      const styleName = `Speaker_${sanitizedSpeaker || 'Unknown'}`;
       return `Style: ${styleName},Arial,75,${bgrColor},&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,3,2,2,10,10,10,1`;
     })
     .join('\n');

@@ -569,3 +569,36 @@ export const parseGeminiResponse = (
     return [];
   }
 };
+
+/**
+ * Load subtitle segments from a JSON or SRT file.
+ * For debug/testing purposes - loads mock data from files.
+ * @param filePath - Path to JSON (SubtitleItem[]) or SRT file
+ * @returns Parsed subtitle items
+ */
+export async function loadSegmentsFromFile(filePath: string): Promise<SubtitleItem[]> {
+  if (!window.electronAPI?.readLocalFile) {
+    throw new Error('File reading requires Electron environment');
+  }
+
+  const buffer = await window.electronAPI.readLocalFile(filePath);
+  const content = new TextDecoder('utf-8').decode(buffer);
+
+  if (filePath.endsWith('.json')) {
+    // Parse as JSON array of SubtitleItem
+    const data = JSON.parse(content);
+    if (Array.isArray(data)) {
+      return data as SubtitleItem[];
+    }
+    if (data?.segments && Array.isArray(data.segments)) {
+      return data.segments as SubtitleItem[];
+    }
+    throw new Error('JSON file must contain an array of segments');
+  } else if (filePath.endsWith('.srt')) {
+    return parseSrt(content);
+  } else if (filePath.endsWith('.ass')) {
+    return parseAss(content);
+  }
+
+  throw new Error(`Unsupported file format: ${filePath}`);
+}
