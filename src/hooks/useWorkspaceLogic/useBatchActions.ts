@@ -13,7 +13,11 @@ import { runBatchOperation } from '@/services/generation/batch/operations';
 import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { retryGlossaryExtraction } from '@/services/generation/extractors/glossary';
 import { ENV } from '@/config';
-import { type GlossaryFlowProps, type SnapshotsValuesProps, type ProgressHandler } from './types';
+import {
+  type GlossaryFlowProps,
+  type SnapshotsValuesProps,
+  type ProgressHandler,
+} from '@/types/workspace';
 
 interface UseBatchActionsProps {
   // State reading

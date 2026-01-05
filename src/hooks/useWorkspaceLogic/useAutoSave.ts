@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { type SubtitleItem } from '@/types/subtitle';
 import { GenerationStatus } from '@/types/api';
 import { logger } from '@/services/utils/logger';
-import { type SnapshotsValuesProps } from './types';
+import { type SnapshotsValuesProps } from '@/types/workspace';
 
 interface UseAutoSaveProps {
   subtitles: SubtitleItem[];

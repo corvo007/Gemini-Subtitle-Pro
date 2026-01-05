@@ -7,7 +7,7 @@ import { GenerationStatus } from '@/types/api';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { logger } from '@/services/utils/logger';
 import { getSpeakerColor } from '@/services/utils/colors';
-import { type SnapshotsValuesProps } from './types';
+import { type SnapshotsValuesProps } from '@/types/workspace';
 
 interface UseFileOperationsProps {
   // State reading

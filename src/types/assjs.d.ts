@@ -34,11 +34,6 @@ declare module 'assjs' {
     destroy(): ASS;
 
     /**
-     * Recalculate and apply subtitle positioning and scaling.
-     */
-    resize(): void;
-
-    /**
      * Show subtitles in the container
      */
     show(): ASS;
