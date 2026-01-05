@@ -45,3 +45,6 @@ bilibili-video-downloader/
 openai-python/
 python-genai/
 cloc_result.txt
+
+align.py
+aligner_readme.md

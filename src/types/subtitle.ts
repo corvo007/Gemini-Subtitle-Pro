@@ -1,3 +1,11 @@
+export type SubtitleIssueType =
+  | 'duration'
+  | 'length'
+  | 'overlap'
+  | 'confidence'
+  | 'regression'
+  | 'corrupted';
+
 export interface SubtitleItem {
   id: string;
   startTime: string; // Format: HH:MM:SS,ms
@@ -9,6 +17,9 @@ export interface SubtitleItem {
   // Timeline validation markers (from refinement step)
   hasRegressionIssue?: boolean; // startTime went backwards significantly
   hasCorruptedRangeIssue?: boolean; // Part of a corrupted timeline range
+  // Alignment confidence markers (from CTC alignment step)
+  alignmentScore?: number; // 0.0 - 1.0 confidence score from CTC aligner
+  lowConfidence?: boolean; // true if alignmentScore < 0.7
 }
 
 export interface SubtitleSnapshot {
