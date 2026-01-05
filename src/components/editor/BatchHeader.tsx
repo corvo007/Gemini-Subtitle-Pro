@@ -20,7 +20,7 @@ import {
   Shield,
   ArrowDownCircle,
 } from 'lucide-react';
-import { type SubtitleItem } from '@/types';
+import { type SubtitleItem, type SubtitleIssueType } from '@/types';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { getSpeakerColor } from '@/services/utils/colors';
 import { cn } from '@/lib/cn';
@@ -28,16 +28,12 @@ import { useDropdownDirection } from '@/hooks/useDropdownDirection';
 
 // Multi-select filter type
 export interface SubtitleFilters {
-  duration: boolean; // 时间过长
-  length: boolean; // 字符过多
-  overlap: boolean; // 时间重叠
+  issues: Set<SubtitleIssueType>;
   speakers: Set<string>; // 选中的说话人
 }
 
 export const defaultFilters: SubtitleFilters = {
-  duration: false,
-  length: false,
-  overlap: false,
+  issues: new Set(),
   speakers: new Set(),
 };
 
@@ -54,7 +50,7 @@ interface BatchHeaderProps {
   setSearchQuery: (query: string) => void;
   filters: SubtitleFilters;
   setFilters: (filters: SubtitleFilters) => void;
-  issueCounts?: { duration: number; length: number; overlap: number };
+  issueCounts?: Record<SubtitleIssueType, number>;
   speakerProfiles?: SpeakerUIProfile[];
   speakerCounts?: Record<string, number>; // 每个说话人的字幕条数
   onManageSpeakers?: () => void;
@@ -135,9 +131,7 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
   };
 
   // Count active filters
-  const activeIssueFilterCount = [filters.duration, filters.length, filters.overlap].filter(
-    Boolean
-  ).length;
+  const activeIssueFilterCount = filters.issues.size;
   const activeSpeakerFilterCount = filters.speakers.size;
 
   // Close filter dropdowns when clicking outside
@@ -159,12 +153,18 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
     setSearchQuery('');
   };
 
-  const toggleFilter = (key: keyof SubtitleFilters) => {
-    setFilters({ ...filters, [key]: !filters[key] });
+  const toggleFilter = (key: SubtitleIssueType) => {
+    const newIssues = new Set(filters.issues);
+    if (newIssues.has(key)) {
+      newIssues.delete(key);
+    } else {
+      newIssues.add(key);
+    }
+    setFilters({ ...filters, issues: newIssues });
   };
 
   const clearIssueFilters = () => {
-    setFilters({ ...filters, duration: false, length: false, overlap: false });
+    setFilters({ ...filters, issues: new Set() });
   };
 
   const toggleSpeaker = (speakerName: string) => {
@@ -254,7 +254,11 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                 >
                   <div className="flex items-center space-x-2">
                     <Clock className="w-3.5 h-3.5 text-amber-400" />
-                    <span className={filters.duration ? 'text-amber-300' : 'text-slate-300'}>
+                    <span
+                      className={
+                        filters.issues.has('duration') ? 'text-amber-300' : 'text-slate-300'
+                      }
+                    >
                       {t('batchHeader.durationTooLong')}
                     </span>
                   </div>
@@ -262,7 +266,7 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                     {issueCounts && (
                       <span className="text-slate-500 text-[10px]">({issueCounts.duration})</span>
                     )}
-                    {filters.duration ? (
+                    {filters.issues.has('duration') ? (
                       <CheckSquare className="w-4 h-4 text-indigo-400" />
                     ) : (
                       <Square className="w-4 h-4 text-slate-600" />
@@ -277,7 +281,9 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                 >
                   <div className="flex items-center space-x-2">
                     <Type className="w-3.5 h-3.5 text-rose-400" />
-                    <span className={filters.length ? 'text-rose-300' : 'text-slate-300'}>
+                    <span
+                      className={filters.issues.has('length') ? 'text-rose-300' : 'text-slate-300'}
+                    >
                       {t('batchHeader.tooManyChars')}
                     </span>
                   </div>
@@ -285,7 +291,7 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                     {issueCounts && (
                       <span className="text-slate-500 text-[10px]">({issueCounts.length})</span>
                     )}
-                    {filters.length ? (
+                    {filters.issues.has('length') ? (
                       <CheckSquare className="w-4 h-4 text-indigo-400" />
                     ) : (
                       <Square className="w-4 h-4 text-slate-600" />
@@ -300,7 +306,11 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                 >
                   <div className="flex items-center space-x-2">
                     <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
-                    <span className={filters.overlap ? 'text-orange-300' : 'text-slate-300'}>
+                    <span
+                      className={
+                        filters.issues.has('overlap') ? 'text-orange-300' : 'text-slate-300'
+                      }
+                    >
                       {t('batchHeader.timeOverlap')}
                     </span>
                   </div>
@@ -308,7 +318,94 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                     {issueCounts && (
                       <span className="text-slate-500 text-[10px]">({issueCounts.overlap})</span>
                     )}
-                    {filters.overlap ? (
+                    {filters.issues.has('overlap') ? (
+                      <CheckSquare className="w-4 h-4 text-indigo-400" />
+                    ) : (
+                      <Square className="w-4 h-4 text-slate-600" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Confidence Filter */}
+                <button
+                  onClick={() => toggleFilter('confidence')}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-800 transition-colors"
+                >
+                  <div className="flex items-center space-x-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                    <span
+                      className={
+                        filters.issues.has('confidence') ? 'text-amber-300' : 'text-slate-300'
+                      }
+                    >
+                      {t('batchHeader.lowConfidence')}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {issueCounts && (
+                      <span className="text-slate-500 text-[10px]">
+                        ({issueCounts.confidence || 0})
+                      </span>
+                    )}
+                    {filters.issues.has('confidence') ? (
+                      <CheckSquare className="w-4 h-4 text-indigo-400" />
+                    ) : (
+                      <Square className="w-4 h-4 text-slate-600" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Regression Filter */}
+                <button
+                  onClick={() => toggleFilter('regression')}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-800 transition-colors"
+                >
+                  <div className="flex items-center space-x-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                    <span
+                      className={
+                        filters.issues.has('regression') ? 'text-red-300' : 'text-slate-300'
+                      }
+                    >
+                      {t('batchHeader.regression')}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {issueCounts && (
+                      <span className="text-slate-500 text-[10px]">
+                        ({issueCounts.regression || 0})
+                      </span>
+                    )}
+                    {filters.issues.has('regression') ? (
+                      <CheckSquare className="w-4 h-4 text-indigo-400" />
+                    ) : (
+                      <Square className="w-4 h-4 text-slate-600" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Corrupted Filter */}
+                <button
+                  onClick={() => toggleFilter('corrupted')}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-800 transition-colors"
+                >
+                  <div className="flex items-center space-x-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-purple-400" />
+                    <span
+                      className={
+                        filters.issues.has('corrupted') ? 'text-purple-300' : 'text-slate-300'
+                      }
+                    >
+                      {t('batchHeader.corrupted')}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {issueCounts && (
+                      <span className="text-slate-500 text-[10px]">
+                        ({issueCounts.corrupted || 0})
+                      </span>
+                    )}
+                    {filters.issues.has('corrupted') ? (
                       <CheckSquare className="w-4 h-4 text-indigo-400" />
                     ) : (
                       <Square className="w-4 h-4 text-slate-600" />

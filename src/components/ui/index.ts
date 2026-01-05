@@ -14,3 +14,4 @@ export { PrimaryButton } from './PrimaryButton';
 export { ProgressBar } from './ProgressBar';
 export { GenrePicker } from './GenrePicker';
 export { DirectorySelector } from './DirectorySelector';
+export { CustomSelect } from './CustomSelect';

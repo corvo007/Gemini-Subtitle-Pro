@@ -33,7 +33,7 @@ import { FileUploader } from '@/components/upload/FileUploader';
 import { SubtitleEditor } from '@/components/editor/SubtitleEditor';
 import { VideoPlayerPreview } from '@/components/editor/VideoPlayerPreview';
 import { useVideoPreview } from '@/hooks/useVideoPreview';
-import { CustomSelect } from '@/components/settings';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 import { TargetLanguageSelector } from '@/components/settings/TargetLanguageSelector';
 import { Modal } from '@/components/ui/Modal';
 import { NumberInput } from '@/components/ui/NumberInput';

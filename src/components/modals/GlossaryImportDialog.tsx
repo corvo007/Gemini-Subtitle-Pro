@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Plus, Merge, X, CheckCircle } from 'lucide-react';
 import { useTranslation, Trans } from 'react-i18next';
 import { type Glossary } from '@/types/glossary';
-import { CustomSelect } from '@/components/settings';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 import { cn } from '@/lib/cn';
 
 export type ImportMode = 'create' | 'merge';

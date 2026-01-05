@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, FileText, Download, Filter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { LogEntry } from '@/services/utils/logger';
-import { CustomSelect } from '@/components/settings/CustomSelect';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 import { cn } from '@/lib/cn';
 
 interface LogViewerModalProps {

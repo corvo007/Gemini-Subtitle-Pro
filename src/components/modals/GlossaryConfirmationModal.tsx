@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Book, X, AlertCircle, CheckCircle, Sparkles, Edit2, Plus, Check } from 'lucide-react';
 import { type GlossaryItem, type GlossaryExtractionResult, type AppSettings } from '@/types';
 import { mergeGlossaryResults } from '@/services/glossary/merger';
-import { CustomSelect } from '@/components/settings';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 import { createGlossary } from '@/services/glossary/manager';
 import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { cn } from '@/lib/cn';

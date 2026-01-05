@@ -5,3 +5,4 @@ export * from './settings';
 export * from './glossary';
 export * from './modals';
 export * from './common';
+export * from './compression';

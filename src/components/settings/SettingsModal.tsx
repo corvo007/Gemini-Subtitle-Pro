@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Settings, X, Languages, Type, Clock, Book, Bug, Trash2 } from 'lucide-react';
 import { type AppSettings } from '@/types/settings';
-import { CustomSelect } from '@/components/settings/CustomSelect';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 import { LocalWhisperSettings } from '@/components/settings/LocalWhisperSettings';
+import { AlignmentSettings } from '@/components/settings/AlignmentSettings';
 import { LanguageSwitcher } from '@/components/settings/LanguageSwitcher';
 import { Toggle } from '@/components/ui/Toggle';
+import { TextInput } from '@/components/ui/TextInput';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { InputWithReset } from '@/components/ui/InputWithReset';
@@ -391,47 +393,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-6 animate-fade-in">
                 {/* Local Whisper Performance Settings */}
                 {/* Local Whisper Performance Settings */}
-                {settings.useLocalWhisper && (
-                  <div className="space-y-4">
-                    <SectionHeader>{t('performance.localWhisper.title')}</SectionHeader>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          {t('performance.localWhisper.cpuThreads')}
-                        </label>
-                        <NumberInput
-                          value={settings.whisperThreads}
-                          onChange={(v) => updateSetting('whisperThreads', v)}
-                          min={1}
-                          max={16}
-                          defaultOnBlur={4}
-                          placeholder="4"
-                          className="w-full"
-                        />
-                        <p className="text-xs text-slate-500 mt-1">
-                          {t('performance.localWhisper.cpuThreadsHint')}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                          {t('performance.localWhisper.concurrency')}
-                        </label>
-                        <NumberInput
-                          value={settings.whisperConcurrency}
-                          onChange={(v) => updateSetting('whisperConcurrency', v)}
-                          min={1}
-                          max={4}
-                          defaultOnBlur={1}
-                          placeholder="1"
-                          className="w-full"
-                        />
-                        <p className="text-xs text-slate-500 mt-1">
-                          {t('performance.localWhisper.concurrencyHint')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Batch Processing Section */}
                 <div className="space-y-4">
@@ -519,6 +480,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           __html: t('performance.concurrency.concurrencyProHint'),
                         }}
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        {t('performance.concurrency.localConcurrency')}
+                      </label>
+                      <NumberInput
+                        value={settings.localConcurrency}
+                        onChange={(v) => updateSetting('localConcurrency', v)}
+                        min={1}
+                        max={4}
+                        defaultOnBlur={1}
+                        placeholder="1"
+                        className="w-full"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        {t('performance.concurrency.localConcurrencyHint')}
+                      </p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-1.5">
@@ -690,10 +668,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </SettingRow>
                     </div>
                   )}
-                </div>
 
-                {/* Manage Glossary Button */}
-                <div>
+                  {/* Manage Glossary Button */}
                   <button
                     onClick={() => {
                       onClose();
@@ -703,6 +679,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     <Book className="w-4 h-4 mr-2" /> {t('enhance.glossary.manageGlossary')}
                   </button>
+                </div>
+
+                {/* Alignment Settings */}
+                <div className="space-y-4">
+                  <SectionHeader>{t('enhance.alignment.title')}</SectionHeader>
+                  <AlignmentSettings
+                    settings={settings}
+                    updateSetting={updateSetting}
+                    addToast={addToast}
+                  />
                 </div>
               </div>
             )}
@@ -716,51 +702,94 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <p className="text-xs text-slate-400 mb-4">{t('debug.description')}</p>
 
                   <div className="space-y-4">
+                    {/* Mock Stage Dropdown */}
                     <SettingRow
-                      label={t('debug.mockGemini')}
-                      description={t('debug.mockGeminiDesc')}
+                      label={t('debug.mockStage.title')}
+                      description={t('debug.mockStage.desc')}
                     >
-                      <Toggle
-                        checked={settings.debug?.mockGemini || false}
-                        onChange={(v) =>
+                      <CustomSelect
+                        value={settings.debug?.mockStage || ''}
+                        onChange={(value) =>
                           updateSetting('debug', {
                             ...settings.debug,
-                            mockGemini: v,
+                            mockStage: (value as any) || undefined,
                           })
                         }
-                        color="amber"
+                        className="w-64"
+                        options={[
+                          { value: '', label: t('debug.mockStage.none') },
+                          { value: 'transcribe', label: t('debug.mockStage.transcribe') },
+                          { value: 'refinement', label: t('debug.mockStage.refinement') },
+                          { value: 'alignment', label: t('debug.mockStage.alignment') },
+                          { value: 'translation', label: t('debug.mockStage.translation') },
+                        ]}
                       />
                     </SettingRow>
 
-                    <SettingRow
-                      label={t('debug.mockOpenAI')}
-                      description={t('debug.mockOpenAIDesc')}
-                    >
-                      <Toggle
-                        checked={settings.debug?.mockOpenAI || false}
-                        onChange={(v) =>
+                    {/* Mock Data Path */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">
+                        {t('debug.mockData.title')}
+                      </label>
+                      <p className="text-xs text-slate-500 mb-2">{t('debug.mockData.hint')}</p>
+                      <TextInput
+                        type="text"
+                        value={settings.debug?.mockDataPath || ''}
+                        onChange={(e) =>
                           updateSetting('debug', {
                             ...settings.debug,
-                            mockOpenAI: v,
+                            mockDataPath: e.target.value || undefined,
                           })
                         }
-                        color="amber"
+                        placeholder={t('debug.mockData.placeholder')}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Skip After Dropdown */}
+                    <SettingRow
+                      label={t('debug.skipAfter.title')}
+                      description={t('debug.skipAfter.desc')}
+                    >
+                      <CustomSelect
+                        value={settings.debug?.skipAfter || ''}
+                        onChange={(value) =>
+                          updateSetting('debug', {
+                            ...settings.debug,
+                            skipAfter: (value as any) || undefined,
+                          })
+                        }
+                        className="w-64"
+                        options={[
+                          { value: '', label: t('debug.skipAfter.none') },
+                          { value: 'transcribe', label: t('debug.skipAfter.transcribe') },
+                          { value: 'refinement', label: t('debug.skipAfter.refinement') },
+                          { value: 'alignment', label: t('debug.skipAfter.alignment') },
+                        ]}
                       />
                     </SettingRow>
 
+                    {/* Mock Language */}
                     <SettingRow
-                      label={t('debug.mockLocalWhisper')}
-                      description={t('debug.mockLocalWhisperDesc')}
+                      label={t('debug.language.title')}
+                      description={t('debug.language.desc')}
                     >
-                      <Toggle
-                        checked={settings.debug?.mockLocalWhisper || false}
-                        onChange={(v) =>
+                      <CustomSelect
+                        value={settings.debug?.mockLanguage || ''}
+                        onChange={(value) =>
                           updateSetting('debug', {
                             ...settings.debug,
-                            mockLocalWhisper: v,
+                            mockLanguage: value || undefined,
                           })
                         }
-                        color="amber"
+                        className="w-64"
+                        options={[
+                          { value: '', label: 'Auto' },
+                          { value: 'eng', label: 'English' },
+                          { value: 'cmn', label: '中文' },
+                          { value: 'jpn', label: '日本語' },
+                          { value: 'kor', label: '한국어' },
+                        ]}
                       />
                     </SettingRow>
 

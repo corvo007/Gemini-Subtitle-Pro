@@ -58,6 +58,9 @@ export interface ValidationResult {
   hasDurationIssue: boolean;
   hasLengthIssue: boolean;
   hasOverlapIssue: boolean;
+  hasConfidenceIssue: boolean;
+  hasRegressionIssue: boolean;
+  hasCorruptedRangeIssue: boolean;
   duration: number;
   charCount: number;
   overlapAmount: number; // How many seconds of overlap (negative means gap)
@@ -83,6 +86,9 @@ export const validateSubtitle = (sub: SubtitleItem, prevEndTime?: string): Valid
     hasDurationIssue: duration > MAX_DURATION_SECONDS,
     hasLengthIssue: charCount > MAX_CHINESE_CHARACTERS,
     hasOverlapIssue,
+    hasConfidenceIssue: !!sub.lowConfidence,
+    hasRegressionIssue: !!sub.hasRegressionIssue,
+    hasCorruptedRangeIssue: !!sub.hasCorruptedRangeIssue,
     duration,
     charCount,
     overlapAmount,
@@ -237,8 +243,9 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
       validation.hasDurationIssue,
       validation.hasLengthIssue,
       validation.hasOverlapIssue,
-      sub.hasRegressionIssue,
-      sub.hasCorruptedRangeIssue,
+      validation.hasConfidenceIssue,
+      validation.hasRegressionIssue,
+      validation.hasCorruptedRangeIssue,
     ].filter(Boolean).length;
 
     // Determine background color based on validation issues
@@ -263,6 +270,9 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
       } else if (validation.hasLengthIssue) {
         // Length issue only: rose/red background
         return 'bg-rose-900/30 border-l-2 border-rose-500';
+      } else if (sub.lowConfidence) {
+        // Low confidence alignment: amber/orange background
+        return 'bg-amber-900/30 border-l-2 border-amber-500';
       }
       return '';
     };
@@ -399,7 +409,8 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
               validation.hasLengthIssue ||
               validation.hasOverlapIssue ||
               sub.hasRegressionIssue ||
-              sub.hasCorruptedRangeIssue) && (
+              sub.hasCorruptedRangeIssue ||
+              sub.lowConfidence) && (
               <div className="flex flex-wrap items-center gap-1 mt-1.5">
                 {sub.hasCorruptedRangeIssue && (
                   <span
@@ -452,6 +463,19 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
                   >
                     <Type className="w-3 h-3" />
                     <span>{t('subtitleRow.charCount', { count: validation.charCount })}</span>
+                  </span>
+                )}
+                {sub.lowConfidence && (
+                  <span
+                    className="flex items-center gap-0.5 text-[10px] text-amber-400"
+                    title={t('subtitleRow.lowConfidence', {
+                      score: sub.alignmentScore ? (sub.alignmentScore * 100).toFixed(0) : '?',
+                    })}
+                  >
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>
+                      {sub.alignmentScore ? `${(sub.alignmentScore * 100).toFixed(0)}%` : '?'}
+                    </span>
                   </span>
                 )}
               </div>

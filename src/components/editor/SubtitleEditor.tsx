@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Languages, Search } from 'lucide-react';
-import { type SubtitleItem } from '@/types';
+import { type SubtitleItem, type SubtitleIssueType } from '@/types';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { GenerationStatus } from '@/types/api';
 import { SubtitleBatch } from '@/components/editor/SubtitleBatch';
@@ -84,7 +84,7 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
     currentPlayTime,
     onRowClick,
   }) => {
-    const { t } = useTranslation('workspace');
+    const { t } = useTranslation(['workspace', 'editor']);
     const [searchQuery, setSearchQuery] = React.useState('');
     const [filters, setFilters] = React.useState<SubtitleFilters>(defaultFilters);
     const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
@@ -129,19 +129,27 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
 
     // Calculate issue counts for filter dropdown
     const issueCounts = React.useMemo(() => {
-      let duration = 0;
-      let length = 0;
-      let overlap = 0;
+      const counts: Record<SubtitleIssueType, number> = {
+        duration: 0,
+        length: 0,
+        overlap: 0,
+        confidence: 0,
+        regression: 0,
+        corrupted: 0,
+      };
 
       subtitles.forEach((sub, index) => {
         const prevEndTime = index > 0 ? subtitles[index - 1].endTime : undefined;
         const validation = validateSubtitle(sub, prevEndTime);
-        if (validation.hasDurationIssue) duration++;
-        if (validation.hasLengthIssue) length++;
-        if (validation.hasOverlapIssue) overlap++;
+        if (validation.hasDurationIssue) counts.duration++;
+        if (validation.hasLengthIssue) counts.length++;
+        if (validation.hasOverlapIssue) counts.overlap++;
+        if (sub.lowConfidence) counts.confidence++;
+        if (sub.hasRegressionIssue) counts.regression++;
+        if (sub.hasCorruptedRangeIssue) counts.corrupted++;
       });
 
-      return { duration, length, overlap };
+      return counts;
     }, [subtitles]);
 
     // Calculate speaker counts
@@ -156,8 +164,7 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
     }, [subtitles]);
 
     // Check if any filter is active
-    const hasActiveFilter =
-      filters.duration || filters.length || filters.overlap || filters.speakers.size > 0;
+    const hasActiveFilter = filters.issues.size > 0 || filters.speakers.size > 0;
 
     // Filter subtitles based on filters
     const filterByType = React.useCallback(
@@ -169,11 +176,14 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
           const validation = validateSubtitle(sub, prevEndTime);
 
           // Issue filters (OR logic): show if any selected issue filter matches
-          const issueFiltersActive = filters.duration || filters.length || filters.overlap;
+          const issueFiltersActive = filters.issues.size > 0;
           const hasMatchingIssue =
-            (filters.duration && validation.hasDurationIssue) ||
-            (filters.length && validation.hasLengthIssue) ||
-            (filters.overlap && validation.hasOverlapIssue);
+            (filters.issues.has('duration') && validation.hasDurationIssue) ||
+            (filters.issues.has('length') && validation.hasLengthIssue) ||
+            (filters.issues.has('overlap') && validation.hasOverlapIssue) ||
+            (filters.issues.has('confidence') && sub.lowConfidence) ||
+            (filters.issues.has('regression') && sub.hasRegressionIssue) ||
+            (filters.issues.has('corrupted') && sub.hasCorruptedRangeIssue);
 
           // Speaker filter (OR logic): show if speaker is in selected set
           const speakerFilterActive = filters.speakers.size > 0;
@@ -379,9 +389,12 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
     // Get active filter labels for display
     const getFilterLabels = (): string[] => {
       const labels: string[] = [];
-      if (filters.duration) labels.push(t('editor.filters.durationTooLong'));
-      if (filters.length) labels.push(t('editor.filters.tooManyChars'));
-      if (filters.overlap) labels.push(t('editor.filters.timeOverlap'));
+      if (filters.issues.has('duration')) labels.push(t('editor:batchHeader.durationTooLong'));
+      if (filters.issues.has('length')) labels.push(t('editor:batchHeader.tooManyChars'));
+      if (filters.issues.has('overlap')) labels.push(t('editor:batchHeader.timeOverlap'));
+      if (filters.issues.has('confidence')) labels.push(t('editor:batchHeader.lowConfidence'));
+      if (filters.issues.has('regression')) labels.push(t('editor:batchHeader.regression'));
+      if (filters.issues.has('corrupted')) labels.push(t('editor:batchHeader.corrupted'));
       filters.speakers.forEach((s) => labels.push(s));
       return labels;
     };

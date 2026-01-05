@@ -1,7 +1,7 @@
 import React from 'react';
 import { Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { CustomSelect } from './CustomSelect';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface TargetLanguageSelectorProps {
   value?: string;
