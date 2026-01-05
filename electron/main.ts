@@ -120,7 +120,6 @@ import { endToEndPipeline } from './services/endToEndPipeline.ts';
 import type { EndToEndConfig } from '@/types/endToEnd.ts';
 import { t, changeLanguage } from './i18n.ts';
 import { ctcAlignerService } from './services/ctcAligner.ts';
-import { kuromojiTokenizerService } from './services/kuromoji.ts';
 import { writeTempFile } from './services/fileUtils.ts';
 
 const videoCompressorService = new VideoCompressorService();
@@ -187,17 +186,6 @@ ipcMain.handle('alignment:ctc-abort', async () => {
   console.log('[DEBUG] [Main] Aborting CTC alignment');
   ctcAlignerService.abort();
   return { success: true };
-});
-
-// IPC Handler: Tokenizer
-ipcMain.handle('tokenizer:tokenize', async (_event, text: string) => {
-  try {
-    const tokens = await kuromojiTokenizerService.tokenize(text);
-    return { success: true, tokens };
-  } catch (error: any) {
-    console.error('[Main] Tokenization failed:', error);
-    return { success: false, error: error.message };
-  }
 });
 
 // IPC Handler: Change Language

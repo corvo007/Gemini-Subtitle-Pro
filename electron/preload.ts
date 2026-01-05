@@ -73,11 +73,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ctcAbort: () => ipcRenderer.invoke('alignment:ctc-abort'),
   },
 
-  // Tokenizer API
-  tokenizer: {
-    tokenize: (text: string) => ipcRenderer.invoke('tokenizer:tokenize', text),
-  },
-
   // Open external link
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
 

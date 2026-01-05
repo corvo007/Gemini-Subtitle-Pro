@@ -199,16 +199,12 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
       }
 
       // 3. Initialize new instance
+      // Note: ASS library handles resize automatically via video events
       try {
         assRef.current = new ASS(assContent, video, {
           container: assContainerRef.current,
           resampling: 'video_width',
         });
-
-        // Force initial layout
-        if (assRef.current) {
-          assRef.current.resize();
-        }
       } catch (error) {
         console.error('Failed to initialize ASS renderer:', error);
       }
