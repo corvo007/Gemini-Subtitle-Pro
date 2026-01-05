@@ -119,6 +119,9 @@ import type { CompressionOptions } from './services/videoCompressor.ts';
 import { endToEndPipeline } from './services/endToEndPipeline.ts';
 import type { EndToEndConfig } from '@/types/endToEnd.ts';
 import { t, changeLanguage } from './i18n.ts';
+import { ctcAlignerService } from './services/ctcAligner.ts';
+import { kuromojiTokenizerService } from './services/kuromoji.ts';
+import { writeTempFile } from './services/fileUtils.ts';
 
 const videoCompressorService = new VideoCompressorService();
 
@@ -168,6 +171,35 @@ ipcMain.handle('local-whisper-abort', async () => {
   return { success: true };
 });
 
+// IPC Handler: CTC Alignment
+ipcMain.handle('alignment:ctc', async (_event, data: any) => {
+  try {
+    console.log('[DEBUG] [Main] CTC alignment request received');
+    return await ctcAlignerService.align(data);
+  } catch (error: any) {
+    console.error('[Main] CTC alignment failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC Handler: Abort CTC Alignment
+ipcMain.handle('alignment:ctc-abort', async () => {
+  console.log('[DEBUG] [Main] Aborting CTC alignment');
+  ctcAlignerService.abort();
+  return { success: true };
+});
+
+// IPC Handler: Tokenizer
+ipcMain.handle('tokenizer:tokenize', async (_event, text: string) => {
+  try {
+    const tokens = await kuromojiTokenizerService.tokenize(text);
+    return { success: true, tokens };
+  } catch (error: any) {
+    console.error('[Main] Tokenization failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // IPC Handler: Change Language
 ipcMain.handle('i18n:change-language', async (_event, lang: string) => {
   try {
@@ -187,8 +219,9 @@ ipcMain.handle('select-media-file', async () => {
       title: t('dialog.selectMediaFile'),
       filters: [
         {
-          name: t('fileFilter.videoFiles'),
+          name: t('fileFilter.mediaFiles'),
           extensions: [
+            // Video
             'mp4',
             'mkv',
             'avi',
@@ -205,11 +238,7 @@ ipcMain.handle('select-media-file', async () => {
             'ogm',
             'asf',
             'vob',
-          ],
-        },
-        {
-          name: t('fileFilter.audioFiles'),
-          extensions: [
+            // Audio
             'mp3',
             'wav',
             'flac',
@@ -389,6 +418,57 @@ ipcMain.handle('select-whisper-model', async () => {
     return { success: false, canceled: true };
   } catch (error: any) {
     console.error('[Main] Model selection failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC Handler: Select Aligner Executable
+ipcMain.handle('select-aligner-executable', async () => {
+  try {
+    const result = await dialog.showOpenDialog({
+      title: t('dialog.selectAlignerExecutable'),
+      filters: [
+        { name: t('fileFilter.executableFiles'), extensions: ['exe'] },
+        { name: t('fileFilter.allFiles'), extensions: ['*'] },
+      ],
+      properties: ['openFile'],
+    });
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      const filePath = result.filePaths[0];
+      // Basic validation: check if file exists and is executable-like
+      try {
+        const stats = await fs.promises.stat(filePath);
+        if (!stats.isFile()) {
+          return { success: false, error: t('error.notAFile') };
+        }
+      } catch {
+        return { success: false, error: t('error.fileNotAccessible') };
+      }
+      return { success: true, path: filePath };
+    }
+    return { success: false, canceled: true };
+  } catch (error: any) {
+    console.error('[Main] Aligner executable selection failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC Handler: Select Aligner Model Directory
+ipcMain.handle('select-aligner-model-dir', async () => {
+  try {
+    const result = await dialog.showOpenDialog({
+      title: t('dialog.selectAlignerModelDir'),
+      properties: ['openDirectory'],
+    });
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      const dirPath = result.filePaths[0];
+      return { success: true, path: dirPath };
+    }
+    return { success: false, canceled: true };
+  } catch (error: any) {
+    console.error('[Main] Aligner model directory selection failed:', error);
     return { success: false, error: error.message };
   }
 });
@@ -642,21 +722,95 @@ ipcMain.handle('read-local-file', async (event, filePath) => {
   }
 });
 
-// IPC Handler: Write Temp File (for subtitles)
-ipcMain.handle('util:write-temp', async (_event, content: string, extension: string) => {
+// IPC Handler: Get resource path (for bundled assets like kuromoji dict)
+ipcMain.handle('util:get-resource-path', async (_event, resourceName: string) => {
   try {
-    const tempDir = app.getPath('temp');
-    const fileName = `gemini_subtitle_temp_${Date.now()}.${extension.replace(/^\./, '')}`;
-    const filePath = path.join(tempDir, fileName);
-    // Add BOM for Windows compatibility
-    const bom = '\uFEFF';
-    await fs.promises.writeFile(filePath, bom + content, 'utf-8');
-    return { success: true, path: filePath };
+    // Security: Validate resourceName to prevent path traversal
+    if (!resourceName) {
+      return { success: false, error: 'Invalid resource name' };
+    }
+
+    // Check 1: No absolute paths
+    if (path.isAbsolute(resourceName)) {
+      console.warn(`[Main] Blocked absolute path resource request: "${resourceName}"`);
+      return { success: false, error: 'Absolute paths not allowed' };
+    }
+
+    // Check 2: No directory traversal (..)
+    if (resourceName.split(/[/\\]/).includes('..')) {
+      console.warn(`[Main] Blocked path traversal resource request: "${resourceName}"`);
+      return { success: false, error: 'Path traversal not allowed' };
+    }
+
+    const exePath = app.getPath('exe');
+    const exeDir = path.dirname(exePath);
+    const portableExeDir = process.env.PORTABLE_EXECUTABLE_DIR;
+
+    const possiblePaths: string[] = [];
+
+    if (app.isPackaged) {
+      // Portable App
+      if (portableExeDir) {
+        possiblePaths.push(path.join(portableExeDir, 'resources', resourceName));
+        possiblePaths.push(path.join(portableExeDir, resourceName));
+      }
+      // Standard/Installed
+      possiblePaths.push(path.join(exeDir, 'resources', resourceName));
+      possiblePaths.push(path.join(exeDir, resourceName));
+      possiblePaths.push(path.join(process.resourcesPath, resourceName));
+    } else {
+      // Development
+      const projectRoot = path.join(app.getAppPath(), '..');
+      possiblePaths.push(path.join(projectRoot, 'resources', resourceName));
+      possiblePaths.push(path.join(app.getAppPath(), 'resources', resourceName));
+    }
+
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        console.log(`[Main] Found resource ${resourceName} at: ${p}`);
+        return { success: true, path: p };
+      }
+    }
+
+    return { success: false, error: `Resource not found: ${resourceName}` };
   } catch (error: any) {
-    console.error('[Main] Failed to write temp file:', error);
+    console.error('[Main] Failed to get resource path:', error);
     return { success: false, error: error.message };
   }
 });
+
+// IPC Handler: Write Temp File (for subtitles - text content)
+ipcMain.handle('util:write-temp', async (_event, content: string, extension: string) => {
+  return await writeTempFile(content, extension, true);
+});
+
+// IPC Handler: Write Temp Audio File (for binary audio data)
+ipcMain.handle(
+  'util:write-temp-audio',
+  async (_event, audioData: string | ArrayBuffer, extension: string) => {
+    try {
+      const tempDir = app.getPath('temp');
+      const fileName = `gemini_subtitle_temp_${Date.now()}.${extension.replace(/^\./, '')}`;
+      const filePath = path.join(tempDir, fileName);
+
+      let audioBuffer: Buffer;
+      if (typeof audioData === 'string') {
+        // Legacy: Decode base64 to binary buffer
+        audioBuffer = Buffer.from(audioData, 'base64');
+      } else {
+        // Optimized: Convert ArrayBuffer/Uint8Array to Buffer
+        audioBuffer = Buffer.from(audioData);
+      }
+
+      await fs.promises.writeFile(filePath, audioBuffer);
+      console.log(`[Main] Wrote temp audio file: ${filePath} (${audioBuffer.length} bytes)`);
+      return { success: true, path: filePath };
+    } catch (error: any) {
+      console.error('[Main] Failed to write temp audio file:', error);
+      return { success: false, error: error.message };
+    }
+  }
+);
 
 // IPC Handler: Video Compression
 ipcMain.handle(

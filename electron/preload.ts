@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // New: Local Whisper APIs
   selectWhisperModel: () => ipcRenderer.invoke('select-whisper-model'),
+  selectAlignerExecutable: () => ipcRenderer.invoke('select-aligner-executable'),
+  selectAlignerModelDir: () => ipcRenderer.invoke('select-aligner-model-dir'),
   transcribeLocal: (data: {
     audioData: ArrayBuffer;
     modelPath: string;
@@ -65,6 +67,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     changeLanguage: (lang: string) => ipcRenderer.invoke('i18n:change-language', lang),
   },
 
+  // CTC Alignment APIs
+  alignment: {
+    ctc: (data: any) => ipcRenderer.invoke('alignment:ctc', data),
+    ctcAbort: () => ipcRenderer.invoke('alignment:ctc-abort'),
+  },
+
+  // Tokenizer API
+  tokenizer: {
+    tokenize: (text: string) => ipcRenderer.invoke('tokenizer:tokenize', text),
+  },
+
   // Open external link
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
 
@@ -94,6 +107,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Utils
   writeTempFile: (content: string, extension: string) =>
     ipcRenderer.invoke('util:write-temp', content, extension),
+  writeTempAudioFile: (audioData: string | ArrayBuffer, extension: string) =>
+    ipcRenderer.invoke('util:write-temp-audio', audioData, extension),
+  getResourcePath: (resourceName: string) =>
+    ipcRenderer.invoke('util:get-resource-path', resourceName),
   showItemInFolder: (path: string) => ipcRenderer.invoke('shell:show-item-in-folder', path),
 
   // Video Compression APIs

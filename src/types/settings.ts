@@ -13,9 +13,13 @@ export const GENRE_KEYS: Record<string, string> = {
 };
 
 export interface DebugSettings {
-  mockGemini: boolean;
-  mockOpenAI: boolean;
-  mockLocalWhisper: boolean;
+  // Mock Stage: Use mock data for selected stage
+  mockStage?: 'transcribe' | 'refinement' | 'alignment' | 'translation';
+  mockDataPath?: string; // Path to JSON/SRT file (optional, falls back to preset)
+  // Skip After: Stop pipeline after this stage
+  skipAfter?: 'transcribe' | 'refinement' | 'alignment';
+  mockLanguage?: string; // Language for alignment (ISO 639-3)
+  // Custom paths
   ffmpegPath?: string;
   ffprobePath?: string;
   whisperPath?: string;
@@ -58,8 +62,6 @@ export interface AppSettings {
   // Local Whisper Settings
   useLocalWhisper?: boolean; // Whether to use local Whisper
   whisperModelPath?: string; // Model file path (.bin)
-  whisperThreads?: number; // Number of threads (default: 4)
-  whisperConcurrency?: number; // Max concurrent processes (default: 1)
 
   // Speaker Diarization Settings
   enableDiarization?: boolean; // Enable speaker identification (default: false)
@@ -73,6 +75,12 @@ export interface AppSettings {
   // Batch Operation Settings
   conservativeBatchMode?: boolean; // Conservative mode for fix_timestamps/proofread (default: false)
   zoomLevel?: number; // UI Zoom level (0.5 - 2.0)
+
+  // Alignment Settings
+  alignmentMode?: 'ctc' | 'llm' | 'none'; // Timestamp alignment strategy (default: 'none')
+  alignerPath?: string; // Path to align.exe (CTC forced aligner)
+  alignmentModelPath?: string; // Path to MMS alignment model directory
+  localConcurrency?: number; // Max concurrent local processes (default: 1)
 
   // Display Settings
   language?: 'zh-CN' | 'en-US' | 'ja-JP'; // UI language (default: auto-detect from system)

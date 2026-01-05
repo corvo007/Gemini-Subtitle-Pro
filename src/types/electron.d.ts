@@ -78,6 +78,18 @@ export interface ElectronAPI {
     error?: string;
     canceled?: boolean;
   }>;
+  selectAlignerExecutable: () => Promise<{
+    success: boolean;
+    path?: string;
+    error?: string;
+    canceled?: boolean;
+  }>;
+  selectAlignerModelDir: () => Promise<{
+    success: boolean;
+    path?: string;
+    error?: string;
+    canceled?: boolean;
+  }>;
   transcribeLocal: (data: {
     audioData: ArrayBuffer;
     modelPath: string;
@@ -120,6 +132,32 @@ export interface ElectronAPI {
   cache: {
     getSize: () => Promise<{ size: number; fileCount: number }>;
     clear: () => Promise<{ cleared: number; freedBytes: number }>;
+  };
+
+  // CTC Alignment APIs
+  alignment: {
+    ctc: (data: {
+      segments: { index: number; text: string; start?: number; end?: number }[];
+      audioPath: string;
+      language: string;
+      config: {
+        alignerPath: string;
+        modelPath: string;
+        batchSize?: number;
+        romanize?: boolean;
+      };
+    }) => Promise<{
+      success: boolean;
+      segments?: { index: number; start: number; end: number; text: string; score: number }[];
+      metadata?: { count: number; processing_time: number };
+      error?: string;
+    }>;
+    ctcAbort: () => Promise<{ success: boolean }>;
+  };
+
+  // Tokenizer API
+  tokenizer: {
+    tokenize: (text: string) => Promise<{ success: boolean; tokens?: any[]; error?: string }>;
   };
 
   // Open external link
@@ -193,7 +231,14 @@ export interface ElectronAPI {
     content: string,
     extension: string
   ) => Promise<{ success: boolean; path?: string; error?: string }>;
-  showItemInFolder: (path: string) => Promise<boolean>;
+  writeTempAudioFile: (
+    audioData: string | ArrayBuffer,
+    extension: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>;
+  getResourcePath: (
+    resourceName: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>;
+  showItemInFolder: (path: string) => Promise<{ success: boolean; error?: string }>;
 
   // Video Compression APIs
   compression: {
