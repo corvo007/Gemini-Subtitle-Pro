@@ -141,13 +141,12 @@
       "manageGlossary": "用語集を管理"
     },
     "alignment": {
-      "title": "長文分割 ＆ タイムスタンプ調整",
+      "title": "タイムスタンプ調整",
       "mode": "調整モード",
-      "modeHint": "校正後の長文分割とタイムスタンプ調整の方法を選択してください。",
+      "modeHint": "CTC調整を使用してタイムスタンプを精密に調整するかどうかを選択してください。",
       "modeOptions": {
         "none": "なし（元のタイムスタンプを維持）",
-        "ctc": "CTC (最高精度)",
-        "llm": "LLM (実験的)"
+        "ctc": "CTC (最高精度)"
       },
       "ctcConfig": "CTC アライナー設定",
       "ctcConfigDesc": "外部 CTC アライメントツールとモデルのパスを設定してください。",
@@ -160,8 +159,7 @@
       "selectErrorGeneric": "選択に失敗しました",
       "instructions": "セットアップ：",
       "instructionAligner": "リリースページから align.exe をダウンロード",
-      "instructionModel": "MMS モデル（約1.2GB）をダウンロードして展開",
-      "llmHint": "LLM モードは Gemini でタイムスタンプを推定します。CTC より精度は劣りますが、外部依存が不要です。"
+      "instructionModel": "MMS モデル（約1.2GB）をダウンロードして展開"
     }
   },
   "debug": {

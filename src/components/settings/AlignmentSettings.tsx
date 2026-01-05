@@ -25,7 +25,6 @@ export const AlignmentSettings: React.FC<AlignmentSettingsProps> = ({
   const alignmentOptions = [
     { value: 'none', label: t('enhance.alignment.modeOptions.none') },
     ...(isElectron ? [{ value: 'ctc', label: t('enhance.alignment.modeOptions.ctc') }] : []),
-    { value: 'llm', label: t('enhance.alignment.modeOptions.llm') },
   ];
 
   // Handle aligner executable selection
@@ -146,13 +145,6 @@ export const AlignmentSettings: React.FC<AlignmentSettingsProps> = ({
               <li>{t('enhance.alignment.instructionModel')}</li>
             </ul>
           </div>
-        </div>
-      )}
-
-      {/* LLM mode hint */}
-      {settings.alignmentMode === 'llm' && (
-        <div className="text-xs text-amber-400 bg-amber-900/20 p-3 rounded border border-amber-500/30 animate-fade-in">
-          {t('enhance.alignment.llmHint')}
         </div>
       )}
     </div>

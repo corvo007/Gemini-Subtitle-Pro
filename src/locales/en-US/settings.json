@@ -141,13 +141,12 @@
       "manageGlossary": "Manage Glossary"
     },
     "alignment": {
-      "title": "Sentence Splitting & Alignment",
+      "title": "Timestamp Alignment",
       "mode": "Alignment Mode",
-      "modeHint": "Select how to split and align timestamps after transcription refinement.",
+      "modeHint": "Select whether to use CTC alignment for precise timestamp adjustment.",
       "modeOptions": {
         "none": "None (Keep Original)",
-        "ctc": "CTC (Highest Accuracy)",
-        "llm": "LLM (Experimental)"
+        "ctc": "CTC (Highest Accuracy)"
       },
       "ctcConfig": "CTC Aligner Configuration",
       "ctcConfigDesc": "Configure paths for the external CTC alignment tool and model.",
@@ -160,8 +159,7 @@
       "selectErrorGeneric": "Selection failed",
       "instructions": "Setup Instructions:",
       "instructionAligner": "Download align.exe from the project releases page",
-      "instructionModel": "Download the MMS model (~1.2GB) and extract to a folder",
-      "llmHint": "LLM mode uses Gemini to estimate timestamps. Less accurate than CTC but requires no external dependencies."
+      "instructionModel": "Download the MMS model (~1.2GB) and extract to a folder"
     }
   },
   "debug": {

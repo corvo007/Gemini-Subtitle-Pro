@@ -141,13 +141,12 @@
       "manageGlossary": "管理术语表"
     },
     "alignment": {
-      "title": "长句拆分 & 时间轴对齐",
-      "mode": "执行模式",
-      "modeHint": "选择转录优化后如何进行拆分与对齐时间轴。",
+      "title": "时间轴对齐",
+      "mode": "对齐模式",
+      "modeHint": "选择是否使用 CTC 对齐来精确调整时间轴。",
       "modeOptions": {
         "none": "无 (保留原始)",
-        "ctc": "CTC (准确度最高)",
-        "llm": "LLM (实验性)"
+        "ctc": "CTC (准确度最高)"
       },
       "ctcConfig": "CTC 对齐器配置",
       "ctcConfigDesc": "配置外部 CTC 对齐工具和模型的路径。",
@@ -160,8 +159,7 @@
       "selectErrorGeneric": "选择失败",
       "instructions": "设置说明：",
       "instructionAligner": "从项目发布页面下载 align.exe",
-      "instructionModel": "下载 MMS 模型 (~1.2GB) 并解压到文件夹",
-      "llmHint": "LLM 模式使用 Gemini 对齐时间轴。精度不如 CTC，但无需外部依赖。"
+      "instructionModel": "下载 MMS 模型 (~1.2GB) 并解压到文件夹"
     }
   },
   "debug": {
