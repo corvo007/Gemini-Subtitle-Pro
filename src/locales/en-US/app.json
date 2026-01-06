@@ -15,6 +15,9 @@
   "errorBoundary": {
     "title": "Something went wrong",
     "description": "The application encountered an unexpected error. This issue has been logged.",
-    "reload": "Reload Application"
+    "reload": "Reload Application",
+    "compactTitle": "Component Error",
+    "unknownError": "Unknown Error",
+    "retry": "Try Again"
   }
 }

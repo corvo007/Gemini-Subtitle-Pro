@@ -145,5 +145,6 @@
     "resize": "拖动调整高度",
     "jumpAfterTranscode": "转码完成后可跳转",
     "unableToLoadFile": "无法加载文件: {{error}}"
-  }
+  },
+  "unableToLoadFile": "无法加载文件: {{error}}"
 }

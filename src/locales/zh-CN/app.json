@@ -15,6 +15,9 @@
   "errorBoundary": {
     "title": "出错了",
     "description": "应用程序遇到意外错误。我们已记录此问题。",
-    "reload": "重新加载应用"
+    "reload": "重新加载应用",
+    "compactTitle": "组件错误",
+    "unknownError": "未知错误",
+    "retry": "重试"
   }
 }

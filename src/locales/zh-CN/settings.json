@@ -164,7 +164,26 @@
   },
   "debug": {
     "title": "调试模式",
-    "description": "启用 Mock 模式可以跳过实际 API 请求，直接返回模拟数据。用于测试流程或节省 API 额度。启用后将自动跳过术语表提取及说话人预分析。",
+    "description": "启用 Mock 模式可以跳过实际 API 请求或特定阶段，用于测试流程或节省 API 额度。",
+    "startFrom": {
+      "title": "流程起始点",
+      "desc": "跳过此前步骤，从该阶段开始运行。需配合 Mock 数据文件使用。"
+    },
+    "mockApi": {
+      "title": "API 模拟执行 (Mock)",
+      "transcribe": "转录",
+      "transcribeDesc": "返回预设或文件数据",
+      "refinement": "润色",
+      "refinementDesc": "跳过 LLM，保留原文",
+      "alignment": "时间轴对齐",
+      "alignmentDesc": "跳过 CTC，复用时间轴",
+      "translation": "翻译",
+      "translationDesc": "复制原文到译文",
+      "glossary": "术语表提取",
+      "glossaryDesc": "跳过提取（返回 Mock 结果）",
+      "speaker": "说话人预分析",
+      "speakerDesc": "跳过分析（返回 Mock 结果）"
+    },
     "mockStage": {
       "title": "Mock 起始阶段",
       "desc": "从选定的阶段开始执行，跳过该阶段之前的所有步骤。例如选择「润色」则跳过转录，从润色开始执行后续流程。Mock 模式下仅处理第一个分块。",

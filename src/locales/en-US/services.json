@@ -14,13 +14,31 @@
       "modelNotFound": "Model not found",
       "notFound": "Resource not found",
       "regionRestricted": "Region restricted (Not available in your location)",
-      "network": "Network error"
+      "network": "Network error",
+      "connectionFailed": "Connection failed",
+      "retryFailed": "Retry failed",
+      "parseFailed": "Response parsing failed"
     },
     "network": {
       "rateLimited": "Rate limit exceeded / Quota exhausted",
       "timeout": "Request timed out",
       "timeoutWithSeconds": "Request timed out after {{seconds}}s",
       "cancelled": "Request cancelled"
+    },
+    "whisperLocal": {
+      "errors": {
+        "notElectron": "Local Whisper is available on Desktop App only",
+        "transcriptionFailed": "Local Whisper transcription failed",
+        "noModelPath": "Whisper model path not found",
+        "fallbackToApi": "Falling back to OpenAI API"
+      }
+    },
+    "openai": {
+      "errors": {
+        "billingHardLimit": "Billing hard limit reached",
+        "invalidAudioFormat": "Invalid audio format",
+        "transcriptionFailed": "Transcription failed"
+      }
     }
   },
   "snapshots": {
@@ -63,14 +81,23 @@
       "extractingGlossaryInit": "Initializing glossary extraction ({{total}} chunks)...",
       "extractingGlossaryComplete": "Glossary extraction complete",
       "extractingGlossary": "Extracting glossary ({{current}}/{{total}})...",
+      "generatingGlossary": "Generating glossary...",
+      "waitingUserConfirm": "Waiting for user confirmation...",
+      "glossaryApplied": "Glossary applied",
+      "noTermsFound": "No terms found",
+      "glossaryExtractionFailed": "Glossary extraction failed",
       "analyzingSpeakers": "Analyzing speakers...",
+      "speakersIdentified": "{{count}} speakers identified",
+      "speakerAnalysisFailed": "Speaker analysis failed",
       "complete": "Complete",
       "waitingTranscription": "Waiting for transcription...",
       "transcribing": "Transcribing...",
       "completeNoContent": "Complete (No content)",
       "waitingGlossary": "Waiting for glossary...",
       "waitingSpeakerAnalysis": "Waiting for speaker analysis...",
-      "refinementFailed": "Refinement failed (Chunk {{index}})"
+      "refinementFailed": "Refinement failed (Chunk {{index}})",
+      "audioLoaded": "Audio loaded",
+      "cancelled": "Cancelled"
     },
     "errors": {
       "translationFailed": "Translation failed: {{error}}",
@@ -78,7 +105,26 @@
       "missingGeminiKey": "Gemini API key is missing",
       "missingOpenAIKey": "OpenAI API Key missing (or local Whisper not enabled)",
       "cancelled": "Operation cancelled",
-      "translationFailedKeepRefined": "Translation failed (Chunk {{index}}), keeping refined text"
+      "translationFailedKeepRefined": "Translation failed (Chunk {{index}}), keeping refined text",
+      "decodeFailed": "Audio decoding failed"
+    }
+  },
+  "utils": {
+    "url": {
+      "inputRequired": "Please enter a valid URL"
+    }
+  },
+  "audio": {
+    "errors": {
+      "ffmpegElectronOnly": "FFmpeg operations are only available in the desktop app",
+      "ffmpegFilePathRequired": "File path is required for FFmpeg operations",
+      "getAudioInfoFailed": "Failed to retrieve audio information",
+      "ffmpegExtractionFailed": "Audio extraction failed",
+      "webAudioNotSupported": "Web Audio API is not supported in this browser",
+      "unsupportedAudioFormat": "Unsupported audio format",
+      "unsupportedBrowserEncoding": "Browser encoding not supported",
+      "decodeFailed": "Audio decoding failed",
+      "decodeRetryFailed": "Audio decoding failed after retries"
     }
   }
 }

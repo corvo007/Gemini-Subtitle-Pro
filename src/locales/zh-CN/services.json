@@ -14,13 +14,31 @@
       "modelNotFound": "找不到该模型",
       "notFound": "资源未找到",
       "regionRestricted": "区域受限（当前位置不可用）",
-      "network": "网络错误"
+      "network": "网络错误",
+      "connectionFailed": "连接失败",
+      "retryFailed": "重试失败",
+      "parseFailed": "响应解析失败"
     },
     "network": {
       "rateLimited": "请求频率受限 / 配额用尽",
       "timeout": "请求超时",
       "timeoutWithSeconds": "请求超时（{{seconds}}秒）",
       "cancelled": "请求已取消"
+    },
+    "whisperLocal": {
+      "errors": {
+        "notElectron": "本地 Whisper 仅在桌面端应用可用",
+        "transcriptionFailed": "本地 Whisper 转录失败",
+        "noModelPath": "未找到 Whisper 模型路径",
+        "fallbackToApi": "正在回退到 OpenAI API"
+      }
+    },
+    "openai": {
+      "errors": {
+        "billingHardLimit": "已达到账单硬限额",
+        "invalidAudioFormat": "无效的音频格式",
+        "transcriptionFailed": "转录失败"
+      }
     }
   },
   "snapshots": {
@@ -63,14 +81,23 @@
       "extractingGlossaryInit": "正在初始化术语提取 (共 {{total}} 个片段)...",
       "extractingGlossaryComplete": "术语提取完成",
       "extractingGlossary": "正在提取术语 ({{current}}/{{total}})...",
+      "generatingGlossary": "正在生成术语表...",
+      "waitingUserConfirm": "等待用户确认...",
+      "glossaryApplied": "术语表已应用",
+      "noTermsFound": "未发现术语",
+      "glossaryExtractionFailed": "术语提取失败",
       "analyzingSpeakers": "正在分析说话人...",
+      "speakersIdentified": "已识别 {{count}} 位说话人",
+      "speakerAnalysisFailed": "说话人分析失败",
       "complete": "完成",
       "waitingTranscription": "等待转录...",
       "transcribing": "正在转录...",
       "completeNoContent": "完成 (无内容)",
       "waitingGlossary": "正在等待术语表...",
       "waitingSpeakerAnalysis": "正在等待说话人分析...",
-      "refinementFailed": "优化失败 (第 {{index}} 块)"
+      "refinementFailed": "优化失败 (第 {{index}} 块)",
+      "audioLoaded": "音频已加载",
+      "cancelled": "已取消"
     },
     "errors": {
       "translationFailed": "翻译失败: {{error}}",
@@ -78,7 +105,26 @@
       "missingGeminiKey": "缺少 Gemini API Key",
       "missingOpenAIKey": "缺少 OpenAI API Key (或未启用本地 Whisper)",
       "cancelled": "操作已取消",
-      "translationFailedKeepRefined": "翻译失败 (第 {{index}} 块)，保留优化结果"
+      "translationFailedKeepRefined": "翻译失败 (第 {{index}} 块)，保留优化结果",
+      "decodeFailed": "音频解码失败"
+    }
+  },
+  "utils": {
+    "url": {
+      "inputRequired": "请输入有效的 URL"
+    }
+  },
+  "audio": {
+    "errors": {
+      "ffmpegElectronOnly": "FFmpeg 操作仅在桌面端可用",
+      "ffmpegFilePathRequired": "FFmpeg 操作需要文件路径",
+      "getAudioInfoFailed": "获取音频信息失败",
+      "ffmpegExtractionFailed": "音频提取失败",
+      "webAudioNotSupported": "当前浏览器不支持 Web Audio API",
+      "unsupportedAudioFormat": "不支持的音频格式",
+      "unsupportedBrowserEncoding": "浏览器不支持该编码",
+      "decodeFailed": "音频解码失败",
+      "decodeRetryFailed": "音频解码重试失败"
     }
   }
 }

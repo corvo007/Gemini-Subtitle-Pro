@@ -164,7 +164,26 @@
   },
   "debug": {
     "title": "開発者モード",
-    "description": "Mock モードを有効にすると、実際の API リクエストをスキップしてモックデータを返します。処理フローのテストや API 使用量の節約に便利です。有効にすると、用語抽出と話者の事前分析は自動的にスキップされます。",
+    "description": "Mock モードでは、API リクエストや特定のステージをスキップしてワークフローをテストできます。",
+    "startFrom": {
+      "title": "開始ステージ",
+      "desc": "以前の工程をスキップし、このステージから開始します。入力にはファイルまたはプリセットデータを使用します。"
+    },
+    "mockApi": {
+      "title": "API モック実行",
+      "transcribe": "文字起こし",
+      "transcribeDesc": "プリセット/ファイルデータを返す",
+      "refinement": "校正",
+      "refinementDesc": "LLMをスキップし、原文を維持",
+      "alignment": "タイムスタンプ調整",
+      "alignmentDesc": "CTCをスキップし、時刻を維持",
+      "translation": "翻訳",
+      "translationDesc": "原文を訳文としてコピー",
+      "glossary": "用語抽出",
+      "glossaryDesc": "抽出をスキップ（Mock結果を返す）",
+      "speaker": "話者の事前分析",
+      "speakerDesc": "分析をスキップ（Mock結果を返す）"
+    },
     "mockStage": {
       "title": "Mock 開始ステージ",
       "desc": "選択したステージから処理を開始し、それ以前のステージは全てスキップされます。例：「校正」を選択すると文字起こしをスキップし、校正から開始します。Mock モードでは最初のチャンクのみ処理されます。",

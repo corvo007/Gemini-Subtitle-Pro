@@ -15,6 +15,9 @@
   "errorBoundary": {
     "title": "エラーが発生しました",
     "description": "アプリケーションで予期しないエラーが発生しました。この問題は記録されました。",
-    "reload": "アプリを再読み込み"
+    "reload": "アプリを再読み込み",
+    "compactTitle": "コンポーネントエラー",
+    "unknownError": "不明なエラー",
+    "retry": "再試行"
   }
 }

@@ -145,5 +145,6 @@
     "resize": "Drag to resize height",
     "jumpAfterTranscode": "Seek available after transcoding",
     "unableToLoadFile": "Unable to load file: {{error}}"
-  }
+  },
+  "unableToLoadFile": "Unable to load file: {{error}}"
 }

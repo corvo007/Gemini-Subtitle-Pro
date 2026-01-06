@@ -164,7 +164,26 @@
   },
   "debug": {
     "title": "Debug Mode",
-    "description": "Enable Mock mode to skip actual API requests and return simulated data. Useful for testing workflows or saving API quota. When enabled, glossary extraction and speaker pre-analysis are automatically skipped.",
+    "description": "Mock mode allows skipping actual API requests or specific stages to test workflows and save quota.",
+    "startFrom": {
+      "title": "Start Pipeline From",
+      "desc": "Start execution from this stage, skipping previous steps. Uses file/preset data as input."
+    },
+    "mockApi": {
+      "title": "Mock API Execution",
+      "transcribe": "Transcribe",
+      "transcribeDesc": "Return preset/file data",
+      "refinement": "Refinement",
+      "refinementDesc": "Bypass LLM, keep original text",
+      "alignment": "Alignment",
+      "alignmentDesc": "Bypass CTC, reuse timestamps",
+      "translation": "Translation",
+      "translationDesc": "Copy source text to translation",
+      "glossary": "Glossary Extraction",
+      "glossaryDesc": "Skip extraction (return mock result)",
+      "speaker": "Speaker Pre-analysis",
+      "speakerDesc": "Skip analysis (return mock result)"
+    },
     "mockStage": {
       "title": "Mock Start Stage",
       "desc": "Start from the selected stage, skipping ALL stages before it. E.g., selecting 'Refinement' skips transcription and starts from refinement. Only the first chunk is processed in mock mode.",

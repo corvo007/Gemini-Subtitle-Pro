@@ -14,13 +14,31 @@
       "modelNotFound": "モデルが見つかりません",
       "notFound": "リソースが見つかりません",
       "regionRestricted": "地域制限があります（現在の場所では利用できません）",
-      "network": "ネットワークエラーが発生しました"
+      "network": "ネットワークエラーが発生しました",
+      "connectionFailed": "接続に失敗しました",
+      "retryFailed": "再試行に失敗しました",
+      "parseFailed": "レスポンスの解析に失敗しました"
     },
     "network": {
       "rateLimited": "リクエスト頻度制限 / クォータ超過",
       "timeout": "リクエストタイムアウト",
       "timeoutWithSeconds": "リクエストタイムアウト（{{seconds}}秒）",
       "cancelled": "リクエストがキャンセルされました"
+    },
+    "whisperLocal": {
+      "errors": {
+        "notElectron": "ローカル Whisper はデスクトップアプリでのみ使用可能です",
+        "transcriptionFailed": "ローカル Whisper の文字起こしに失敗しました",
+        "noModelPath": "Whisper モデルパスが見つかりません",
+        "fallbackToApi": "OpenAI API にフォールバックしています"
+      }
+    },
+    "openai": {
+      "errors": {
+        "billingHardLimit": "課金のハードリミットに達しました",
+        "invalidAudioFormat": "無効な音声形式です",
+        "transcriptionFailed": "文字起こしに失敗しました"
+      }
     }
   },
   "snapshots": {
@@ -62,14 +80,52 @@
       "autoTranslationFailed": "自動翻訳に失敗しました",
       "extractingGlossaryInit": "用語抽出を初期化中（全 {{total}} セグメント）...",
       "extractingGlossaryComplete": "用語抽出完了",
+      "speakersIdentified": "{{count}} 人の話者を特定しました",
+      "speakerAnalysisFailed": "話者分析に失敗しました",
+      "waitingUserConfirm": "ユーザーの確認を待っています...",
+      "glossaryApplied": "用語集を適用しました",
+      "noTermsFound": "用語が見つかりませんでした",
+      "glossaryExtractionFailed": "用語抽出に失敗しました",
+      "complete": "完了",
+      "waitingTranscription": "文字起こしを待っています...",
+      "transcribing": "文字起こし中...",
+      "completeNoContent": "完了（コンテンツなし）",
+      "translationFailedUseOriginal": "翻訳に失敗しました、原文を使用します",
       "extractingGlossary": "用語を抽出中（{{current}}/{{total}}）...",
-      "analyzingSpeakers": "話者を分析中..."
+      "analyzingSpeakers": "話者を分析中...",
+      "generatingGlossary": "用語集を生成中...",
+      "waitingGlossary": "ユーザーの確認待ち...",
+      "waitingSpeakerAnalysis": "話者を分析中...",
+      "refinementFailed": "精製失敗 (Chunk {{index}})",
+      "audioLoaded": "音声を読み込みました",
+      "cancelled": "キャンセルされました"
     },
     "errors": {
-      "translationFailed": "翻訳失敗: {{error}}",
-      "translationFailedUseOriginal": "翻訳失敗、原文を使用",
+      "translationFailed": "翻訳に失敗しました: {{error}}",
+      "translationFailedUseOriginal": "翻訳に失敗しました、原文を使用します",
       "missingGeminiKey": "Gemini API キーがありません",
-      "missingOpenAIKey": "OpenAI API キーが見つかりません（またはローカル Whisper が無効になっています）"
+      "missingOpenAIKey": "OpenAI API キーがありません（またはローカル Whisper が無効です）",
+      "cancelled": "操作がキャンセルされました",
+      "translationFailedKeepRefined": "翻訳失敗 (第 {{index}} 塊)、精製結果を保持",
+      "decodeFailed": "音声デコード失敗"
+    }
+  },
+  "utils": {
+    "url": {
+      "inputRequired": "有効な URL を入力してください"
+    }
+  },
+  "audio": {
+    "errors": {
+      "ffmpegElectronOnly": "FFmpeg 操作はデスクトップアプリでのみ使用可能です",
+      "ffmpegFilePathRequired": "FFmpeg 操作にはファイルパスが必要です",
+      "getAudioInfoFailed": "音声情報の取得に失敗しました",
+      "ffmpegExtractionFailed": "音声抽出に失敗しました",
+      "webAudioNotSupported": "このブラウザでは Web Audio API がサポートされていません",
+      "unsupportedAudioFormat": "サポートされていない音声形式です",
+      "unsupportedBrowserEncoding": "ブラウザのエンコーディングがサポートされていません",
+      "decodeFailed": "音声のデコードに失敗しました",
+      "decodeRetryFailed": "再試行後も音声のデコードに失敗しました"
     }
   }
 }
