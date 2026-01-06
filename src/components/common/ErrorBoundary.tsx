@@ -4,6 +4,7 @@ import { AlertCircle, RefreshCcw } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
+  variant?: 'default' | 'compact';
 }
 
 interface State {
@@ -28,12 +29,41 @@ export class ErrorBoundary extends React.Component<Props, State> {
     this.setState({ errorInfo });
   }
 
-  private handleReload = () => {
+  private handleRetry = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null });
+  };
+
+  private handleHardReload = () => {
     window.location.reload();
   };
 
   public render() {
     if (this.state.hasError) {
+      if (this.props.variant === 'compact') {
+        return (
+          <Translation ns="app">
+            {(t) => (
+              <div className="h-full w-full min-h-[200px] flex flex-col items-center justify-center bg-slate-900/50 border border-red-500/20 rounded-xl p-4 text-center">
+                <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
+                <h3 className="text-sm font-semibold text-white mb-1">
+                  {t('errorBoundary.compactTitle', 'Component Error')}
+                </h3>
+                <p className="text-xs text-slate-400 mb-3 max-w-[250px]">
+                  {this.state.error?.message || t('errorBoundary.unknownError')}
+                </p>
+                <button
+                  onClick={this.handleRetry}
+                  className="inline-flex items-center px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs rounded-lg font-medium transition-colors border border-slate-700"
+                >
+                  <RefreshCcw className="w-3 h-3 mr-1.5" />
+                  {t('errorBoundary.retry')}
+                </button>
+              </div>
+            )}
+          </Translation>
+        );
+      }
+
       return (
         <Translation ns="app">
           {(t) => (
@@ -53,13 +83,23 @@ export class ErrorBoundary extends React.Component<Props, State> {
                   </div>
                 )}
 
-                <button
-                  onClick={this.handleReload}
-                  className="inline-flex items-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
-                >
-                  <RefreshCcw className="w-4 h-4 mr-2" />
-                  {t('errorBoundary.reload')}
-                </button>
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    onClick={this.handleRetry}
+                    className="inline-flex items-center px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors border border-slate-700"
+                  >
+                    <RefreshCcw className="w-4 h-4 mr-2" />
+                    {t('errorBoundary.retry')}
+                  </button>
+
+                  <button
+                    onClick={this.handleHardReload}
+                    className="inline-flex items-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    <RefreshCcw className="w-4 h-4 mr-2" />
+                    {t('errorBoundary.reload')}
+                  </button>
+                </div>
               </div>
             </div>
           )}

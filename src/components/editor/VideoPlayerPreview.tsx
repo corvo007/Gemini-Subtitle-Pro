@@ -50,6 +50,7 @@ interface VideoPlayerPreviewProps {
   fullVideoDuration?: number; // Full duration from backend for accurate progress
   onTimeUpdate: (seconds: number) => void;
   onToggleCollapse: () => void;
+  isGenerating?: boolean;
 }
 
 export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerPreviewProps>(
@@ -69,6 +70,7 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
       fullVideoDuration,
       onTimeUpdate,
       onToggleCollapse,
+      isGenerating = false,
     },
     ref
   ) => {
@@ -158,6 +160,12 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
     // Generate ASS content for preview (WYSIWYG)
     // Reuse existing generator logic to ensure preview matches export
     const assContent = useMemo(() => {
+      // If generating, return empty string to pause updates and clear subtitles
+      // This prevents performance issues and crashes during rapid updates
+      if (isGenerating) {
+        return '';
+      }
+
       // Default Title: Video Preview
       // Bilingual: Always true for preview (or depend on settings? showing both lines matches current behavior)
       // Include Speaker: True (to match export)
@@ -170,7 +178,14 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
         useSpeakerColors,
         speakerProfiles
       );
-    }, [subtitles, speakerProfiles, includeSpeaker, useSpeakerColors, showSourceText]);
+    }, [
+      subtitles,
+      speakerProfiles,
+      includeSpeaker,
+      useSpeakerColors,
+      showSourceText,
+      isGenerating,
+    ]);
 
     // Initialize ASS instance
     useEffect(() => {

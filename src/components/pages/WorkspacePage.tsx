@@ -27,6 +27,7 @@ import {
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { type AppSettings } from '@/types/settings';
 import { GenerationStatus } from '@/types/api';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { HistoryPanel } from '@/components/layout/HistoryPanel';
 import { FileUploader } from '@/components/upload/FileUploader';
@@ -717,71 +718,78 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
             ></div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl relative flex-1 min-h-0">
               {showSnapshots ? (
-                <HistoryPanel
-                  isOpen={showSnapshots}
-                  onClose={onToggleSnapshots}
-                  snapshots={snapshots}
-                  onRestoreSnapshot={onRestoreSnapshot}
-                  onDeleteSnapshot={onDeleteSnapshot}
-                />
+                <ErrorBoundary variant="compact">
+                  <HistoryPanel
+                    isOpen={showSnapshots}
+                    onClose={onToggleSnapshots}
+                    snapshots={snapshots}
+                    onRestoreSnapshot={onRestoreSnapshot}
+                    onDeleteSnapshot={onDeleteSnapshot}
+                  />
+                </ErrorBoundary>
               ) : (
                 <div className="flex flex-col flex-1 relative w-full h-full min-h-0">
                   {/* Video Preview Panel - only show for video files in Electron */}
                   {window.electronAPI && file && isVideoFile(file) && (
-                    <VideoPlayerPreview
-                      ref={playerRef}
-                      videoSrc={videoSrc}
-                      subtitles={subtitles}
-                      speakerProfiles={speakerProfiles}
-                      includeSpeaker={settings.includeSpeakerInExport}
-                      useSpeakerColors={settings.useSpeakerColors}
-                      isTranscoding={isTranscoding}
-                      transcodeProgress={transcodeProgress}
-                      transcodedDuration={transcodedDuration}
-                      fullVideoDuration={fullVideoDuration}
-                      showSourceText={showSourceText}
-                      onToggleSourceText={() => setShowSourceText(!showSourceText)}
-                      isCollapsed={videoPreviewCollapsed}
-                      onTimeUpdate={updateTime}
-                      onToggleCollapse={() => setVideoPreviewCollapsed(!videoPreviewCollapsed)}
-                    />
+                    <ErrorBoundary variant="compact">
+                      <VideoPlayerPreview
+                        ref={playerRef}
+                        videoSrc={videoSrc}
+                        subtitles={subtitles}
+                        speakerProfiles={speakerProfiles}
+                        includeSpeaker={settings.includeSpeakerInExport}
+                        useSpeakerColors={settings.useSpeakerColors}
+                        isTranscoding={isTranscoding}
+                        transcodeProgress={transcodeProgress}
+                        transcodedDuration={transcodedDuration}
+                        fullVideoDuration={fullVideoDuration}
+                        showSourceText={showSourceText}
+                        onToggleSourceText={() => setShowSourceText(!showSourceText)}
+                        isCollapsed={videoPreviewCollapsed}
+                        onTimeUpdate={updateTime}
+                        onToggleCollapse={() => setVideoPreviewCollapsed(!videoPreviewCollapsed)}
+                        isGenerating={isProcessing}
+                      />
+                    </ErrorBoundary>
                   )}
                   <div className="flex-1 relative w-full h-full min-h-0" ref={subtitleListRef}>
-                    <SubtitleEditor
-                      subtitles={subtitles}
-                      settings={settings}
-                      status={status}
-                      activeTab={activeTab}
-                      selectedBatches={selectedBatches}
-                      toggleAllBatches={toggleAllBatches}
-                      selectBatchesWithComments={selectBatchesWithComments}
-                      showSourceText={showSourceText}
-                      setShowSourceText={setShowSourceText}
-                      file={file}
-                      handleBatchAction={handleBatchAction}
-                      batchComments={batchComments}
-                      toggleBatch={toggleBatch}
-                      updateBatchComment={updateBatchComment}
-                      editingCommentId={editingCommentId}
-                      setEditingCommentId={setEditingCommentId}
-                      updateLineComment={updateLineComment}
-                      updateSubtitleText={updateSubtitleText}
-                      updateSubtitleOriginal={updateSubtitleOriginal}
-                      updateSpeaker={updateSpeaker}
-                      updateSubtitleTime={updateSubtitleTime}
-                      speakerProfiles={speakerProfiles}
-                      deleteSubtitle={deleteSubtitle}
-                      deleteMultipleSubtitles={deleteMultipleSubtitles}
-                      addSubtitle={addSubtitle}
-                      onManageSpeakers={onManageSpeakers}
-                      scrollContainerRef={subtitleListRef}
-                      conservativeBatchMode={settings.conservativeBatchMode}
-                      onToggleConservativeMode={() =>
-                        onUpdateSetting('conservativeBatchMode', !settings.conservativeBatchMode)
-                      }
-                      currentPlayTime={currentTime}
-                      onRowClick={_handleSubtitleRowClick}
-                    />
+                    <ErrorBoundary>
+                      <SubtitleEditor
+                        subtitles={subtitles}
+                        settings={settings}
+                        status={status}
+                        activeTab={activeTab}
+                        selectedBatches={selectedBatches}
+                        toggleAllBatches={toggleAllBatches}
+                        selectBatchesWithComments={selectBatchesWithComments}
+                        showSourceText={showSourceText}
+                        setShowSourceText={setShowSourceText}
+                        file={file}
+                        handleBatchAction={handleBatchAction}
+                        batchComments={batchComments}
+                        toggleBatch={toggleBatch}
+                        updateBatchComment={updateBatchComment}
+                        editingCommentId={editingCommentId}
+                        setEditingCommentId={setEditingCommentId}
+                        updateLineComment={updateLineComment}
+                        updateSubtitleText={updateSubtitleText}
+                        updateSubtitleOriginal={updateSubtitleOriginal}
+                        updateSpeaker={updateSpeaker}
+                        updateSubtitleTime={updateSubtitleTime}
+                        speakerProfiles={speakerProfiles}
+                        deleteSubtitle={deleteSubtitle}
+                        deleteMultipleSubtitles={deleteMultipleSubtitles}
+                        addSubtitle={addSubtitle}
+                        onManageSpeakers={onManageSpeakers}
+                        scrollContainerRef={subtitleListRef}
+                        conservativeBatchMode={settings.conservativeBatchMode}
+                        onToggleConservativeMode={() =>
+                          onUpdateSetting('conservativeBatchMode', !settings.conservativeBatchMode)
+                        }
+                        currentPlayTime={currentTime}
+                        onRowClick={_handleSubtitleRowClick}
+                      />
+                    </ErrorBoundary>
                   </div>
                 </div>
               )}
