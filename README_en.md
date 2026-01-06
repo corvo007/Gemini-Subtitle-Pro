@@ -15,6 +15,7 @@ Open-source subtitle tools on the market each have their focuses, but often have
 | 🎧 **Auto Glossary Extraction**      | Intelligently extracts proper nouns from audio, verifying standard translations with Google Search |
 | ⚡ **Long Context Translation**      | Splits by semantics into 5-10 minute segments, retaining full context for translation              |
 | 💎 **Post-Transcription Processing** | Smart sentence splitting, timeline correction, and term replacement in one go                      |
+| 🎯 **Forced Alignment**              | High-precision timeline alignment based on CTC technology, supporting millisecond-level accuracy   |
 | 🗣️ **Speaker Recognition**           | Automatically infers and labels multiple speakers' identities                                      |
 | 🧠 **Smart Concurrency**             | Dynamically adjusts concurrency based on models; ~8-10 mins to process a 30 min video              |
 | 🚀 **Full Auto Mode**                | Input a video link to automatically complete download, transcription, translation, and encoding    |
@@ -96,6 +97,18 @@ We provide auto-built installation packages so you can use it directly without c
 2.  Intelligently splits long sentences (≤22 characters per line)
 3.  Secondary validation of timeline alignment
 4.  Uses Gemini 3 Flash for translation and polishing
+
+---
+
+### 🎯 Forced Alignment
+
+**Problem Solved**: Standard transcription models (like Whisper) often provide timestamp precision at the segment level, which may not be accurate enough for professional subtitle alignment, leading to slight drifts.
+
+**Technical Features**:
+
+- Uses CTC (Connectionist Temporal Classification) based forced alignment.
+- Aligns text to audio at the character level.
+- Significantly improves timeline accuracy, ensuring subtitles appear exactly when spoken.
 
 ---
 
@@ -270,6 +283,27 @@ If you have an NVIDIA graphics card, it is strongly recommended to enable GPU ac
 - **Cannot find option?**: Please confirm you are using the **Desktop Version**, the web version does not support this feature.
 - **Status Error?**: Check if `.bin` model file is selected correctly.
 - **Slow Speed?**: Speed under CPU mode depends on processor performance, recommend using `Base` or `Small` models. For extreme speed please configure GPU acceleration.
+
+---
+
+## 🎯 Forced Alignment Configuration
+
+Use the forced alignment model to obtain higher precision character-level timestamps, especially suitable for scenarios with high requirements for timeline accuracy.
+
+1.  **Prepare Tools**:
+    - On the Releases page, you need to **separately download** the aligner component (e.g., `aligner-windows-x64.zip`).
+    - Unzip the archive to get `align.exe`.
+
+2.  **Download Model**:
+    - Visit Hugging Face to download [mms-300m-1130-forced-aligner](https://huggingface.co/MahmoudAshraf/mms-300m-1130-forced-aligner).
+    - Download and unzip the model to any location on your local machine.
+
+3.  **Configure Application**:
+    - Open the application **Settings**.
+    - In the **"Alignment"** settings:
+      - **Executable Path**: Select the unzipped `align.exe` file.
+      - **Model Path**: Select the model folder you downloaded and unzipped.
+    - Enable the feature to start using it.
 
 ---
 

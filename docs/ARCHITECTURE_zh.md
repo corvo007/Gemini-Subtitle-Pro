@@ -4,7 +4,7 @@
 
 ## 📖 项目概述
 
-**Gemini Subtitle Pro** 是一款基于 AI 的字幕创建、翻译和润色工具。采用 React + Vite + Electron 技术栈，支持 Web 和桌面客户端双平台部署。
+**Gemini Subtitle Pro** 是一款 AI 驱动的视频字幕生成、翻译与润色工具。采用 React + Vite + Electron 技术栈构建，支持 Web 端和桌面客户端双端部署。
 
 - **技术栈**: React 19, Vite 6, Electron 39, TypeScript
 - **AI 引擎**: Google Gemini (翻译/润色), OpenAI Whisper (语音识别)
@@ -22,19 +22,19 @@ flowchart TB
         REACT["React 19.2<br/>UI 框架"]
         TAILWIND["TailwindCSS 4.1<br/>样式系统"]
         LUCIDE["Lucide React<br/>图标库"]
-        UI_LIB["Unified UI Components<br/>(Button, Modal, Input)"]
+        UI_LIB["统一 UI 组件库<br/>(Button, Modal, Input)"]
         ASSJS["assjs<br/>所见即所得字幕渲染"]
         VIDEO_PLAYER["VideoPlayerPreview<br/>渐进式视频播放"]
     end
 
-    subgraph BUILD["🔧 构建层 (Build Toolchain)"]
+    subgraph BUILD["🔧 构建工具链"]
         direction TB
         VITE["Vite 6.2<br/>开发服务器 & 打包"]
         TS["TypeScript 5.8<br/>类型系统"]
         POSTCSS["PostCSS<br/>CSS 后处理"]
     end
 
-    subgraph RUNTIME["⚡ 运行时层 (Runtime Layer)"]
+    subgraph RUNTIME["⚡ 运行时层"]
         direction TB
 
         subgraph WEB["Web 运行时"]
@@ -47,17 +47,17 @@ flowchart TB
             ELECTRON["Electron 39<br/>桌面容器"]
             NODE["Node.js<br/>本地 API"]
             IPC["IPC<br/>进程通信"]
-            LOCAL_VIDEO["local-video:// 协议<br/>流媒体访问"]
+            LOCAL_VIDEO["local-video:// 协议<br/>流式媒体访问"]
         end
     end
 
-    subgraph AI["🤖 AI 服务层 (AI Services)"]
+    subgraph AI["🤖 AI 服务层"]
         direction TB
 
         subgraph GOOGLE["Google AI"]
             GEMINI_SDK["@google/genai<br/>Gemini SDK"]
-            FLASH["Gemini 2.5/3 Flash<br/>翻译/校对"]
-            PRO["Gemini 3 Pro<br/>术语/说话人/校对"]
+            FLASH["Gemini 2.5/3 Flash<br/>翻译/润色"]
+            PRO["Gemini 3 Pro<br/>术语/说话人/润色"]
         end
 
         subgraph OPENAI_SVC["OpenAI"]
@@ -65,13 +65,13 @@ flowchart TB
             WHISPER_API["Whisper API<br/>云端转写"]
         end
 
-        subgraph LOCAL_AI["本地 AI"]
+        subgraph LOCAL_AI["Local AI"]
             VAD["Silero VAD<br/>(ONNX)"]
             WHISPER_CPP["whisper.cpp<br/>本地转写"]
         end
     end
 
-    subgraph NATIVE["🖥️ 原生层 (Native Layer)"]
+    subgraph NATIVE["🖥️ 原生层"]
         direction TB
         FFMPEG_BIN["FFmpeg<br/>音视频处理"]
         YT_DLP["yt-dlp<br/>视频下载"]
@@ -84,25 +84,25 @@ flowchart TB
     ELECTRON_RT --> NATIVE
 ```
 
-### 依赖版本一览
+### 依赖版本概览
 
-| 类别         | 依赖               | 版本   | 用途               |
-| ------------ | ------------------ | ------ | ------------------ |
-| **核心框架** | React              | 19.2   | UI 框架            |
-|              | Vite               | 6.2    | 构建工具           |
-|              | TypeScript         | 5.8    | 类型系统           |
-|              | Electron           | 39     | 桌面容器           |
-| **AI SDK**   | @google/genai      | Latest | Gemini API         |
-|              | openai             | Latest | Whisper API        |
-|              | onnxruntime-web    | 1.23   | VAD 推理           |
-| **音频处理** | @ricky0123/vad-web | 0.0.30 | Silero VAD 封装    |
-|              | fluent-ffmpeg      | 2.1    | FFmpeg 控制        |
-| **国际化**   | i18next            | 25.7   | 国际化核心         |
-|              | react-i18next      | 16.5   | React 绑定         |
-| **字幕渲染** | assjs              | 0.1.4  | 所见即所得字幕渲染 |
-| **样式**     | TailwindCSS        | 4.1    | 原子化 CSS         |
-|              | Lucide React       | 0.554  | 图标库             |
-| **工具**     | clsx / tw-merge    | Latest | 样式合并           |
+| 类别           | 依赖包             | 版本   | 用途            |
+| :------------- | :----------------- | :----- | :-------------- |
+| **核心框架**   | React              | 19.2   | UI 框架         |
+|                | Vite               | 6.2    | 构建工具        |
+|                | TypeScript         | 5.8    | 类型系统        |
+|                | Electron           | 39     | 桌面容器        |
+| **AI SDK**     | @google/genai      | Latest | Gemini API      |
+|                | openai             | Latest | Whisper API     |
+|                | onnxruntime-web    | 1.23   | VAD 推理        |
+| **音视频处理** | @ricky0123/vad-web | 0.0.30 | Silero VAD 封装 |
+|                | fluent-ffmpeg      | 2.1    | FFmpeg 控制     |
+| **国际化**     | i18next            | 25.7   | 国际化核心      |
+|                | react-i18next      | 16.5   | React 绑定      |
+| **渲染**       | assjs              | 0.1.4  | ASS 字幕渲染    |
+| **样式**       | TailwindCSS        | 4.1    | 原子化 CSS      |
+|                | Lucide React       | 0.554  | 图标库          |
+| **工具库**     | clsx / tw-merge    | Latest | 样式合并        |
 
 ---
 
@@ -110,9 +110,9 @@ flowchart TB
 
 ### 路径别名 (Path Aliases)
 
-本项目在 `src` 和 `electron` 目录下全面使用路径别名，**禁止使用相对路径** (如 `../../`) 引用跨层级模块，但同层级文件引用除外（推荐统一使用别名）。
+本项目在 `src` 和 `electron` 目录下全面使用路径别名。除同级文件引用外（推荐统一使用别名），**禁止使用相对路径**（如 `../../`）进行跨层级模块引用。
 
-- `@/*` -> `src/*` (核心源码)
+- `@/*` -> `src/*` (核心源代码)
 - `@components/*` -> `src/components/*`
 - `@hooks/*` -> `src/hooks/*`
 - `@services/*` -> `src/services/*`
@@ -123,10 +123,10 @@ flowchart TB
 
 ### 目录组织原则
 
-- **就近原则 (Co-location)**: 仅在特定模块内部使用的工具函数或组件，应放置在该模块的 `utils` 或 `shared` 子目录下，而非提升到全局。
-  - 例如 `src/components/endToEnd/wizard/utils/validation.ts` 仅服务于向导模块。
-- **关注点分离**:
-  - `src/utils`: 全局通用、纯 JavaScript/UI 辅助函数。
+- **就近原则 (Co-location)**：仅在特定模块内部使用的工具函数或组件，应放置在该模块的 `utils` 或 `shared` 子目录下，而不是提升到全局。
+  - 例如，`src/components/endToEnd/wizard/utils/validation.ts` 仅服务于向导模块。
+- **关注点分离**：
+  - `src/utils`: 全局通用的、纯 JavaScript/UI 辅助函数。
   - `src/services/utils`: 基础设施、日志、系统级工具。
 
 ---
@@ -137,7 +137,7 @@ flowchart TB
 flowchart TB
     subgraph APP_LAYER["应用层 (App Layer)"]
         direction LR
-        APP["App.tsx<br/>路由 & 状态容器"]
+        APP["App.tsx<br/>路由与状态容器"]
 
         subgraph PAGES["页面"]
             HOME["HomePage<br/>上传入口"]
@@ -168,7 +168,7 @@ flowchart TB
             USE_SNAPSHOTS["useSnapshots<br/>版本快照"]
             USE_DOWNLOAD["useDownload<br/>下载逻辑"]
             USE_TOAST["useToast<br/>通知系统"]
-            USE_E2E["useEndToEnd<br/>流水线状态"]
+            USE_E2E["useEndToEnd<br/>流程状态"]
             USE_VIDEO_PREVIEW["useVideoPreview<br/>视频播放与转码"]
         end
     end
@@ -178,21 +178,21 @@ flowchart TB
 
         subgraph API_SVC["API 服务"]
             direction LR
-            GEMINI_CORE["gemini/core/<br/>client.ts (Client & Config)"]
+            GEMINI_CORE["gemini/core/<br/>client.ts (客户端与配置)"]
             OPENAI_SVC2["openai/<br/>transcribe.ts"]
             WHISPER_SVC["whisper-local/<br/>transcribe.ts"]
         end
 
-        subgraph GENERATION_SVC["生成服务 (New)"]
+        subgraph GENERATION_SVC["生成服务"]
             direction TB
-            PIPELINE["pipeline/<br/>index.ts (Orchestrator)<br/>chunkProcessor.ts"]
+            PIPELINE["pipeline/<br/>index.ts (流程编排)<br/>chunkProcessor.ts"]
             EXTRACTORS["extractors/<br/>glossary.ts<br/>speakerProfile.ts"]
             BATCH_OPS["batch/<br/>operations.ts"]
         end
 
         subgraph AUDIO_SVC["音频服务"]
             direction LR
-            SEGMENTER_SVC["segmenter.ts (17KB)<br/>SmartSegmenter"]
+            SEGMENTER_SVC["segmenter.ts (17KB)<br/>智能切分"]
             SAMPLER_SVC["sampler.ts (12KB)<br/>智能采样"]
             DECODER_SVC["decoder.ts<br/>音频解码"]
         end
@@ -202,6 +202,13 @@ flowchart TB
             PARSER_SVC["parser.ts (13KB)<br/>多格式解析"]
             GENERATOR_SVC["generator.ts<br/>格式导出"]
             TIME_SVC["time.ts<br/>时间码处理"]
+            RECONCILER_SVC["reconciler.ts<br/>数据协调"]
+        end
+
+        subgraph ALIGNMENT_SVC["对齐服务"]
+            direction LR
+            AL_STRATEGY["utils/strategies/ctcAligner.ts<br/>CTC 时间戳校正"]
+            AL_IDX["utils/index.ts<br/>工厂"]
         end
 
         subgraph GLOSSARY_SVC["术语服务"]
@@ -218,10 +225,10 @@ flowchart TB
         end
     end
 
-    subgraph INFRA_LAYER["基础设施层 (Infrastructure)"]
+    subgraph INFRA_LAYER["基础设施层 (Infrastructure Layer)"]
         direction LR
 
-        subgraph UTILS["工具"]
+        subgraph UTILS["工具库"]
             CONCURRENCY["concurrency.ts<br/>Semaphore"]
             LOGGER["logger.ts<br/>日志系统"]
             ENV["env.ts<br/>环境变量"]
@@ -233,15 +240,16 @@ flowchart TB
             PARSER_WORKER["parser.worker.ts<br/>解析后台"]
         end
 
-        subgraph TYPES_GROUP["类型"]
-            SUBTITLE_TYPE["subtitle.ts"]
-            SETTINGS_TYPE["settings.ts"]
-            API_TYPE["api.ts"]
-            GLOSSARY_TYPE["glossary.ts"]
+        subgraph TYPES_GROUP["类型 (全局)"]
+            SUBTITLE_TYPE["src/types/subtitle.ts"]
+            SETTINGS_TYPE["src/types/settings.ts"]
+            API_TYPE["src/types/api.ts"]
+            GLOSSARY_TYPE["src/types/glossary.ts"]
+            PIPELINE_TYPE["src/types/pipeline.ts"]
         end
     end
 
-    subgraph ELECTRON_LAYER["Electron 层 (Desktop Only)"]
+    subgraph ELECTRON_LAYER["Electron 层 (仅桌面端)"]
         direction LR
         MAIN_PROCESS["main.ts (15KB)<br/>主进程"]
         PRELOAD_SCRIPT["preload.ts<br/>安全桥接"]
@@ -266,10 +274,10 @@ flowchart TB
     APP_LAYER --> HOOKS_LAYER
     HOOKS_LAYER --> SERVICES_LAYER
     SERVICES_LAYER --> INFRA_LAYER
-    SERVICES_LAYER -.->|"Electron Only"| ELECTRON_LAYER
+    SERVICES_LAYER -.-|"Electron Only"| ELECTRON_LAYER
 ```
 
-### 模块依赖关系图
+### 模块依赖关系
 
 ```mermaid
 flowchart LR
@@ -277,7 +285,7 @@ flowchart LR
         PIPELINE_IDX["generation/pipeline/index.ts<br/>generateSubtitles()"]
     end
 
-    subgraph EXTRACTORS_DEPS["提取器"]
+    subgraph EXTRACTORS_DEPS["提取器依赖"]
         GLOSSARY_EXT["extractors/glossary.ts"]
         SPEAKER_EXT["extractors/speakerProfile.ts"]
     end
@@ -301,7 +309,7 @@ flowchart LR
         LOCAL_TRANSCRIBE["whisper-local/transcribe.ts"]
     end
 
-    subgraph UTIL_DEPS["工具依赖"]
+    subgraph UTIL_DEPS["通用依赖"]
         CONCURRENCY_TS["concurrency.ts<br/>Semaphore, mapInParallel"]
         LOGGER_TS["logger.ts"]
         PRICING_TS["pricing.ts"]
@@ -351,6 +359,9 @@ Gemini-Subtitle-Pro/
 │   │   ├── 📂 editor/               # 字幕编辑器与视频预览组件
 │   │   │   ├── 📄 VideoPlayerPreview.tsx  # [NEW] 渐进式视频播放器，支持 ASS 字幕渲染
 │   │   │   └── 📄 ...               # SubtitleRow, Batch 等
+│   │   ├── 📂 compression/          # [NEW] 视频压制页面组件
+│   │   │   ├── 📄 EncoderSelector.tsx # 编码器选择与配置
+│   │   │   └── 📄 ...
 │   │   ├── 📂 pages/                # 页面级组件 (HomePage, WorkspacePage 等)
 │   │   ├── 📂 ui/                   # 基础 UI 组件库 (Modal, Toggle, TextInput...)
 │   │   ├── 📂 settings/             # 设置相关组件 (SettingsModal, SettingsPanel 等)
@@ -361,37 +372,26 @@ Gemini-Subtitle-Pro/
 │   │
 │   ├── 📂 hooks/                    # React Hooks
 │   │   ├── 📂 useWorkspaceLogic/    # 核心工作区逻辑 (拆分为多模块)
-│   │   │   ├── 📄 index.ts          # 入口
-│   │   │   └── 📄 ...               # 子逻辑 Hook
-│   │   ├── 📄 useHardwareAcceleration.ts # 硬件加速状态
-│   │   ├── 📄 useSettings.ts        # 设置管理
-│   │   ├── 📄 useDownload.ts        # 下载逻辑
 │   │   ├── 📄 useVideoPreview.ts    # [NEW] 视频预览与转码状态
 │   │   └── ...                      # 其他功能 Hooks
 │   │
 │   ├── 📂 locales/                  # [NEW] 国际化资源目录
 │   │   ├── 📂 zh-CN/                # 简体中文
-│   │   │   ├── 📄 common.json       # 通用文本
-│   │   │   ├── 📄 home.json         # 首页
-│   │   │   ├── 📄 editor.json       # 编辑器
-│   │   │   ├── 📄 settings.json     # 设置
-│   │   │   ├── 📄 endToEnd.json     # 端到端向导
-│   │   │   └── 📄 ...               # 其他命名空间
 │   │   └── 📂 en-US/                # 英语
-│   │       └── 📄 ...               # 相同结构
 │   │
 │   ├── 📂 services/                 # 服务层 (纯逻辑)
 │   │   ├── 📂 api/                  # API 集成 (Gemini Core, OpenAI)
-│   │   │   └── 📂 gemini/           # Gemini 基础客户端与配置
-│   │   │       ├── 📂 core/         # 核心 API 逻辑
-│   │   │       └── 📂 utils/        # API 工具函数
 │   │   ├── 📂 generation/           # 生成服务 (核心业务逻辑)
 │   │   │   ├── 📂 pipeline/         # 完整流水线 (Orchestrator, ChunkProcessor)
 │   │   │   ├── 📂 extractors/       # 信息提取 (Glossary, Speaker)
-│   │   │   ├── 📂 batch/            # 批量操作
-│   │   │   └── 📂 debug/            # 调试工具
+│   │   │   └── 📂 batch/            # 批量操作
 │   │   ├── 📂 audio/                # 音频处理 (Segmenter, Sampler)
 │   │   ├── 📂 subtitle/             # 字幕解析与生成 (Parser, Generator)
+│   │   │   ├── 📄 reconciler.ts     # [NEW] 数据协调器 (数据枢纽)
+│   │   │   └── 📄 ...
+│   │   ├── 📂 alignment/            # [NEW] 对齐服务
+│   │   │   ├── 📂 strategies/       # 对齐策略 (CTC)
+│   │   │   └── 📄 index.ts          # 策略工厂
 │   │   ├── 📂 download/             # 下载服务逻辑
 │   │   └── 📂 utils/                # 通用服务工具 (Logger, URL 验证)
 │   │
@@ -403,13 +403,17 @@ Gemini-Subtitle-Pro/
 │   │   ├── 📄 cn.ts                 # Tailwind 类名合并工具
 │   │   └── 📄 text.ts               # 文本处理工具
 │   │
-│   ├── 📂 types/                    # TypeScript 类型定义
+│   ├── 📂 types/                    # [NEW] 集中式类型定义
+│   │   ├── 📄 pipeline.ts           # Pipeline 共享类型
+│   │   ├── 📄 alignment.ts          # Alignment 类型
+│   │   └── 📄 ...
+│   │
 │   └── 📂 workers/                  # Web Workers
 │
 ├── 📂 electron/                     # Electron 桌面端代码
 │   ├── 📄 main.ts                   # 主进程入口
 │   ├── 📄 preload.ts                # 预加载脚本
-│   └── 📂 services/                 # 桌面端服务 (Node.js 环境)
+│   └── 📂 services/                 # 桌面服务 (Node.js 环境)
 │       ├── 📄 localWhisper.ts       # 本地 Whisper 调用
 │       ├── 📄 videoPreviewTranscoder.ts # [NEW] 视频预览与缓存
 │       ├── 📄 logger.ts             # 统一日志服务
@@ -420,45 +424,45 @@ Gemini-Subtitle-Pro/
 
 ---
 
-## 🔄 核心流程图
+## 🔄 核心流程图解
 
-### 1. 完整 Pipeline 并发架构
+### 1. 完整 Pipeline 并发架构图
 
-下图展示了字幕生成的完整并发架构，包括并行异步任务、Semaphore 控制和跨任务依赖关系：
+下图展示了字幕生成的完整并发架构，包含并行异步任务、Semaphore 控制及任务间依赖关系：
 
 ```mermaid
 flowchart TB
     subgraph INIT["🎬 初始化阶段"]
-        A[音频/视频文件] --> B[音频解码]
-        B --> C{智能分段?}
+        A[音视频文件] --> B[音频解码]
+        B --> C{是否智能切分?}
         C -->|是| D["VAD 智能切分<br/>(Silero VAD)"]
         C -->|否| E[固定时长切分]
-        D --> F[音频片段列表]
+        D --> F[Audio Chunk 列表]
         E --> F
-        D --> G["缓存 VAD Segments<br/>(供说话人采样复用)"]
+        D --> G["缓存 VAD 片段<br/>(供说话人采样复用)"]
     end
 
     subgraph PARALLEL["⚡ 并行异步任务 (Promise)"]
         direction TB
 
-        subgraph GLOSSARY["📚 术语提取 Pipeline"]
+        subgraph GLOSSARY["📚 术语提取流水线"]
             H["glossaryPromise<br/>(Gemini 3 Pro)"]
             H --> I[选择采样片段]
             I --> J["并发提取术语<br/>(concurrencyPro=2)"]
             J --> K[Search Grounding 验证]
             K --> L["⏸️ 等待用户确认<br/>(BLOCKING)"]
-            L --> M["GlossaryState<br/>(Non-blocking Wrapper)"]
+            L --> M["GlossaryState<br/>(非阻塞包装器)"]
         end
 
-        subgraph SPEAKER["🗣️ 说话人识别 Pipeline"]
+        subgraph SPEAKER["🗣️ 说话人识别流水线"]
             N["speakerProfilePromise<br/>(Gemini 3 Pro)"]
-            N --> O["智能音频采样<br/>(复用 VAD Segments)"]
-            O --> P[提取说话人档案]
+            N --> O["智能音频采样<br/>(复用 VAD 片段)"]
+            O --> P[提取说话人特征]
             P --> Q["SpeakerProfile[]<br/>{name, style, tone, catchphrases}"]
         end
     end
 
-    subgraph CHUNKS["🔄 Chunk 并行处理 (mapInParallel)"]
+    subgraph CHUNKS["🔄 Chunk 并发处理 (mapInParallel)"]
         direction TB
 
         subgraph CHUNK1["Chunk 1"]
@@ -479,7 +483,7 @@ flowchart TB
 
         subgraph CHUNKN["Chunk N..."]
             CN_T["Transcription"]
-            CN_T --> CN_G["等待术语表"]
+            CN_T --> CN_G["等待术语"]
             CN_G --> CN_S["等待说话人"]
             CN_S --> CN_R["Refinement"]
             CN_R --> CN_TR[Translation]
@@ -489,10 +493,10 @@ flowchart TB
     F --> PARALLEL
     G --> O
     F --> CHUNKS
-    M -.->|"非阻塞访问"| C1_G
-    M -.->|"非阻塞访问"| C2_G
-    Q -.->|"等待完成"| C1_S
-    Q -.->|"等待完成"| C2_S
+    M -.-|"非阻塞访问"| C1_G
+    M -.-|"非阻塞访问"| C2_G
+    Q -.-|"等待完成"| C1_S
+    Q -.-|"等待完成"| C2_S
 
     subgraph MERGE["📦 合并结果"]
         R[合并所有 Chunk 结果]
@@ -513,6 +517,12 @@ flowchart LR
         subgraph TRANS["transcriptionSemaphore"]
             T1["Slot 1"]
             T2["Slot 2<br/>(本地 Whisper 默认 1)"]
+        end
+
+        subgraph ALIGN["alignmentSemaphore"]
+            A1["Slot 1"]
+            A2["Slot 2"]
+            A3["Slot 3"]
         end
 
         subgraph REFINE["refinementSemaphore"]
@@ -539,20 +549,23 @@ flowchart LR
 
     C1 -->|"转录完成后"| R1
     C2 -->|"转录完成后"| R2
-    C4 -->|"acquire()"| R3
+
+    C1 -->|"校对完成后"| A1
+    C2 -->|"校对完成后"| A2
 ```
 
 **配置说明：**
 
-| Semaphore                | 用途                  | 默认并发数       | 配置项               |
-| ------------------------ | --------------------- | ---------------- | -------------------- |
-| `transcriptionSemaphore` | 控制 Whisper API 调用 | 本地: 1, 云端: 5 | `whisperConcurrency` |
-| `refinementSemaphore`    | 控制 Gemini Flash API | 5                | `concurrencyFlash`   |
-| (术语提取内部)           | 控制 Gemini Pro API   | 2                | `concurrencyPro`     |
+| Semaphore                | 用途                  | 默认并发数       | 配置项                 |
+| ------------------------ | --------------------- | ---------------- | ---------------------- |
+| `transcriptionSemaphore` | 控制 Whisper API 调用 | 本地: 1, 云端: 5 | `whisperConcurrency`   |
+| `refinementSemaphore`    | 控制 Gemini Flash API | 5                | `concurrencyFlash`     |
+| `alignmentSemaphore`     | 控制对齐服务          | 2                | `concurrencyAlignment` |
+| (术语提取内部)           | 控制 Gemini Pro API   | 2                | `concurrencyPro`       |
 
 ---
 
-### 3. Chunk 内部 4 阶段流水线
+### 3. Chunk 内部 5 阶段流水线
 
 ```mermaid
 sequenceDiagram
@@ -563,6 +576,8 @@ sequenceDiagram
     participant SProm as speakerProfilePromise
     participant RSem as refinementSemaphore
     participant Gemini as Gemini Flash
+    participant ASem as alignmentSemaphore
+    participant Aligner as CTC Aligner
 
     Note over Chunk: Stage 1: Transcription
     Chunk->>TSem: acquire()
@@ -575,35 +590,75 @@ sequenceDiagram
 
     Note over Chunk: Stage 2: Wait for Glossary (Non-blocking)
     Chunk->>GState: await get()
-    Note right of GState: 如果术语提取尚未完成<br/>或用户尚未确认，则等待
     GState-->>Chunk: finalGlossary[]
 
     Note over Chunk: Stage 3: Wait for Speaker Profiles
     Chunk->>SProm: await speakerProfiles
-    Note right of SProm: 如果说话人识别尚未完成则等待
     SProm-->>Chunk: SpeakerProfile[]
 
-    Note over Chunk: Stage 4: Refinement + Translation
+    Note over Chunk: Stage 4: Refinement
     Chunk->>RSem: acquire()
     activate RSem
     RSem-->>Chunk: 获得许可
-
     Chunk->>Gemini: Refinement (音频+原文)
     Note right of Gemini: 时间轴校正<br/>术语应用<br/>说话人匹配
     Gemini-->>Chunk: refinedSegments[]
-
-    Chunk->>Gemini: Translation (批量)
-    Gemini-->>Chunk: translatedItems[]
-
     Chunk->>RSem: release()
     deactivate RSem
 
-    Note over Chunk: 完成，更新中间结果
+    Note over Chunk: Stage 5: Alignment
+    Chunk->>ASem: acquire()
+    activate ASem
+    ASem-->>Chunk: 获得许可 (CTC)
+    Chunk->>Aligner: align(refinedSegments)
+    Note right of Aligner: 精确时间轴<br/>强制对齐
+    Aligner-->>Chunk: alignedSegments[]
+    Chunk->>ASem: release()
+    deactivate ASem
+
+    Note over Chunk: Stage 6: Translation
+    Chunk->>RSem: acquire()
+    activate RSem
+    RSem-->>Chunk: 获得许可
+    Chunk->>Gemini: Translation (批量)
+    Gemini-->>Chunk: translatedItems[]
+    Chunk->>RSem: release()
+    deactivate RSem
+
+    Note over Chunk: 完成
 ```
 
 ---
 
-### 4. 术语提取与用户交互流程
+### 4. 数据完整性与协调 ("数据枢纽")
+
+系统采用严格的 **数据协调策略** (`src/services/subtitle/reconciler.ts`) 以确保在流水线各个阶段（Refinement, Alignment, Translation）之间，即使片段数量发生变化（如拆分或合并），元数据也能保持一致。
+
+#### 4.1 协调器逻辑 (The Reconciler Logic)
+
+`reconcile(prev, curr)` 函数充当连接流水线各个阶段的“数据枢纽”。它智能地将 `prev`（源）的元数据合并到 `curr`（新生成）的片段中：
+
+- **语义元数据 (Semantic Metadata)** (始终继承):
+  - `speaker` (说话人 ID/名称)
+  - `comment` (用户备注)
+  - **逻辑**: 继承自重叠率最高的 `prev` 片段。即使片段被拆分，所有子片段都会继承父片段的说话人信息。
+- **内部状态 (Internal State)** (条件继承):
+  - `alignmentScore` (CTC 置信度)
+  - `lowConfidence` (低置信度标记)
+  - `hasRegressionIssue`, `hasCorruptedRangeIssue` (错误标记)
+  - **逻辑**: **仅当**检测到 **1:1 映射**时才严格继承。如果片段被拆分或合并，这些内部标记会被重置，以此避免错误的传播（例如，“完美对齐”的评分不应自动应用于两个新生成的半片段，除非经过重新验证）。
+
+#### 4.2 对齐策略 (CTC)
+
+系统使用 **CTC (Connectionist Temporal Classification)** 进行高精度对齐：
+
+- **引擎**: `ctcAligner.ts` 调用外部 `align.exe` (MMS-300m 模型)。
+- **功能**: 基于音频对齐结果更新 `startTime` 和 `endTime`，但**绝不拆分或合并**片段。
+- **元数据**: 为片段添加 `alignmentScore`。低于阈值的评分会触发 `lowConfidence` 标记以供用户复查。
+
+---
+
+### 5. 术语提取与用户交互流程
 
 ```mermaid
 sequenceDiagram
@@ -647,7 +702,7 @@ sequenceDiagram
 
 ---
 
-### 5. 说话人识别在 Pipeline 中的位置
+### 6. 说话人识别在 Pipeline 中的位置
 
 ```mermaid
 flowchart TB
@@ -669,38 +724,39 @@ flowchart TB
         R --> TR
     end
 
-    GP -.->|"用户确认后"| WG
-    SP -.->|"提取完成后"| WS
+    GP -.-|"After User Confirms"| WG
+    SP -.-|"After Extraction Complete"| WS
 
-    subgraph REFINEMENT["Refinement 阶段使用"]
-        G["术语表 → 纠正识别错误"]
-        S["说话人档案 → 匹配发言者"]
-        G --> PROMPT["系统 Prompt"]
+    subgraph REFINEMENT["Refinement Stage Uses"]
+        G["Glossary → Correct Recognition Errors"]
+        S["Speaker Profiles → Match Speakers"]
+        G --> PROMPT["System Prompt"]
         S --> PROMPT
     end
 
     R --> REFINEMENT
 ```
 
-**Pipeline 依赖关系总结：**
+**Pipeline 依赖总结：**
 
-| 阶段          | 依赖项                                | 说明                   |
-| ------------- | ------------------------------------- | ---------------------- |
-| Transcription | `transcriptionSemaphore`              | 独立执行，无阻塞依赖   |
-| Wait Glossary | `glossaryState.get()`                 | 必须等待术语确认完成   |
-| Wait Speakers | `speakerProfilePromise`               | 必须等待说话人识别完成 |
-| Refinement    | `refinementSemaphore` + 术语 + 说话人 | 合并使用所有数据       |
-| Translation   | (在 Refinement Semaphore 内)          | 随 Refinement 一起完成 |
+| 阶段          | 依赖项                                      | 说明                   |
+| :------------ | :------------------------------------------ | :--------------------- |
+| Transcription | `transcriptionSemaphore`                    | 独立执行，无阻塞依赖   |
+| Wait Glossary | `glossaryState.get()`                       | 必须等待术语表确认完成 |
+| Wait Speakers | `speakerProfilePromise`                     | 必须等待说话人识别完成 |
+| Refinement    | `refinementSemaphore` + Glossary + Speakers | 合并并使用所有数据     |
+| Alignment     | `alignmentSemaphore`                        | 高精度时间轴对齐       |
+| Translation   | `refinementSemaphore` (共享)                | 对齐后进行翻译         |
 
 ---
 
-### 6. 桌面端全流程 (下载-制作-压制)
+### 7. 桌面端全流程 (下载-制作-压制)
 
-桌面版独有的完整工作流，打通了从素材获取到成片输出的链路：
+桌面端独有的完整工作流，打通从素材获取到成品输出：
 
 ```mermaid
 flowchart LR
-    subgraph DOWNLOAD["📥 资源获取"]
+    subgraph DOWNLOAD["📥 素材获取"]
         direction TB
         YTB["YouTube<br/>(yt-dlp)"]
         BILI["Bilibili<br/>(yt-dlp)"]
@@ -722,13 +778,13 @@ flowchart LR
         EDIT --> SRT_ASS["导出字幕文件<br/>(.srt / .ass)"]
     end
 
-    subgraph COMPRESS["🎬 成片压制"]
+    subgraph COMPRESS["🎬 最终压制"]
         direction TB
         LOCAL_FILE --> COMPRESSOR["视频压制引擎<br/>(FFmpeg)"]
-        EDIT -.->|"自动传递字幕路径"| COMPRESSOR
-        SRT_ASS -.->|"手动选择字幕"| COMPRESSOR
+        EDIT -.-|"自动传递字幕路径"| COMPRESSOR
+        SRT_ASS -.-|"手动选择字幕"| COMPRESSOR
 
-        COMPRESSOR --> OUTPUT["硬字幕视频<br/>(Hardsub Video)"]
+        COMPRESSOR --> OUTPUT["内置字幕视频<br/>(Hardsub Video)"]
     end
 
     DOWNLOAD --> PROCESS
@@ -737,19 +793,19 @@ flowchart LR
 
 ---
 
-### 7. 全自动端到端模式 (End-to-End Pipeline)
+### 8. 全自动 End-to-End 模式 (End-to-End Pipeline)
 
-这是 Electron 端独有的核心功能，通过 IPC 通信协调主进程（资源调度）与渲染进程（AI 运算），实现"一键熟肉"。
+这是 Electron 端独有的核心功能，通过 IPC 通信协调 主进程 (资源调度) 和 渲染进程 (AI 计算)，实现“一键熟肉”。
 
-#### 7.1 跨进程交互架构
+#### 8.1 跨进程交互架构
 
 ```mermaid
 sequenceDiagram
-    participant User as 用户输入
-    participant Main as 🖥️ 主进程 (Node.js)
-    participant Renderer as 🎨 渲染进程 (Web)
-    participant Ext as 🛠️ 外部工具 (yt-dlp/ffmpeg)
-    participant AI as ☁️ AI 服务 (Gemini/OpenAI)
+    participant User as User Input
+    participant Main as 🖥️ Main Process (Node.js)
+    participant Renderer as 🎨 Renderer Process (Web)
+    participant Ext as 🛠️ External Tools (yt-dlp/ffmpeg)
+    participant AI as ☁️ AI Services (Gemini/OpenAI)
 
     User->>Main: 1. 提交视频 URL
     activate Main
@@ -760,7 +816,7 @@ sequenceDiagram
     Main->>Ext: 调用 ffmpeg 提取音频
     Ext-->>Main: 临时音频 (.wav)
 
-    note over Main: [Phase 2: 渲染进程接管]
+    note over Main: [Phase 2: Renderer 接管]
     Main->>Renderer: IPC: generate-subtitles
     activate Renderer
 
@@ -791,7 +847,7 @@ sequenceDiagram
     deactivate Main
 ```
 
-#### 7.2 数据流向与状态管理
+#### 8.2 数据流向与状态管理
 
 所有中间状态和配置通过 `EndToEndWizard` 组件管理，数据流转如下：
 
@@ -813,7 +869,7 @@ sequenceDiagram
     - 各阶段 (下载/转写/压制) 均产生进度事件
     - 主进程 -> `IPC (progress)` -> 渲染进程 `useEndToEnd` Hook -> UI 进度条
 
-#### 7.3 关键 IPC 通道
+#### 8.3 关键 IPC 通道
 
 | 通道名 (Channel)                | 方向             | 载荷 (Payload)    | 作用                               |
 | :------------------------------ | :--------------- | :---------------- | :--------------------------------- |
@@ -952,6 +1008,7 @@ sequenceDiagram
 | `time.ts`              | 时间码处理工具                      |
 | `postCheck.ts`         | 字幕质量后检查                      |
 | `timelineValidator.ts` | 字幕时间轴逻辑校验                  |
+| `reconciler.ts`        | **[NEW] 数据协调器** (元数据合并)   |
 
 ### 5. 下载服务模块 (`src/services/download/`)
 
@@ -1123,7 +1180,10 @@ flowchart TB
         WAIT_DEPS --> REFINEMENT["Gemini 3 Flash<br/>校对 & 时间轴修正"]
         REFINEMENT --> REFINED_SUBS["校对字幕<br/>+ speaker 标注"]
 
-        REFINED_SUBS --> TRANSLATION["Gemini 3 Flash<br/>翻译"]
+        REFINED_SUBS --> ALIGNMENT["CTC 对齐器<br/>(时间轴校正)"]
+        ALIGNMENT --> ALIGNED_SUBS["已对齐字幕<br/>+ alignmentScore"]
+
+        ALIGNED_SUBS --> TRANSLATION["Gemini 3 Flash<br/>翻译"]
         TRANSLATION --> TRANSLATED_SUBS["双语字幕<br/>{original, translated, speaker}[]"]
     end
 
@@ -1197,7 +1257,8 @@ stateDiagram-v2
         state ChunkProcessing {
             Transcribing --> WaitingDeps
             WaitingDeps --> Refining: 依赖就绪
-            Refining --> Translating
+            Refining --> Aligning: 校对完成
+            Aligning --> Translating: 对齐完成
             Translating --> ChunkDone
         }
 

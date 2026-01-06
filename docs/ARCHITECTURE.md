@@ -183,7 +183,7 @@ flowchart TB
             WHISPER_SVC["whisper-local/<br/>transcribe.ts"]
         end
 
-        subgraph GENERATION_SVC["Generation Services (New)"]
+        subgraph GENERATION_SVC["Generation Services"]
             direction TB
             PIPELINE["pipeline/<br/>index.ts (Orchestrator)<br/>chunkProcessor.ts"]
             EXTRACTORS["extractors/<br/>glossary.ts<br/>speakerProfile.ts"]
@@ -202,6 +202,13 @@ flowchart TB
             PARSER_SVC["parser.ts (13KB)<br/>Multi-format Parsing"]
             GENERATOR_SVC["generator.ts<br/>Format Export"]
             TIME_SVC["time.ts<br/>Timecode Processing"]
+            RECONCILER_SVC["reconciler.ts<br/>Robust Reconciliation"]
+        end
+
+        subgraph ALIGNMENT_SVC["Alignment Services"]
+            direction LR
+            AL_STRATEGY["utils/strategies/ctcAligner.ts<br/>CTC Timestamping"]
+            AL_IDX["utils/index.ts<br/>Factory"]
         end
 
         subgraph GLOSSARY_SVC["Glossary Services"]
@@ -233,11 +240,12 @@ flowchart TB
             PARSER_WORKER["parser.worker.ts<br/>Parser Background"]
         end
 
-        subgraph TYPES_GROUP["Types"]
-            SUBTITLE_TYPE["subtitle.ts"]
-            SETTINGS_TYPE["settings.ts"]
-            API_TYPE["api.ts"]
-            GLOSSARY_TYPE["glossary.ts"]
+        subgraph TYPES_GROUP["Types (Src/types)"]
+            SUBTITLE_TYPE["src/types/subtitle.ts"]
+            SETTINGS_TYPE["src/types/settings.ts"]
+            API_TYPE["src/types/api.ts"]
+            GLOSSARY_TYPE["src/types/glossary.ts"]
+            PIPELINE_TYPE["src/types/pipeline.ts"]
         end
     end
 
@@ -351,59 +359,53 @@ Gemini-Subtitle-Pro/
 │   │   ├── 📂 editor/               # Subtitle Editor & Video Preview Components
 │   │   │   ├── 📄 VideoPlayerPreview.tsx  # [NEW] Progressive Video Player with ASS Rendering
 │   │   │   └── 📄 ...               # SubtitleRow, Batch, etc.
+│   │   ├── 📂 compression/          # [NEW] Video Compression Page Components
+│   │   │   ├── 📄 EncoderSelector.tsx # Encoder Selection & Config
+│   │   │   └── 📄 ...
 │   │   ├── 📂 pages/                # Page-level Components (HomePage, WorkspacePage, etc.)
 │   │   ├── 📂 ui/                   # Base UI Component Library (Modal, Toggle, TextInput...)
-│   │   ├── 📂 settings/             # Settings-related Components (SettingsModal, SettingsPanel, etc.)
+│   │   ├── 📂 settings/             # Settings-related Components (SettingsModal, etc.)
 │   │   ├── 📂 layout/               # Layout Containers
-│   │   ├── 📂 modals/               # Business Modals (SettingsModal, etc.)
+│   │   ├── 📂 modals/               # Business Modals
 │   │   ├── 📂 endToEnd/             # End-to-End Wizard Components
 │   │   └── 📂 ...                   # Other feature-divided component directories
 │   │
 │   ├── 📂 hooks/                    # React Hooks
-│   │   ├── 📂 useWorkspaceLogic/    # Core Workspace Logic (Split into multiple modules)
-│   │   │   ├── 📄 index.ts          # Entry
-│   │   │   └── 📄 ...               # Sub-logic Hooks
-│   │   ├── 📄 useHardwareAcceleration.ts # Hardware Acceleration State
-│   │   ├── 📄 useSettings.ts        # Settings Management
-│   │   ├── 📄 useDownload.ts        # Download Logic
+│   │   ├── 📂 useWorkspaceLogic/    # Core Workspace Logic
 │   │   ├── 📄 useVideoPreview.ts    # [NEW] Video Preview & Transcoding State
 │   │   └── ...                      # Other Feature Hooks
 │   │
 │   ├── 📂 locales/                  # [NEW] Internationalization Resources
 │   │   ├── 📂 zh-CN/                # Chinese (Simplified)
-│   │   │   ├── 📄 common.json       # Common Texts
-│   │   │   ├── 📄 home.json         # Home Page
-│   │   │   ├── 📄 editor.json       # Editor
-│   │   │   ├── 📄 settings.json     # Settings
-│   │   │   ├── 📄 endToEnd.json     # End-to-End Wizard
-│   │   │   └── 📄 ...               # Other Namespaces
 │   │   └── 📂 en-US/                # English
-│   │       └── 📄 ...               # Same Structure
 │   │
 │   ├── 📂 services/                 # Service Layer (Pure Logic)
-│   │   ├── 📂 api/                  # API Integration (Gemini Core, OpenAI)
-│   │   │   └── 📂 gemini/           # Gemini Basic Client and Config
-│   │   │       ├── 📂 core/         # Core API Logic
-│   │   │       └── 📂 utils/        # API Utility Functions
+│   │   ├── 📂 api/                  # API Integration
 │   │   ├── 📂 generation/           # Generation Services (Core Business Logic)
-│   │   │   ├── 📂 pipeline/         # Complete Pipeline (Orchestrator, ChunkProcessor)
-│   │   │   ├── 📂 extractors/       # Information Extraction (Glossary, Speaker)
-│   │   │   ├── 📂 batch/            # Batch Operations
-│   │   │   └── 📂 debug/            # Debug Tools
-│   │   ├── 📂 audio/                # Audio Processing (Segmenter, Sampler)
-│   │   ├── 📂 subtitle/             # Subtitle Parsing and Generation (Parser, Generator)
+│   │   │   ├── 📂 pipeline/         # Complete Pipeline
+│   │   │   ├── 📂 extractors/       # Information Extraction
+│   │   │   └── 📂 batch/            # Batch Operations
+│   │   ├── 📂 audio/                # Audio Processing
+│   │   ├── 📂 subtitle/             # Subtitle Parsing and Generation
+│   │   │   ├── 📄 reconciler.ts     # [NEW] Data Reconciler (Data Hub)
+│   │   │   └── 📄 ...
+│   │   ├── 📂 alignment/            # [NEW] Alignment Services
+│   │   │   ├── 📂 strategies/       # Alignment Strategies (CTC)
+│   │   │   └── 📄 index.ts          # Strategy Factory
 │   │   ├── 📂 download/             # Download Service Logic
-│   │   └── 📂 utils/                # Common Service Tools (Logger, URL Validation)
+│   │   └── 📂 utils/                # Common Service Tools
 │   │
 │   ├── 📂 config/                   # Configuration Module
 │   │   ├── 📄 index.ts              # Config Export Entry
-│   │   └── 📄 models.ts             # Model Config (Step→Model Mapping)
+│   │   └── 📄 models.ts             # Model Config
 │   │
 │   ├── 📂 lib/                      # Common Libraries
-│   │   ├── 📄 cn.ts                 # Tailwind Classname Merge Tool
-│   │   └── 📄 text.ts               # Text Processing Tool
 │   │
-│   ├── 📂 types/                    # TypeScript Type Definitions
+│   ├── 📂 types/                    # [NEW] Centralized Type Definitions
+│   │   ├── 📄 pipeline.ts           # Pipeline Shared Types
+│   │   ├── 📄 alignment.ts          # Alignment Types
+│   │   └── 📄 ...
+│   │
 │   └── 📂 workers/                  # Web Workers
 │
 ├── 📂 electron/                     # Electron Desktop Code
@@ -515,6 +517,12 @@ flowchart LR
             T2["Slot 2<br/>(Local Whisper Default 1)"]
         end
 
+        subgraph ALIGN["alignmentSemaphore"]
+            A1["Slot 1"]
+            A2["Slot 2"]
+            A3["Slot 3"]
+        end
+
         subgraph REFINE["refinementSemaphore"]
             R1["Slot 1"]
             R2["Slot 2"]
@@ -539,20 +547,23 @@ flowchart LR
 
     C1 -->|"After Transcription"| R1
     C2 -->|"After Transcription"| R2
-    C4 -->|"acquire()"| R3
+
+    C1 -->|"After Refinement"| A1
+    C2 -->|"After Refinement"| A2
 ```
 
 **Configuration Explanation:**
 
-| Semaphore                      | Purpose                    | Default Concurrency | Config Item          |
-| :----------------------------- | :------------------------- | :------------------ | :------------------- |
-| `transcriptionSemaphore`       | Controls Whisper API Calls | Local: 1, Cloud: 5  | `whisperConcurrency` |
-| `refinementSemaphore`          | Controls Gemini Flash API  | 5                   | `concurrencyFlash`   |
-| (Glossary Extraction Internal) | Controls Gemini Pro API    | 2                   | `concurrencyPro`     |
+| Semaphore                      | Purpose                    | Default Concurrency | Config Item            |
+| :----------------------------- | :------------------------- | :------------------ | :--------------------- |
+| `transcriptionSemaphore`       | Controls Whisper API Calls | Local: 1, Cloud: 5  | `whisperConcurrency`   |
+| `refinementSemaphore`          | Controls Gemini Flash API  | 5                   | `concurrencyFlash`     |
+| `alignmentSemaphore`           | Controls Alignment Tools   | 2                   | `concurrencyAlignment` |
+| (Glossary Extraction Internal) | Controls Gemini Pro API    | 2                   | `concurrencyPro`       |
 
 ---
 
-### 3. Chunk Internal 4-Stage Pipeline
+### 3. Chunk Internal 5-Stage Pipeline
 
 ```mermaid
 sequenceDiagram
@@ -563,6 +574,8 @@ sequenceDiagram
     participant SProm as speakerProfilePromise
     participant RSem as refinementSemaphore
     participant Gemini as Gemini Flash
+    participant ASem as alignmentSemaphore
+    participant Aligner as CTC Aligner
 
     Note over Chunk: Stage 1: Transcription
     Chunk->>TSem: acquire()
@@ -575,35 +588,75 @@ sequenceDiagram
 
     Note over Chunk: Stage 2: Wait for Glossary (Non-blocking)
     Chunk->>GState: await get()
-    Note right of GState: If glossary extraction not complete<br/>or user not confirmed, wait
     GState-->>Chunk: finalGlossary[]
 
     Note over Chunk: Stage 3: Wait for Speaker Profiles
     Chunk->>SProm: await speakerProfiles
-    Note right of SProm: If speaker recognition not complete, wait
     SProm-->>Chunk: SpeakerProfile[]
 
-    Note over Chunk: Stage 4: Refinement + Translation
+    Note over Chunk: Stage 4: Refinement
     Chunk->>RSem: acquire()
     activate RSem
     RSem-->>Chunk: Permission Granted
-
     Chunk->>Gemini: Refinement (Audio+Text)
     Note right of Gemini: Timeline Correction<br/>Apply Glossary<br/>Speaker Matching
     Gemini-->>Chunk: refinedSegments[]
-
-    Chunk->>Gemini: Translation (Batch)
-    Gemini-->>Chunk: translatedItems[]
-
     Chunk->>RSem: release()
     deactivate RSem
 
-    Note over Chunk: Complete, Update Intermediate Results
+    Note over Chunk: Stage 5: Alignment
+    Chunk->>ASem: acquire()
+    activate ASem
+    ASem-->>Chunk: Permission Granted
+    Chunk->>Aligner: align(refinedSegments)
+    Note right of Aligner: Precise Timestamp<br/>Alignment w/ Audio
+    Aligner-->>Chunk: alignedSegments[]
+    Chunk->>ASem: release()
+    deactivate ASem
+
+    Note over Chunk: Stage 6: Translation
+    Chunk->>RSem: acquire()
+    activate RSem
+    RSem-->>Chunk: Permission Granted
+    Chunk->>Gemini: Translation (Batch)
+    Gemini-->>Chunk: translatedItems[]
+    Chunk->>RSem: release()
+    deactivate RSem
+
+    Note over Chunk: Complete
 ```
 
 ---
 
-### 4. Glossary Extraction and User Interaction Flow
+### 4. Data Integrity & Reconciliation (The "Data Hub")
+
+The system employs a rigorous **Data Reconciliation Strategy** (`src/services/subtitle/reconciler.ts`) to ensure metadata persistence across the pipeline matches (Refinement, Alignment, Translation), even when the number of segments changes due to splitting or merging.
+
+#### 4.1 The Reconciler Logic
+
+The `reconcile(prev, curr)` function acts as the "Data Hub" connecting pipeline stages. It intelligently merges `prev` (source) metadata into `curr` (newly generated) segments:
+
+- **Semantic Metadata** (Always Inherited):
+  - `speaker` (Speaker ID/Name)
+  - `comment` (User comments)
+  - **Logic**: Inherited from the `prev` segment with the highest overlap ratio. Even if segments are split, they all inherit the parent's speaker.
+- **Internal State** (Conditionally Inherited):
+  - `alignmentScore` (CTC Confidence)
+  - `lowConfidence` (Flag)
+  - `hasRegressionIssue`, `hasCorruptedRangeIssue` (Error Flags)
+  - **Logic**: Strictly inherited **ONLY** when a **1:1 mapping** is detected. If a segment is split or merged, these internal flags are resetting to avoid false propagation (e.g., a "Perfect Alignment" score shouldn't automatically apply to two new half-segments without re-verification).
+
+#### 4.2 Alignment Strategy (CTC)
+
+The system uses **CTC (Connectionist Temporal Classification)** for high-precision alignment:
+
+- **Engine**: `ctcAligner.ts` interfacing with an external `align.exe` (MMS-300m model).
+- **Function**: Updates `startTime` and `endTime` based on effective audio alignment, but **never splits or merges** segments.
+- **Metadata**: Adds `alignmentScore` to segments. Scores below threshold trigger `lowConfidence` flag for user review.
+
+---
+
+### 5. Glossary Extraction and User Interaction Flow
 
 ```mermaid
 sequenceDiagram
@@ -647,7 +700,7 @@ sequenceDiagram
 
 ---
 
-### 5. Speaker Recognition Position in Pipeline
+### 6. Speaker Recognition Position in Pipeline
 
 ```mermaid
 flowchart TB
@@ -690,11 +743,12 @@ flowchart TB
 | Wait Glossary | `glossaryState.get()`                       | Must Wait for Glossary Confirmation Complete    |
 | Wait Speakers | `speakerProfilePromise`                     | Must Wait for Speaker Recognition Complete      |
 | Refinement    | `refinementSemaphore` + Glossary + Speakers | Merge and Use All Data                          |
-| Translation   | (Within Refinement Semaphore)               | Completed Together with Refinement              |
+| Alignment     | `alignmentSemaphore`                        | High-precision Timestamp Alignment              |
+| Translation   | `refinementSemaphore` (Shared)              | Translated after Alignment                      |
 
 ---
 
-### 6. Desktop Full Workflow (Download-Create-Encode)
+### 7. Desktop Full Workflow (Download-Create-Encode)
 
 Desktop-exclusive complete workflow, connecting from material acquisition to final output:
 
@@ -737,11 +791,11 @@ flowchart LR
 
 ---
 
-### 7. Full Auto End-to-End Mode (End-to-End Pipeline)
+### 8. Full Auto End-to-End Mode (End-to-End Pipeline)
 
 This is an Electron-exclusive core feature that coordinates Main Process (resource scheduling) and Renderer Process (AI computation) through IPC communication, achieving "one-click cooked content".
 
-#### 7.1 Cross-Process Interaction Architecture
+#### 8.1 Cross-Process Interaction Architecture
 
 ```mermaid
 sequenceDiagram
@@ -791,7 +845,7 @@ sequenceDiagram
     deactivate Main
 ```
 
-#### 7.2 Data Flow and State Management
+#### 8.2 Data Flow and State Management
 
 All intermediate state and configuration is managed through the `EndToEndWizard` component, with data flow as follows:
 
@@ -813,7 +867,7 @@ All intermediate state and configuration is managed through the `EndToEndWizard`
    - Each stage (Download/Transcribe/Encode) produces progress events
    - Main Process -> `IPC (progress)` -> Renderer Process `useEndToEnd` Hook -> UI Progress Bar
 
-#### 7.3 Key IPC Channels
+#### 8.3 Key IPC Channels
 
 | Channel Name                    | Direction        | Payload           | Purpose                                                  |
 | :------------------------------ | :--------------- | :---------------- | :------------------------------------------------------- |
@@ -952,6 +1006,7 @@ Retains only the most basic API interaction capabilities:
 | `time.ts`              | Timecode Processing Tool                                |
 | `postCheck.ts`         | Subtitle Quality Post-check                             |
 | `timelineValidator.ts` | Subtitle Timeline Logic Validation                      |
+| `reconciler.ts`        | **[NEW] Data Reconciliation** (Merges Metadata)         |
 
 ### 5. Download Service Module (`src/services/download/`)
 
@@ -1123,7 +1178,10 @@ flowchart TB
         WAIT_DEPS --> REFINEMENT["Gemini 3 Flash<br/>Proofreading & Timeline Correction"]
         REFINEMENT --> REFINED_SUBS["Proofread Subtitles<br/>+ speaker Labels"]
 
-        REFINED_SUBS --> TRANSLATION["Gemini 3 Flash<br/>Translation"]
+        REFINED_SUBS --> ALIGNMENT["CTC Aligner<br/>(Timestamp Correction)"]
+        ALIGNMENT --> ALIGNED_SUBS["Aligned Subtitles<br/>+ alignmentScore"]
+
+        ALIGNED_SUBS --> TRANSLATION["Gemini 3 Flash<br/>Translation"]
         TRANSLATION --> TRANSLATED_SUBS["Bilingual Subtitles<br/>{original, translated, speaker}[]"]
     end
 
@@ -1197,7 +1255,8 @@ stateDiagram-v2
         state ChunkProcessing {
             Transcribing --> WaitingDeps
             WaitingDeps --> Refining: Dependencies Ready
-            Refining --> Translating
+            Refining --> Aligning: Refinement Done
+            Aligning --> Translating: Alignment Done
             Translating --> ChunkDone
         }
 
