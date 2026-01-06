@@ -7,7 +7,7 @@
 /**
  * Confidence threshold for marking segments as low-confidence
  */
-export const CONFIDENCE_THRESHOLD = 0.7;
+export const CONFIDENCE_THRESHOLD = 0.6;
 
 /**
  * Maximum characters per segment before smart splitting

@@ -11,9 +11,10 @@
 import { type SubtitleItem } from '@/types/subtitle';
 import { type AlignmentStrategy, type CTCAlignmentConfig } from '@/types/alignment';
 import { CONFIDENCE_THRESHOLD, requiresRomanization } from '@/services/alignment/utils';
-import { formatTime, timeToSeconds } from '@/services/subtitle/time';
+import { formatTime } from '@/services/subtitle/time';
 import { logger } from '@/services/utils/logger';
 import { generateSubtitleId } from '@/services/utils/id';
+import { toAlignmentPayloads } from '@/services/subtitle/payloads';
 
 // Re-export language utilities for backward compatibility
 export { detectLanguage, iso639_1To3 } from '@/services/utils/language';
@@ -58,12 +59,7 @@ export class CTCAligner implements AlignmentStrategy {
 
     // Prepare segments for alignment (no splitting, no merging)
     // LLM Refinement already split the segments appropriately
-    const alignmentSegments = segments.map((seg, index) => ({
-      index,
-      text: seg.original,
-      start: timeToSeconds(seg.startTime),
-      end: timeToSeconds(seg.endTime),
-    }));
+    const alignmentSegments = toAlignmentPayloads(segments);
 
     try {
       logger.info(`CTC Aligner: Starting alignment for ${segments.length} segments`);

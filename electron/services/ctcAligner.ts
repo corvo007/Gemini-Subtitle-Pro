@@ -158,7 +158,7 @@ export class CTCAlignerService {
           this.activeJobRejects.delete(jobId);
 
           if (stderr) {
-            console.warn(`[CTCAligner] stderr: ${stderr}`);
+            // console.warn(`[CTCAligner] stderr: ${stderr}`);
           }
 
           if (code !== 0) {
