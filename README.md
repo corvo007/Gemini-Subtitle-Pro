@@ -1,6 +1,6 @@
 # Gemini Subtitle Pro
 
-[English Documentation](./README_en.md)
+[English Documentation](./docs/README_en.md)
 
 **Gemini Subtitle Pro** 是一款基于 AI 的字幕创建、翻译和润色工具。它利用 Google 的 Gemini 模型进行高质量的翻译和润色，并使用 OpenAI 的 Whisper 进行精准的语音转写。
 

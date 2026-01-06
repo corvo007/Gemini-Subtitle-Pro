@@ -1,0 +1,9 @@
+{
+  "installCommand": "git config --global url.\"https://github.com/\".insteadOf ssh://git@github.com/ && cd .. && yarn install",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

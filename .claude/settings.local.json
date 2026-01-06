@@ -27,7 +27,21 @@
       "Bash(git rev-parse:*)",
       "Bash(node:*)",
       "Bash(echo:*)",
-      "Bash(mkdir -p:*)"
+      "Bash(mkdir -p:*)",
+      "Bash(claude /plugins:*)",
+      "Bash(claude config list:*)",
+      "Skill(customaize-agent:create-skill)",
+      "Bash(powershell -Command \"echo $env:USERPROFILE\")",
+      "Bash(git tag --list:*)",
+      "Bash(git describe:*)",
+      "Skill(release-version)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git tag:*)",
+      "Bash(git push:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run watch:*)",
+      "Bash(gh release view:*)"
     ]
   },
   "hooks": {

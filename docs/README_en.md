@@ -1,6 +1,6 @@
 # Gemini Subtitle Pro
 
-[中文文档 (Chinese Documentation)](./README.md)
+[中文文档 (Chinese Documentation)](../README.md)
 
 **Gemini Subtitle Pro** is an AI-powered subtitle creation, translation, and polishing tool. It leverages Google's Gemini models for high-quality translation and polishing, and uses OpenAI's Whisper for precise speech transcription.
 
@@ -311,6 +311,8 @@ Use the forced alignment model to obtain higher precision character-level timest
 
 You can deploy this application to various Serverless platforms, but using local Whisper is not supported.
 
+> **Note:** Serverless configuration files (`netlify.toml`, `render.yaml`, `vercel.json`, `wrangler.toml`) are located in the `deploy/` directory.
+
 ### Vercel
 
 The simplest way to deploy is using Vercel.
@@ -330,7 +332,8 @@ Deploy as a containerized application on Google Cloud Run.
 
 1.  Click the button above.
 2.  Select your project and repository.
-3.  `Dockerfile` will be automatically detected.
+3.  **Manual Step:** Since the `Dockerfile` is moved to `deploy/Dockerfile`, you may need to specify the Dockerfile path in your build settings or use:
+    `gcloud builds submit --config cloudbuild.yaml .` (if using Cloud Build) or ensure the build tool points to `deploy/Dockerfile`.
 4.  In **Variables & Secrets** step, add your `GEMINI_API_KEY` and `OPENAI_API_KEY`.
 
 ### Cloudflare Pages
@@ -347,24 +350,27 @@ Deploy as a containerized application on Google Cloud Run.
 
 ### Netlify
 
-Deploy to Netlify using the configured `netlify.toml`.
+Deploy to Netlify using the configured `deploy/netlify.toml`.
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/corvo007/gemini-subtitle-pro)
 
 1.  Click the button above.
 2.  Connect your GitHub repository.
-3.  Netlify will detect `netlify.toml` settings.
+3.  Netlify will detect settings from `deploy/netlify.toml`. The `base = ".."` setting ensures it builds from the repository root.
 4.  Go to **Site settings > Build & deploy > Environment** and add your API keys.
 
-### Render
+### Cloudflare Pages
 
-Deploy as a static site on Render.
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/corvo007/gemini-subtitle-pro)
-
-1.  Click the button above.
-2.  Render will read `render.yaml` file.
-3.  The system will prompt you to enter `GEMINI_API_KEY` and `OPENAI_API_KEY` during setup.
+1.  Push code to GitHub repository.
+2.  Log in to Cloudflare Dashboard and go to **Pages**.
+3.  Select **Connect to Git** and choose your repository.
+4.  **Build Settings:**
+    - **Framework Preset:** Vite
+    - **Build Command:** `npm run build`
+    - **Build Output Directory:** `dist`
+5.  **Environment Variables:**
+    - Add `GEMINI_API_KEY` and `OPENAI_API_KEY`.
+6.  **Advanced:** If deploying via Wrangler CLI, use `wrangler pages deploy --config deploy/wrangler.toml`.
 
 ---
 
@@ -421,4 +427,4 @@ Deploy as a static site on Render.
 
 ## 📚 Documentation
 
-- [Project Architecture Document](./docs/ARCHITECTURE.md)
+- [Project Architecture Document](./ARCHITECTURE.md)
