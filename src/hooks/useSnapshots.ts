@@ -50,7 +50,7 @@ export const useSnapshots = () => {
     ) => {
       const newSnapshot: SubtitleSnapshot = {
         id: Date.now().toString(),
-        timestamp: new Date().toLocaleTimeString(),
+        timestamp: new Date().toLocaleString(),
         description,
         subtitles: JSON.parse(JSON.stringify(subtitles)),
         batchComments: { ...batchComments },
@@ -87,7 +87,7 @@ export const useSnapshots = () => {
 
       const newSnapshot: SubtitleSnapshot = {
         id: Date.now().toString(),
-        timestamp: new Date().toLocaleTimeString(),
+        timestamp: new Date().toLocaleString(),
         description: t('snapshots.autoSave'),
         subtitles: JSON.parse(JSON.stringify(subtitles)),
         batchComments: { ...batchComments },
@@ -102,7 +102,7 @@ export const useSnapshots = () => {
       lastSnapshotHashRef.current = currentHash;
       return true;
     },
-    []
+    [t]
   );
 
   const deleteSnapshot = useCallback((id: string) => {
