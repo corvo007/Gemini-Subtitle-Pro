@@ -4,7 +4,9 @@ import { toAssTime } from '@/services/subtitle/time';
 import { getSpeakerColor } from '@/services/utils/colors';
 
 // Helper to convert Hex (#RRGGBB) to ASS BGR (&HBBGGRR)
-const hexToAssBgr = (hex: string): string => {
+// Helper to convert Hex (#RRGGBB) to ASS BGR (&HBBGGRR)
+const hexToAssBgr = (hex?: string): string => {
+  if (!hex) return '&H00FFFFFF'; // Default to white
   const cleanHex = hex.replace('#', '');
   const r = cleanHex.substring(0, 2);
   const g = cleanHex.substring(2, 4);
@@ -58,7 +60,7 @@ export const generateAssContent = (
       let color = getSpeakerColor(speaker);
       if (speakerProfiles) {
         const profile = speakerProfiles.find((p) => p.name === speaker);
-        if (profile) {
+        if (profile?.color) {
           color = profile.color;
         }
       }
