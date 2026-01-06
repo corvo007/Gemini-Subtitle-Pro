@@ -205,7 +205,7 @@ export function useEndToEnd(): UseEndToEndReturn {
         }));
       }
     },
-    [isElectron]
+    [isElectron, t]
   );
 
   // Pipeline execution
@@ -269,7 +269,7 @@ export function useEndToEnd(): UseEndToEndReturn {
 
       return errorResult;
     }
-  }, [isElectron, state.config, state.videoInfo]);
+  }, [isElectron, state.config, state.videoInfo, t]);
 
   const abortPipeline = useCallback(() => {
     if (!isElectron || !window.electronAPI?.endToEnd?.abort) return;

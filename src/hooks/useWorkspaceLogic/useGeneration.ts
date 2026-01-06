@@ -123,30 +123,40 @@ export function useGeneration({
         glossary: getActiveGlossaryTerms(settings),
       };
 
-      // Decode audio first to cache it for retries
-      let audioBuffer: AudioBuffer;
-      try {
-        if (audioCacheRef.current && audioCacheRef.current.file === file) {
-          audioBuffer = audioCacheRef.current.buffer;
-        } else {
-          handleProgress({
-            id: 'decoding',
-            total: 1,
-            status: 'processing',
+      // Prepare audio source: Use cached/decoded buffer for normal mode, or pass raw file for Mock/Debug mode
+      // (This allows pipeline/index.ts to decide if decoding is even necessary, e.g. satisfying "Start From: Refinement" optimization)
+      let audioSource: AudioBuffer | File;
+      const isMockMode = !!settings.debug?.mockStage;
 
-            message: t('services:pipeline.status.decoding'),
-          });
-          audioBuffer = await decodeAudioWithRetry(file);
-          audioCacheRef.current = { file, buffer: audioBuffer };
+      if (isMockMode) {
+        audioSource = file;
+        logger.info(
+          'Debug/Mock mode detected: Skipping eager audio decoding in workspace. Delegating to pipeline.'
+        );
+      } else {
+        // Normal mode: Decode eagerley to support caching and retry without re-decoding
+        try {
+          if (audioCacheRef.current && audioCacheRef.current.file === file) {
+            audioSource = audioCacheRef.current.buffer;
+          } else {
+            handleProgress({
+              id: 'decoding',
+              total: 1,
+              status: 'processing',
+              message: t('services:pipeline.status.decoding'),
+            });
+            const buffer = await decodeAudioWithRetry(file);
+            audioCacheRef.current = { file, buffer };
+            audioSource = buffer;
+          }
+        } catch (e) {
+          logger.error('Failed to decode audio in handleGenerate', e);
+          throw new Error(t('services:pipeline.errors.decodeFailed'));
         }
-      } catch (e) {
-        logger.error('Failed to decode audio in handleGenerate', e);
-
-        throw new Error(t('services:pipeline.errors.decodeFailed'));
       }
 
       const { subtitles: result } = await generateSubtitles(
-        audioBuffer,
+        audioSource,
         duration,
         runtimeSettings,
         handleProgress,
@@ -295,6 +305,7 @@ export function useGeneration({
     setStartTime,
     setSelectedBatches,
     setBatchComments,
+    t,
   ]);
 
   return {

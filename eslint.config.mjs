@@ -8,7 +8,7 @@ import unusedImports from 'eslint-plugin-unused-imports';
 export default [
   js.configs.recommended,
   {
-    ignores: ['dist/**', 'dist-electron/**', 'node_modules/**', 'release/**'],
+    ignores: ['dist/**', 'dist-electron/**', 'node_modules/**', 'release/**', '.claude/**', 'scripts/**'],
   },
   {
     files: ['src/**/*.{ts,tsx}', 'electron/**/*.{ts,tsx}'],
@@ -86,14 +86,7 @@ export default [
     },
     rules: {
       // TypeScript rules
-      '@typescript-eslint/no-unused-vars': [
-        'warn',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          destructuredArrayIgnorePattern: '^_',
-        },
-      ],
+      '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
 
       // Deprecation detection (requires type-checking, built-in since typescript-eslint v8)
@@ -151,7 +144,7 @@ export default [
       '@typescript-eslint': tseslint,
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },

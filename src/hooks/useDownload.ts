@@ -133,7 +133,7 @@ export function useDownload(): UseDownloadReturn {
       }
       return undefined;
     }
-  }, [videoInfo, outputDir]);
+  }, [videoInfo, outputDir, t]);
 
   const cancel = useCallback(async () => {
     await cancelDownload();

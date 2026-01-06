@@ -201,6 +201,7 @@ export function useFileOperations({
       setSubtitles,
       setStatus,
       setBatchComments,
+      t,
     ]
   );
 
@@ -287,6 +288,7 @@ export function useFileOperations({
       setStatus,
       setBatchComments,
       setError,
+      t,
     ]
   );
 
@@ -356,6 +358,7 @@ export function useFileOperations({
       setError,
       setSpeakerProfiles,
       setBatchComments,
+      t,
     ]
   );
 
@@ -426,6 +429,7 @@ export function useFileOperations({
     setError,
     setSpeakerProfiles,
     setBatchComments,
+    t,
   ]);
 
   return {
