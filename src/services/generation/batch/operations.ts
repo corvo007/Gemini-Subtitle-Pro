@@ -443,7 +443,7 @@ export const runBatchOperation = async (
           signal,
           trackUsage,
           (settings.requestTimeout || 600) * 1000,
-          !!settings.enableDiarization,
+          !!(settings.enableDiarization && settings.useSpeakerStyledTranslation),
           settings.targetLanguage
         );
 
