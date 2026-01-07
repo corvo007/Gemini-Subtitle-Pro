@@ -32,7 +32,7 @@ import { STEP_MODELS, buildStepConfig } from '@/config';
 import { parseGeminiResponse } from '@/services/subtitle/parser';
 import { withPostCheck } from '@/services/subtitle/postCheck';
 import { reconcile } from '@/services/subtitle/reconciler';
-import { toTranslationPayload, toRefinementPayloads } from '@/services/subtitle/payloads';
+import { toRefinementPayloads } from '@/services/subtitle/payloads';
 import { createRefinementPostProcessor } from '@/services/generation/pipeline/postProcessors';
 import { createAligner } from '@/services/alignment';
 import { iso639_1To3, detectLanguage, toLocaleCode } from '@/services/utils/language';
@@ -615,9 +615,7 @@ export class ChunkProcessor {
               message: i18n.t('services:pipeline.status.translating'),
             });
 
-            const toTranslate = alignedSegments.map((seg) =>
-              toTranslationPayload(seg, { includeSpeaker: chunkSettings.enableDiarization })
-            );
+            const toTranslate = alignedSegments;
 
             const profilesForTranslation =
               chunkSettings.useSpeakerStyledTranslation && speakerProfiles
@@ -701,7 +699,7 @@ export class ChunkProcessor {
                   signal,
                   trackUsage,
                   (settings.requestTimeout || 600) * 1000,
-                  !!chunkSettings.enableDiarization,
+                  !!(chunkSettings.enableDiarization && chunkSettings.useSpeakerStyledTranslation),
                   targetLanguage
                 );
               }
@@ -712,29 +710,57 @@ export class ChunkProcessor {
                   `[Chunk ${index}] Translation first segment speaker: ${items[0].speaker}`
                 );
               }
-
               // Convert translation items to SubtitleItem format (chunk-local timestamps)
-              const translatedSegments: SubtitleItem[] = items.map((item) => ({
-                id: item.id,
-                startTime: item.start,
-                endTime: item.end,
-                original: item.original,
-                translated: item.translated,
-                ...(chunkSettings.enableDiarization && item.speaker
-                  ? { speaker: item.speaker }
-                  : {}),
-              }));
+              // Create a lookup map for fast access to original segments
+              const alignedMap = new Map(alignedSegments.map((s) => [s.id, s]));
 
-              // Use reconcile to preserve metadata from aligned segments
-              // 1:1 mapping is auto-detected, internal fields preserved automatically
-              const reconciledSegments = reconcile(alignedSegments, translatedSegments);
+              // Direct ID-based mapping - no need for over-engineered reconciliation
+              // API 1:1 response guarantee allows us to directly hydrate from alignedSegments
+              const translatedSegments: SubtitleItem[] = items.map((item) => {
+                const originalSeg = alignedMap.get(item.id);
+                // Fallback for extreme edge cases where ID might mismatch (should not happen in 1:1)
+                if (!originalSeg) {
+                  return {
+                    id: item.id,
+                    startTime: item.start || '00:00:00,000',
+                    endTime: item.end || '00:00:00,000',
+                    original: item.original || '',
+                    translated: item.translated,
+                  };
+                }
+
+                // Inherit ALL metadata from aligned segment (start, end, internal fields, alignmentScore)
+                // Overwrite translated text and update speaker if provided by API (styled translation)
+                return {
+                  ...originalSeg,
+                  translated: item.translated,
+                  // If API returns speaker (styled translation), usage it. Otherwise keep original.
+                  // Note: item.speaker will be undefined if useSpeakerStyledTranslation is false.
+                  ...(chunkSettings.enableDiarization && item.speaker
+                    ? { speaker: item.speaker }
+                    : {}),
+                };
+              });
 
               // Convert to global timestamps
-              finalChunkSubs = reconciledSegments.map((seg) => ({
+              finalChunkSubs = translatedSegments.map((seg) => ({
                 ...seg,
                 startTime: formatTime(timeToSeconds(seg.startTime) + start),
                 endTime: formatTime(timeToSeconds(seg.endTime) + start),
               }));
+
+              // Filter out Music segments and empty content using cleanNonSpeechAnnotations
+              finalChunkSubs = finalChunkSubs.filter((seg) => {
+                const cleanOriginal = cleanNonSpeechAnnotations(seg.original || '');
+                const cleanTranslated = cleanNonSpeechAnnotations(seg.translated || '');
+                // Keep if ANY content remains after cleaning
+                const hasContent = cleanOriginal.length > 0 || cleanTranslated.length > 0;
+
+                if (!hasContent) {
+                  logger.debug(`[Chunk ${index}] Filtering out empty/music segment: ${seg.id}`);
+                }
+                return hasContent;
+              });
             }
 
             ArtifactSaver.saveChunkArtifact(index, 'translation', finalChunkSubs, settings);
