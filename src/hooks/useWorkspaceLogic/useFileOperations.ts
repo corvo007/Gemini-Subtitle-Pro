@@ -180,7 +180,6 @@ export function useFileOperations({
             async () => {
               setSubtitles([]);
               setStatus(GenerationStatus.IDLE);
-              snapshotsValues.setSnapshots([]);
               setBatchComments({});
               await processFileInternal(selectedFile);
             },
@@ -195,7 +194,6 @@ export function useFileOperations({
       file,
       subtitles.length,
       status,
-      snapshotsValues,
       showConfirm,
       processFileInternal,
       setSubtitles,
@@ -267,7 +265,6 @@ export function useFileOperations({
           async () => {
             setSubtitles([]);
             setStatus(GenerationStatus.IDLE);
-            snapshotsValues.setSnapshots([]);
             setBatchComments({});
             await readAndProcessFile();
           },
@@ -281,7 +278,6 @@ export function useFileOperations({
       file,
       subtitles.length,
       status,
-      snapshotsValues,
       showConfirm,
       processFileInternal,
       setSubtitles,

@@ -262,11 +262,10 @@ export const useWorkspaceLogic = ({
     setFile(null);
     setDuration(0);
     setStatus(GenerationStatus.IDLE);
-    snapshotsValues.setSnapshots([]);
     setBatchComments({});
     setSelectedBatches(new Set());
     setError(null);
-  }, [snapshotsValues, setBatchComments, setSelectedBatches]);
+  }, [setBatchComments, setSelectedBatches]);
 
   const loadFileFromPath = useCallback(
     async (path: string) => {
@@ -313,7 +312,6 @@ export const useWorkspaceLogic = ({
         // Reset workspace state
         setSubtitles([]);
         setStatus(GenerationStatus.IDLE);
-        snapshotsValues.setSnapshots([]);
         setBatchComments({});
         setSelectedBatches(new Set());
       } catch (e: unknown) {
@@ -322,7 +320,7 @@ export const useWorkspaceLogic = ({
         setError(t('unableToLoadFile', { error: error.message }));
       }
     },
-    [snapshotsValues, setBatchComments, setSelectedBatches, t]
+    [setBatchComments, setSelectedBatches, t]
   );
 
   // ============================================
