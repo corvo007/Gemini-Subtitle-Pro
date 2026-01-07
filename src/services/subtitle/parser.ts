@@ -61,9 +61,9 @@ const NON_SPEECH_KEYWORDS = [
 const keywordPattern = NON_SPEECH_KEYWORDS.map((k) =>
   k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 ).join('|');
-// Match: [keyword], (keyword), *keyword*, ♪keyword♪ - case insensitive
+// Match: [keyword], (keyword), （keyword）, *keyword*, ♪keyword♪ - case insensitive
 const NON_SPEECH_PATTERN = new RegExp(
-  `\\s*(?:\\[[^\\]]*(?:${keywordPattern})[^\\]]*\\]|\\([^)]*(?:${keywordPattern})[^)]*\\)|\\*[^*]*(?:${keywordPattern})[^*]*\\*|♪[^♪]*(?:${keywordPattern})[^♪]*♪)\\s*`,
+  `\\s*(?:\\[[^\\]]*(?:${keywordPattern})[^\\]]*\\]|\\([^)]*(?:${keywordPattern})[^)]*\\)|（[^）]*(?:${keywordPattern})[^）]*）|\\*[^*]*(?:${keywordPattern})[^*]*\\*|♪[^♪]*(?:${keywordPattern})[^♪]*♪)\\s*`,
   'gi'
 );
 

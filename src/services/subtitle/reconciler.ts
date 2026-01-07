@@ -253,19 +253,3 @@ function mergeMetadata(
 
   return result;
 }
-
-// ============================================================================
-// 导出工具函数（供测试使用）
-// ============================================================================
-
-export const _internal = {
-  calculateOverlapDuration,
-  calculateOverlapRatio,
-  findMatches,
-  findDominant,
-  findDominantIndex,
-  mergeMetadata,
-  SEMANTIC_FIELDS,
-  INTERNAL_FIELDS,
-  OVERLAP_THRESHOLD,
-};
