@@ -265,6 +265,45 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
       activeBatchIndexRef.current = -1;
     }, [chunks.length]);
 
+    // Track previous filter state to detect filter mode changes
+    const prevIsFilteringRef = React.useRef<boolean>(false);
+
+    // Reset auto-scroll memory when exiting filter mode to trigger re-scroll
+    React.useEffect(() => {
+      const wasFiltering = prevIsFilteringRef.current;
+      const isNowFiltering = filteredSubtitles !== null;
+
+      // Update ref for next render
+      prevIsFilteringRef.current = isNowFiltering;
+
+      // When exiting filter mode, reset batch index to trigger auto-scroll
+      if (wasFiltering && !isNowFiltering) {
+        activeBatchIndexRef.current = -1;
+        lastScrollTimeRef.current = 0; // Allow immediate scroll
+
+        // If we have a current play time, scroll to it after a brief delay
+        // (to let Virtuoso mount the new view)
+        if (currentPlayTime !== undefined && virtuosoRef.current) {
+          setTimeout(() => {
+            const activeBatchIndex = chunks.findIndex((chunk) => {
+              const start = parseTime(chunk[0].startTime);
+              const end = parseTime(chunk[chunk.length - 1].endTime);
+              return currentPlayTime >= start && currentPlayTime <= end;
+            });
+
+            if (activeBatchIndex !== -1 && virtuosoRef.current) {
+              virtuosoRef.current.scrollToIndex({
+                index: activeBatchIndex,
+                align: 'start',
+                behavior: 'auto', // Use 'auto' for instant positioning
+              });
+              activeBatchIndexRef.current = activeBatchIndex;
+            }
+          }, 50);
+        }
+      }
+    }, [filteredSubtitles, chunks, currentPlayTime]);
+
     // We need batchSize later for rendering
     const batchSize = settings.proofreadBatchSize || 20;
 
@@ -406,8 +445,8 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
         onTouchMove={handleUserInteraction}
         onKeyDown={handleUserInteraction}
       >
-        {/* Always show BatchHeader when completed */}
-        {status === GenerationStatus.COMPLETED && (
+        {/* Always show BatchHeader when completed or cancelled (so UI remains usable after abort) */}
+        {(status === GenerationStatus.COMPLETED || status === GenerationStatus.CANCELLED) && (
           <BatchHeader
             chunks={chunks}
             selectedBatches={selectedBatches}
