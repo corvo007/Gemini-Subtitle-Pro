@@ -14,7 +14,8 @@ import { timeToSeconds } from './time';
 // ============================================================================
 
 /** 语义元数据：跨阶段保留，Split/Merge 时也继承 */
-const SEMANTIC_FIELDS = ['speaker', 'comment'] as const;
+const SEMANTIC_FIELDS = ['speaker'] as const;
+// Note: 'comment' is intentionally NOT inherited - it's a user instruction that should be cleared after processing
 
 /** 状态标记：仅 1:1 映射时继承，Split/Merge 时丢弃 */
 const INTERNAL_FIELDS = [
@@ -224,12 +225,10 @@ function mergeMetadata(
   // 合并元数据（当前阶段优先）
   const result: SubtitleItem = { ...currSeg };
 
-  // 语义元数据：始终继承
+  // 语义元数据：始终继承（speaker）
+  // Note: comment is NOT inherited - it's cleared after processing
   if (result.speaker === undefined && dominant.speaker !== undefined) {
     result.speaker = dominant.speaker;
-  }
-  if (result.comment === undefined && dominant.comment !== undefined) {
-    result.comment = dominant.comment;
   }
 
   // 状态标记：仅 1:1 映射时继承
