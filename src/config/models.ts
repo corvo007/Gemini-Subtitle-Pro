@@ -55,7 +55,7 @@ export interface StepConfig {
 
 export const STEP_CONFIGS: Record<StepName, StepConfig> = {
   refinement: {
-    thinkingLevel: 'medium',
+    thinkingLevel: 'high',
     useSearch: false,
     maxOutputTokens: 65536,
   },
