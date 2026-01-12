@@ -1,7 +1,7 @@
 {
   "status": {
     "cancelled": "中止",
-    "proofreading": "一括校正中...",
+    "proofreading": "一括操作中...",
     "generating": "字幕を生成中...",
     "preparing": "準備中..."
   },
@@ -11,6 +11,7 @@
   },
   "chunks": {
     "segment": "セグメント {{id}}",
+    "init": "初期化",
     "decoding": "音声をデコード",
     "segmenting": "セグメント処理",
     "glossary": "用語を抽出",

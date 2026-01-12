@@ -90,7 +90,8 @@
       "errors": {
         "fileRequired": "Please upload a media file first.",
         "apiKeyMissing": "API key not configured, please add in settings.",
-        "noSubtitles": "No subtitles generated."
+        "noSubtitles": "No subtitles generated.",
+        "targetLanguageRequired": "Please select a target language."
       },
       "status": {
         "success": "Subtitle generation successful!",

@@ -1,7 +1,7 @@
 {
   "status": {
     "cancelled": "Cancelled",
-    "proofreading": "Proofreading...",
+    "proofreading": "Batch Operation...",
     "generating": "Generating subtitles...",
     "preparing": "Preparing..."
   },
@@ -11,6 +11,7 @@
   },
   "chunks": {
     "segment": "Segment {{id}}",
+    "init": "Initializing",
     "decoding": "Decoding audio",
     "segmenting": "Segmenting",
     "glossary": "Extracting terms",

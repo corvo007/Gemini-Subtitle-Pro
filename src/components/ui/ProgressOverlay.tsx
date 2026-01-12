@@ -26,10 +26,10 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
   if (!isProcessing) return null;
 
   const chunks = (Object.values(chunkProgress) as ChunkStatus[]).sort((a, b) => {
-    // Prioritize system tasks
-    const systemOrder = { decoding: 1, segmenting: 2, glossary: 3, diarization: 4 };
-    const orderA = systemOrder[a.id as keyof typeof systemOrder] || 999;
-    const orderB = systemOrder[b.id as keyof typeof systemOrder] || 999;
+    // Prioritize system tasks (init first, then others)
+    const systemOrder = { init: 0, decoding: 1, segmenting: 2, glossary: 3, diarization: 4 };
+    const orderA = systemOrder[a.id as keyof typeof systemOrder] ?? 999;
+    const orderB = systemOrder[b.id as keyof typeof systemOrder] ?? 999;
 
     if (orderA !== orderB) return orderA - orderB;
 
@@ -40,7 +40,7 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
   });
 
   const systemChunks = chunks.filter((c) =>
-    ['decoding', 'segmenting', 'glossary', 'diarization'].includes(String(c.id))
+    ['init', 'decoding', 'segmenting', 'glossary', 'diarization'].includes(String(c.id))
   );
   const contentChunks = chunks.filter(
     (c) => !['init', 'decoding', 'segmenting', 'glossary', 'diarization'].includes(String(c.id))
@@ -131,15 +131,17 @@ export const ProgressOverlay: React.FC<ProgressOverlayProps> = ({
                 <span className="text-slate-300 text-sm font-medium">
                   {typeof chunk.id === 'number'
                     ? t('chunks.segment', { id: chunk.id })
-                    : chunk.id === 'decoding'
-                      ? t('chunks.decoding')
-                      : chunk.id === 'segmenting'
-                        ? t('chunks.segmenting')
-                        : chunk.id === 'glossary'
-                          ? t('chunks.glossary')
-                          : chunk.id === 'diarization'
-                            ? t('chunks.diarization')
-                            : chunk.id}
+                    : chunk.id === 'init'
+                      ? t('chunks.init')
+                      : chunk.id === 'decoding'
+                        ? t('chunks.decoding')
+                        : chunk.id === 'segmenting'
+                          ? t('chunks.segmenting')
+                          : chunk.id === 'glossary'
+                            ? t('chunks.glossary')
+                            : chunk.id === 'diarization'
+                              ? t('chunks.diarization')
+                              : t('chunks.segment', { id: chunk.id })}
                 </span>
               </div>
               <div className="flex-1 flex items-center justify-end space-x-4">
