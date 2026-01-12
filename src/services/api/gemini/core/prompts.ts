@@ -863,8 +863,6 @@ export const getTranslationBatchPrompt = (
  * Parameters for fix timestamps prompt
  */
 export interface FixTimestampsPromptParams {
-  batchLabel: string;
-  lastEndTime: string;
   payload: any[];
   glossaryContext: string;
   specificInstruction: string;
@@ -908,9 +906,7 @@ export const getFixTimestampsPrompt = (params: FixTimestampsPromptParams): strin
     `;
 
   return `
-    Batch ${params.batchLabel}.
     TIMESTAMP ALIGNMENT TASK${params.conservativeMode ? ' (CONSERVATIVE MODE)' : ''}
-    Previous batch ended at: "${params.lastEndTime}"
     ${params.glossaryContext}
     ${params.specificInstruction}
 
@@ -943,8 +939,6 @@ export const getFixTimestampsPrompt = (params: FixTimestampsPromptParams): strin
  * Parameters for proofread prompt
  */
 export interface ProofreadPromptParams {
-  batchLabel: string;
-  lastEndTime: string;
   totalVideoDuration?: number;
   payload: any[];
   glossaryContext: string;
@@ -958,9 +952,7 @@ export interface ProofreadPromptParams {
 export const getProofreadPrompt = (params: ProofreadPromptParams): string => {
   const targetLanguage = params.targetLanguage || 'Simplified Chinese';
   return `
-    Batch ${params.batchLabel}.
     TRANSLATION QUALITY IMPROVEMENT TASK
-    Previous batch ended at: "${params.lastEndTime}"
     Total video duration: ${params.totalVideoDuration ? formatTime(params.totalVideoDuration) : 'Unknown'}
     ${params.glossaryContext}
     ${params.specificInstruction}

@@ -119,8 +119,6 @@ async function processBatch(
 
   if (mode === 'fix_timestamps') {
     prompt = getFixTimestampsPrompt({
-      batchLabel,
-      lastEndTime,
       payload,
       glossaryContext,
       specificInstruction,
@@ -128,10 +126,7 @@ async function processBatch(
       targetLanguage: settings.targetLanguage,
     });
   } else {
-    // Proofread - Focus on TRANSLATION quality, may adjust timing when necessary
     prompt = getProofreadPrompt({
-      batchLabel,
-      lastEndTime,
       totalVideoDuration,
       payload,
       glossaryContext,
