@@ -1044,6 +1044,33 @@ class YtDlpService {
       });
     });
   }
+
+  async getVersions(): Promise<{ ytdlp: string; qjs: string }> {
+    let ytdlpVersion = 'unknown';
+    let qjsVersion = 'unknown';
+
+    try {
+      const ytdlpOutput = await this.execute(['--version']);
+      ytdlpVersion = ytdlpOutput.trim();
+    } catch (error) {
+      console.warn('[YtDlpService] Failed to get yt-dlp version:', error);
+    }
+
+    try {
+      // QuickJS version is usually on the first line of help output
+      const { spawnSync } = await import('child_process');
+      const result = spawnSync(this.quickjsPath, ['-h'], { encoding: 'utf-8', windowsHide: true });
+      const output = result.stdout || result.stderr || '';
+      const firstLine = output.split('\n')[0];
+      if (firstLine.includes('QuickJS version')) {
+        qjsVersion = firstLine.replace('QuickJS version ', '').trim();
+      }
+    } catch (error) {
+      console.warn('[YtDlpService] Failed to get QuickJS version:', error);
+    }
+
+    return { ytdlp: ytdlpVersion, qjs: qjsVersion };
+  }
 }
 
 export const ytDlpService = new YtDlpService();

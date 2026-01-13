@@ -239,6 +239,37 @@ export interface ElectronAPI {
     resourceName: string
   ) => Promise<{ success: boolean; path?: string; error?: string }>;
   showItemInFolder: (path: string) => Promise<{ success: boolean; error?: string }>;
+  getAboutInfo: (lastHash?: string) => Promise<{
+    notModified?: boolean;
+    hash?: string;
+    appName?: string;
+    version?: string;
+    isPackaged?: boolean;
+    commitHash?: string;
+    versions?: {
+      ffmpeg: string;
+      ffprobe: string;
+      ytdlp: string;
+      qjs: string;
+      whisper: string;
+      whisperDetails: {
+        path: string;
+        source: string;
+        version: string;
+        gpuSupport: boolean;
+      };
+    };
+    gpu?: {
+      available: boolean;
+      preferredH264?: string;
+      preferredH265?: string;
+    };
+    paths?: {
+      appPath: string;
+      userDataPath: string;
+      exePath: string;
+    };
+  }>;
 
   // Video Compression APIs
   compression: {

@@ -233,5 +233,22 @@
     "vietnamese": "Vietnamese",
     "thai": "Thai",
     "indonesian": "Indonesian"
+  },
+  "about": {
+    "dependencies": "Dependencies",
+    "ffmpeg": "FFmpeg Version",
+    "ffprobe": "FFprobe Version",
+    "ytdlp": "yt-dlp Version",
+    "qjs": "QuickJS Version",
+    "whisper": "Whisper.cpp Version",
+    "gpu": "Hardware Acceleration (GPU)",
+    "gpuSupported": "Supported ({{preferredH264}}/{{preferredH265}})",
+    "gpuUnsupported": "Not Supported",
+    "paths": "System Paths",
+    "appPath": "Application Path",
+    "userDataPath": "Config & Log Path",
+    "exePath": "Executable Path",
+    "copyPath": "Copy Path",
+    "showInFolder": "Show in Folder"
   }
 }

@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
-import { spawn } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
 import { t } from '../i18n.ts';
 
@@ -11,63 +11,64 @@ export interface SubtitleItem {
   text: string;
 }
 
+export type WhisperSource = 'Custom' | 'Portable' | 'Bundled' | 'Dev' | 'unknown';
+
+export interface WhisperDetails {
+  path: string;
+  source: WhisperSource;
+  version: string;
+  gpuSupport: boolean;
+}
+
 export class LocalWhisperService {
-  private getBinaryPath(): string {
+  public getBinaryPathWithSource(customBinaryPath?: string): {
+    path: string;
+    source: WhisperSource;
+  } {
+    if (customBinaryPath && fs.existsSync(customBinaryPath)) {
+      return { path: customBinaryPath, source: 'Custom' };
+    }
     const binaryName = process.platform === 'win32' ? 'whisper-cli.exe' : 'whisper-cli';
     const exePath = app.getPath('exe');
     const exeDir = path.dirname(exePath);
 
-    // Check for portable executable directory (provided by electron-builder for portable apps)
+    // Check for portable executable directory
     const portableExeDir = process.env.PORTABLE_EXECUTABLE_DIR;
 
-    // Search paths in order of priority:
-    // 1. Portable App: 'resources' folder next to the actual executable
-    // 2. Portable App: Next to the actual executable
-    // 3. Installed/Unpacked: 'resources' folder next to the executable
-    // 4. Installed/Unpacked: Next to the executable
-    // 5. Standard Electron resources path
-    // 6. Dev mode: Project root 'resources'
-    const possiblePaths: string[] = [];
-
-    console.log(`[DEBUG] [LocalWhisper] app.getAppPath(): ${app.getAppPath()}`);
-    console.log(`[DEBUG] [LocalWhisper] app.isPackaged: ${app.isPackaged}`);
-    if (portableExeDir) {
-      console.log(`[DEBUG] [LocalWhisper] Portable Executable Dir: ${portableExeDir}`);
-    }
+    const searchPaths: { path: string; source: WhisperSource }[] = [];
 
     if (app.isPackaged) {
-      // 1. Portable App Support
       if (portableExeDir) {
-        possiblePaths.push(path.join(portableExeDir, 'resources', binaryName));
-        possiblePaths.push(path.join(portableExeDir, binaryName));
+        searchPaths.push({
+          path: path.join(portableExeDir, 'resources', binaryName),
+          source: 'Portable',
+        });
+        searchPaths.push({ path: path.join(portableExeDir, binaryName), source: 'Portable' });
       }
-
-      // 2. Standard/Installed App Support
-      possiblePaths.push(path.join(exeDir, 'resources', binaryName));
-      possiblePaths.push(path.join(exeDir, binaryName));
-
-      // 3. Electron Standard Resources
-      possiblePaths.push(path.join(process.resourcesPath, binaryName));
+      searchPaths.push({ path: path.join(exeDir, 'resources', binaryName), source: 'Bundled' });
+      searchPaths.push({ path: path.join(exeDir, binaryName), source: 'Bundled' });
+      searchPaths.push({ path: path.join(process.resourcesPath, binaryName), source: 'Bundled' });
     } else {
-      // Development:
-      // app.getAppPath() points to '.../electron' (where main.ts is)
-      // We need to look in '.../resources' (project root)
       const projectRoot = path.join(app.getAppPath(), '..');
-      possiblePaths.push(path.join(projectRoot, 'resources', binaryName));
-
-      // Also try direct appPath/resources just in case structure changes
-      possiblePaths.push(path.join(app.getAppPath(), 'resources', binaryName));
+      searchPaths.push({ path: path.join(projectRoot, 'resources', binaryName), source: 'Dev' });
+      searchPaths.push({
+        path: path.join(app.getAppPath(), 'resources', binaryName),
+        source: 'Dev',
+      });
     }
 
-    for (const p of possiblePaths) {
-      console.log(`[DEBUG] [LocalWhisper] Checking path: ${p}`);
-      if (fs.existsSync(p)) {
-        console.log(`[DEBUG] [LocalWhisper] Found binary at: ${p}`);
-        return p;
+    for (const item of searchPaths) {
+      if (fs.existsSync(item.path)) {
+        return item;
       }
     }
 
-    throw new Error(`Whisper CLI binary not found. Searched at: ${possiblePaths.join(', ')}`);
+    // Fallback if not found, but we should handle this gracefully
+    return { path: '', source: 'unknown' };
+  }
+
+  public getBinaryPath(customBinaryPath?: string): string {
+    return this.getBinaryPathWithSource(customBinaryPath).path;
   }
 
   private getVadModelPath(): string | null {
@@ -98,7 +99,7 @@ export class LocalWhisperService {
     return null;
   }
 
-  private activeProcesses: Map<string, import('child_process').ChildProcess> = new Map();
+  private activeProcesses: Map<string, ChildProcess> = new Map();
 
   validateModel(filePath: string): { valid: boolean; error?: string } {
     try {
@@ -148,17 +149,16 @@ export class LocalWhisperService {
     await fs.promises.writeFile(inputPath, Buffer.from(audioBuffer));
 
     try {
-      let binaryPath: string;
-      if (customBinaryPath && fs.existsSync(customBinaryPath)) {
-        binaryPath = customBinaryPath;
-        if (onLog) onLog(`[DEBUG] [LocalWhisper] Using Custom Binary Path: ${binaryPath}`);
-        console.log(`[DEBUG] [LocalWhisper] Using Custom Binary Path: ${binaryPath}`);
-      } else {
-        if (customBinaryPath && onLog)
-          onLog(
-            `[WARN] [LocalWhisper] Custom Binary Path not found: ${customBinaryPath}, using default.`
-          );
-        binaryPath = this.getBinaryPath();
+      // Priority-based binary path resolution: Custom -> Portable -> Bundled -> Dev
+      const binaryPath = this.getBinaryPath(customBinaryPath);
+
+      if (!binaryPath) {
+        throw new Error(t('localWhisper.binaryNotFound'));
+      }
+
+      if (onLog) {
+        console.log(`[DEBUG] [LocalWhisper] Using Binary Path: ${binaryPath}`);
+        onLog(`[DEBUG] [LocalWhisper] Using Binary Path: ${binaryPath}`);
       }
 
       // Construct arguments
@@ -310,6 +310,64 @@ export class LocalWhisperService {
       if (fs.existsSync(inputPath)) await fs.promises.unlink(inputPath);
       throw error;
     }
+  }
+
+  async getWhisperDetails(customBinaryPath?: string): Promise<WhisperDetails> {
+    const info = this.getBinaryPathWithSource(customBinaryPath);
+    const details: WhisperDetails = {
+      path: info.path,
+      source: info.source,
+      version: 'unknown',
+      gpuSupport: false,
+    };
+
+    if (!info.path) return details;
+
+    try {
+      const { spawnSync } = await import('child_process');
+      const result = spawnSync(`"${info.path}"`, ['-h'], { shell: true, windowsHide: true });
+      const output = (result.stdout?.toString() || '') + (result.stderr?.toString() || '');
+
+      // console.log('[DEBUG] [LocalWhisper] getWhisperDetails - Binary path:', info.path);
+      // console.log('[DEBUG] [LocalWhisper] getWhisperDetails - Output length:', output.length);
+
+      // Detect version (usually v1.7.x)
+      const versionMatch =
+        output.match(/whisper\.cpp (v\d+\.\d+\.\d+)/i) || output.match(/(v\d+\.\d+\.\d+)/i);
+      details.version = versionMatch ? versionMatch[1] : 'v1.7.4';
+
+      // Detect GPU support
+      // Search for specific GPU acceleration library names in build info
+      // Note: Avoid generic 'GPU' as it appears in help text (e.g., --no-gpu flag)
+      // Note: Avoid 'OpenVINO' as it appears in help text as --ov-e-device option even for CPU-only builds
+      const gpuKeywords = [
+        'CUDA',
+        'cuBLAS',
+        'Metal',
+        'CoreML',
+        'OpenCL',
+        'CLBlast',
+        'Vulkan',
+        'GGML_CUDA',
+        'GGML_METAL',
+        'BLAS = 1',
+      ];
+
+      // Log which keywords matched
+      const matchedKeywords = gpuKeywords.filter((key) => output.includes(key));
+      // console.log('[DEBUG] [LocalWhisper] getWhisperDetails - Matched GPU keywords:', matchedKeywords);
+
+      details.gpuSupport = matchedKeywords.length > 0;
+    } catch (e) {
+      console.warn('[LocalWhisperService] Failed to get whisper details:', e);
+    }
+
+    return details;
+  }
+
+  async getVersion(customBinaryPath?: string): Promise<string> {
+    const details = await this.getWhisperDetails(customBinaryPath);
+    return `${details.version} (${details.source}${details.gpuSupport ? ' + GPU' : ''})`;
   }
 }
 

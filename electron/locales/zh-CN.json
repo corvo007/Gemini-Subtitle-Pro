@@ -88,7 +88,8 @@
     "modelNotExist": "模型文件不存在",
     "modelInvalidFormat": "模型文件格式错误 (需 .bin)",
     "modelTooSmall": "模型文件过小 (可能是无效文件)",
-    "modelReadError": "无法读取模型文件"
+    "modelReadError": "无法读取模型文件",
+    "binaryNotFound": "未检测到 Whisper 运行程序。请检查设置中的路径，或确保软件安装完整。"
   },
   "endToEnd": {
     "preparingDownload": "正在准备下载...",

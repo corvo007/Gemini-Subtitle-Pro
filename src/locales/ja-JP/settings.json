@@ -233,5 +233,22 @@
     "vietnamese": "ベトナム語",
     "thai": "タイ語",
     "indonesian": "インドネシア語"
+  },
+  "about": {
+    "dependencies": "依存コンポーネント",
+    "ffmpeg": "FFmpeg バージョン",
+    "ffprobe": "FFprobe バージョン",
+    "ytdlp": "yt-dlp バージョン",
+    "qjs": "QuickJS バージョン",
+    "whisper": "Whisper.cpp バージョン",
+    "gpu": "ハードウェアアクセラレーション (GPU)",
+    "gpuSupported": "対応 ({{preferredH264}}/{{preferredH265}})",
+    "gpuUnsupported": "非対応",
+    "paths": "システムパス",
+    "appPath": "アプリケーションパス",
+    "userDataPath": "設定とログのパス",
+    "exePath": "実行ファイルパス",
+    "copyPath": "パスをコピー",
+    "showInFolder": "フォルダで開く"
   }
 }

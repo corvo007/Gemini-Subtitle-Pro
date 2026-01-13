@@ -107,6 +107,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getResourcePath: (resourceName: string) =>
     ipcRenderer.invoke('util:get-resource-path', resourceName),
   showItemInFolder: (path: string) => ipcRenderer.invoke('shell:show-item-in-folder', path),
+  getAboutInfo: (lastHash?: string) => ipcRenderer.invoke('util:get-about-info', lastHash),
 
   // Video Compression APIs
   compression: {

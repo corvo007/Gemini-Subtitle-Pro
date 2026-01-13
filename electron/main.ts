@@ -1447,6 +1447,102 @@ app.on('web-contents-created', (_event, contents) => {
   });
 });
 
+// About info cache
+let lastAboutInfo: any = null;
+let lastAboutConfigHash: string | null = null;
+
+// IPC Handler: Get About Information
+ipcMain.handle('util:get-about-info', async (_event, lastHash?: string) => {
+  try {
+    const pkgPath = path.join(__dirname, '../package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+
+    // Read settings for custom binary paths
+    const settings = await storageService.readSettings();
+    const customWhisperPath = settings?.debug?.whisperPath;
+    const { execSync } = await import('child_process');
+
+    let commitHash = 'N/A';
+    try {
+      commitHash = execSync('git rev-parse --short HEAD', {
+        encoding: 'utf-8',
+        windowsHide: true,
+      }).trim();
+    } catch (e) {
+      // In production, git might not be available
+    }
+
+    // Create a configuration hash to detect changes
+    // We include pkg version, commit hash, paths, and platform-specific portable dir
+    const configStr = [
+      `v:${pkg.version}`,
+      `c:${commitHash}`,
+      `w:${customWhisperPath || 'bundled'}`,
+      `ff:${settings?.debug?.ffmpegPath || 'default'}`,
+      `fp:${settings?.debug?.ffprobePath || 'default'}`,
+      `p:${process.env.PORTABLE_EXECUTABLE_DIR || 'none'}`,
+    ].join('|');
+
+    // If the tool configurations haven't changed and the requester has the last hash
+    if (lastHash === configStr && lastAboutInfo) {
+      return { notModified: true, hash: configStr };
+    }
+
+    // Get dependency versions
+    const ytDlpInfo = await ytDlpService.getVersions();
+    const whisperDetails = await localWhisperService.getWhisperDetails(customWhisperPath);
+    const whisperVersionStr = `${whisperDetails.version} (${whisperDetails.source}${whisperDetails.gpuSupport ? ' + GPU' : ''})`;
+
+    // Get FFmpeg/FFprobe versions
+    let ffmpegVersion = 'unknown';
+    let ffprobeVersion = 'unknown';
+    try {
+      const ffmpegOutput = execSync('ffmpeg -version', { encoding: 'utf-8', windowsHide: true });
+      const ffprobeOutput = execSync('ffprobe -version', { encoding: 'utf-8', windowsHide: true });
+
+      const ffmpegMatch = ffmpegOutput.match(/ffmpeg version (.*?) Copyright/);
+      if (ffmpegMatch) ffmpegVersion = ffmpegMatch[1].trim();
+
+      const ffprobeMatch = ffprobeOutput.match(/ffprobe version (.*?) Copyright/);
+      if (ffprobeMatch) ffprobeVersion = ffprobeMatch[1].trim();
+    } catch (e) {
+      console.warn('[Main] Failed to get FFmpeg/FFprobe versions:', e);
+    }
+
+    const hwAccelInfo = videoCompressorService.getHardwareAccelInfo();
+
+    const info = {
+      hash: configStr,
+      appName: pkg.productName || pkg.name,
+      version: pkg.version,
+      isPackaged: app.isPackaged,
+      commitHash,
+      versions: {
+        ffmpeg: ffmpegVersion,
+        ffprobe: ffprobeVersion,
+        ytdlp: ytDlpInfo.ytdlp,
+        qjs: ytDlpInfo.qjs,
+        whisper: whisperVersionStr,
+        whisperDetails,
+      },
+      gpu: hwAccelInfo,
+      paths: {
+        appPath: app.getAppPath(),
+        userDataPath: app.getPath('userData'),
+        exePath: app.getPath('exe'),
+      },
+    };
+
+    lastAboutInfo = info;
+    lastAboutConfigHash = configStr;
+
+    return info;
+  } catch (error: any) {
+    console.error('[Main] Failed to get about info:', error);
+    throw error;
+  }
+});
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();

@@ -88,7 +88,8 @@
     "modelNotExist": "Model file does not exist",
     "modelInvalidFormat": "Invalid model file format (requires .bin)",
     "modelTooSmall": "Model file is too small (may be invalid)",
-    "modelReadError": "Cannot read model file"
+    "modelReadError": "Cannot read model file",
+    "binaryNotFound": "Whisper executable not found. Please check the path in settings or ensure the software is installed correctly."
   },
   "endToEnd": {
     "preparingDownload": "Preparing download...",

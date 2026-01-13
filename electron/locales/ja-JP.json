@@ -88,7 +88,8 @@
     "modelNotExist": "モデルファイルが存在しません",
     "modelInvalidFormat": "無効なモデルファイル形式です（.bin 形式が必要）",
     "modelTooSmall": "モデルファイルが小さすぎます（無効なファイルの可能性）",
-    "modelReadError": "モデルファイルを読み取れません"
+    "modelReadError": "モデルファイルを読み取れません",
+    "binaryNotFound": "Whisper 実行ファイルが見つかりません。設定のパスを確認するか、ソフトウェアが正しくインストールされていることを確認してください。"
   },
   "endToEnd": {
     "preparingDownload": "ダウンロード準備中...",

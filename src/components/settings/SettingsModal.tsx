@@ -1,6 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import pkg from '../../../package.json';
 import { useTranslation } from 'react-i18next';
-import { Settings, X, Languages, Type, Clock, Book, Bug, Trash2 } from 'lucide-react';
+import {
+  Settings,
+  X,
+  Languages,
+  Type,
+  Clock,
+  Book,
+  Bug,
+  Trash2,
+  Info,
+  Copy,
+  ExternalLink,
+  Cpu,
+} from 'lucide-react';
 import { type AppSettings } from '@/types/settings';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { LocalWhisperSettings } from '@/components/settings/LocalWhisperSettings';
@@ -143,6 +157,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               'services',
               'performance',
               'enhance',
+              'about',
               ...(window.electronAPI?.isDebug ? ['debug'] : []),
             ].map((tab) => (
               <button
@@ -693,6 +708,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
+            {activeTab === 'about' && <AboutTab />}
             {activeTab === 'debug' && (
               <div className="space-y-3 animate-fade-in">
                 <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4 mb-4">
@@ -986,6 +1002,218 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// About Tab Cache
+let cachedAboutInfo: any = null;
+let cachedAboutInfoHash: string | null = null;
+
+// About Tab Component
+const AboutTab: React.FC = () => {
+  const { t } = useTranslation('settings');
+  const [info, setInfo] = useState<any>(cachedAboutInfo);
+
+  const loadAboutInfo = useCallback(async () => {
+    if (window.electronAPI?.getAboutInfo) {
+      try {
+        const data = await window.electronAPI.getAboutInfo(cachedAboutInfoHash || undefined);
+        if (data.notModified && cachedAboutInfo) {
+          // Data hasn't changed, keep using the cache
+          setInfo(cachedAboutInfo);
+        } else {
+          // Fresh data received
+          cachedAboutInfo = data;
+          cachedAboutInfoHash = data.hash || null;
+          setInfo(data);
+        }
+      } catch (error) {
+        console.error('[AboutTab] Failed to load info:', error);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAboutInfo();
+  }, [loadAboutInfo]);
+
+  const handleCopy = (text: string) => {
+    void navigator.clipboard.writeText(text);
+  };
+
+  const handleShowInFolder = (path: string) => {
+    void window.electronAPI?.showItemInFolder(path);
+  };
+
+  // Static info fallback from package.json if IPC hasn't returned yet
+  // Note: pkg is not directly available here, so we show loading placeholders for dynamic parts
+  const isLoading = !info;
+
+  return (
+    <div className="space-y-6 animate-fade-in text-left">
+      {/* App Branding */}
+      <div className="flex items-center gap-5 p-6 bg-slate-800/20 rounded-2xl border border-slate-800/50">
+        <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/20 flex-shrink-0">
+          <Languages className="w-8 h-8 text-white" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <span className="text-indigo-400">Gemini</span>
+            <span>Subtitle Pro</span>
+          </h1>
+          <p className="text-sm text-slate-400 mt-1 font-medium">AI 字幕生成与翻译工具</p>
+          <div className="flex items-center gap-3 mt-4">
+            <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-sm font-bold rounded-lg border border-indigo-500/20">
+              v{pkg.version}
+            </span>
+            {info?.commitHash && (
+              <span className="text-slate-600 text-sm font-mono">
+                {info.commitHash} ({info.isPackaged ? 'prod' : 'dev'})
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Dependency Versions */}
+      <div className="space-y-3">
+        <SectionHeader icon={<Cpu className="w-4 h-4" />}>
+          {t('about.dependencies', 'Dependencies')}
+        </SectionHeader>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { label: t('about.ffmpeg', 'FFmpeg'), value: info?.versions.ffmpeg },
+            { label: t('about.ffprobe', 'FFprobe'), value: info?.versions.ffprobe },
+            { label: t('about.ytdlp', 'yt-dlp'), value: info?.versions.ytdlp },
+            { label: t('about.qjs', 'QuickJS'), value: info?.versions.qjs },
+            { label: t('about.whisper', 'Whisper.cpp'), value: info?.versions.whisper },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="px-4 py-3 bg-slate-800/50 rounded-xl border border-slate-700/50 flex justify-between items-center"
+            >
+              <span className="text-sm text-slate-400">{item.label}</span>
+              <span className="text-sm text-white font-mono">{item.value || '...'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* GPU Acceleration Status */}
+      <div className="space-y-3">
+        <SectionHeader icon={<Cpu className="w-4 h-4" />}>
+          {t('about.gpu', 'GPU Acceleration')}
+        </SectionHeader>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div
+            className={cn(
+              'p-4 rounded-xl border flex items-center justify-between',
+              info?.gpu.available
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                : 'bg-slate-800/50 border-slate-700/50 text-slate-400'
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  'w-2 h-2 rounded-full',
+                  info?.gpu.available ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'
+                )}
+              />
+              <span className="text-sm font-medium">
+                {!info
+                  ? '...'
+                  : info.gpu.available
+                    ? t('about.gpuSupported', {
+                        preferredH264: info.gpu.preferredH264,
+                        preferredH265: info.gpu.preferredH265,
+                      })
+                    : t('about.gpuUnsupported', 'Not Supported')}
+              </span>
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
+              Encoder
+            </span>
+          </div>
+
+          <div
+            className={cn(
+              'p-4 rounded-xl border flex items-center justify-between',
+              info?.versions.whisperDetails.gpuSupport
+                ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+                : 'bg-slate-800/50 border-slate-700/50 text-slate-400'
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  'w-2 h-2 rounded-full',
+                  info?.versions.whisperDetails.gpuSupport
+                    ? 'bg-indigo-500 animate-pulse'
+                    : 'bg-slate-600'
+                )}
+              />
+              <span className="text-sm font-medium">
+                {!info ? '...' : info.versions.whisperDetails.gpuSupport ? '支持 (GPU)' : '不支持'}
+              </span>
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
+              Whisper
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* System Paths */}
+      <div className="space-y-3">
+        <SectionHeader icon={<Info className="w-4 h-4" />}>
+          {t('about.paths', 'System Paths')}
+        </SectionHeader>
+        <div className="space-y-2">
+          {[
+            { label: t('about.appPath', 'App Path'), value: info?.paths.appPath },
+            { label: t('about.userDataPath', 'User Data'), value: info?.paths.userDataPath },
+            { label: t('about.exePath', 'Executable'), value: info?.paths.exePath },
+            {
+              label: t('debug.whisperPath', 'Whisper Path'),
+              value: info?.versions.whisperDetails.path,
+            },
+          ].map((pathItem) => (
+            <div
+              key={pathItem.label}
+              className="group p-3 bg-slate-800/50 rounded-xl border border-slate-700/50 space-y-2"
+            >
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-tight">
+                  {pathItem.label}
+                </span>
+                {pathItem.value && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleCopy(pathItem.value)}
+                      className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"
+                      title={t('about.copyPath', 'Copy Path')}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleShowInFolder(pathItem.value)}
+                      className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"
+                      title={t('about.showInFolder', 'Show in Folder')}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-slate-300 font-mono break-all line-clamp-2">
+                {pathItem.value || '...'}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </div>

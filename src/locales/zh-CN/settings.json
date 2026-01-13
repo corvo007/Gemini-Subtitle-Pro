@@ -5,7 +5,8 @@
     "services": "服务",
     "performance": "性能",
     "enhance": "增强",
-    "debug": "调试"
+    "debug": "调试",
+    "about": "关于"
   },
   "general": {
     "display": {
@@ -233,5 +234,27 @@
     "vietnamese": "越南语",
     "thai": "泰语",
     "indonesian": "印尼语"
+  },
+  "about": {
+    "title": "关于软件",
+    "appInfo": "应用信息",
+    "appName": "应用名称",
+    "version": "当前版本",
+    "commitHash": "提交哈希",
+    "dependencies": "依赖组件",
+    "ffmpeg": "FFmpeg 版本",
+    "ffprobe": "FFprobe 版本",
+    "ytdlp": "yt-dlp 版本",
+    "qjs": "QuickJS 版本",
+    "whisper": "Whisper.cpp 版本",
+    "gpu": "硬件加速 (GPU)",
+    "gpuSupported": "支持 ({{preferredH264}}/{{preferredH265}})",
+    "gpuUnsupported": "不支持 (仅软件执行)",
+    "paths": "系统路径",
+    "appPath": "应用路径",
+    "userDataPath": "配置与日志路径",
+    "exePath": "执行文件路径",
+    "copyPath": "复制路径",
+    "showInFolder": "在文件夹中显示"
   }
 }
