@@ -44,7 +44,12 @@
     "addAfter": "在后面添加",
     "addComment": "添加评论",
     "deleteRow": "删除行",
-    "lowConfidence": "时间轴置信度较低 ({{score}}%)"
+    "lowConfidence": "时间轴置信度较低 ({{score}}%)",
+    "errors": {
+      "emptyContent": "字幕内容不能为空",
+      "startTimeAfterEndTime": "开始时间不能晚于结束时间",
+      "durationTooShort": "持续时间太短 (< 0.2s)"
+    }
   },
   "batchHeader": {
     "searchPlaceholder": "搜索...",

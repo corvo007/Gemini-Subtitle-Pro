@@ -44,7 +44,12 @@
     "addAfter": "Add After",
     "addComment": "Add Comment",
     "deleteRow": "Delete Row",
-    "lowConfidence": "Low confidence timestamp ({{score}}%)"
+    "lowConfidence": "Low confidence timestamp ({{score}}%)",
+    "errors": {
+      "emptyContent": "Subtitle content cannot be empty",
+      "startTimeAfterEndTime": "Start time cannot be later than end time",
+      "durationTooShort": "Duration too short (< 0.2s)"
+    }
   },
   "batchHeader": {
     "searchPlaceholder": "Search...",

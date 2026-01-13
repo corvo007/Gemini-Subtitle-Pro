@@ -151,6 +151,7 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
     const [tempOriginal, setTempOriginal] = React.useState('');
     const [tempStartTime, setTempStartTime] = React.useState('');
     const [tempEndTime, setTempEndTime] = React.useState('');
+    const [validationError, setValidationError] = React.useState<string | null>(null);
 
     const [showAddMenu, setShowAddMenu] = React.useState(false);
     const [showAddSubmenu, setShowAddSubmenu] = React.useState(false);
@@ -185,10 +186,16 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showAddMenu, addMenuRef]);
-
     React.useEffect(() => {
       if (!showAddMenu) setShowAddSubmenu(false);
     }, [showAddMenu]);
+
+    // Clear validation error after 3 seconds
+    React.useEffect(() => {
+      if (!validationError) return;
+      const timer = setTimeout(() => setValidationError(null), 3000);
+      return () => clearTimeout(timer);
+    }, [validationError]);
 
     // Toggle menu with smart direction detection
     const toggleMenu = () => {
@@ -286,24 +293,64 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
     };
 
     const handleSave = () => {
+      // 1. Validation: Empty content
+      if (!tempText.trim()) {
+        const msg = t('subtitleRow.errors.emptyContent');
+        setValidationError(msg);
+        handleCancel();
+        return; // Block save
+      }
+
+      // 2. Validation: Time format and logic
+      let normalizedStart = sub.startTime;
+      let normalizedEnd = sub.endTime;
+      let timeChanged = false;
+
+      if (updateSubtitleTime) {
+        const ns = validateAndNormalizeTime(tempStartTime);
+        const ne = validateAndNormalizeTime(tempEndTime);
+
+        if (ns && ne) {
+          const startSec = timeToSeconds(ns);
+          const endSec = timeToSeconds(ne);
+          const duration = endSec - startSec;
+
+          // Check 2.1: End time < Start time
+          if (endSec < startSec) {
+            const msg = t('subtitleRow.errors.startTimeAfterEndTime');
+            setValidationError(msg);
+            handleCancel();
+            return; // Block save
+          }
+
+          // Check 2.2: Duration too short (< 0.2s)
+          if (duration < 0.2) {
+            const msg = t('subtitleRow.errors.durationTooShort');
+            setValidationError(msg);
+            handleCancel();
+            return; // Block save
+          }
+
+          if (ns !== sub.startTime || ne !== sub.endTime) {
+            normalizedStart = ns;
+            normalizedEnd = ne;
+            timeChanged = true;
+          }
+        }
+      }
+
+      // If we got here, inputs are valid. Proceed to save.
       if (tempText.trim() !== sub.translated) {
         updateSubtitleText(sub.id, tempText.trim());
       }
       if (showSourceText && tempOriginal.trim() !== sub.original) {
         updateSubtitleOriginal(sub.id, tempOriginal.trim());
       }
-      // Save time if changed and valid
-      if (updateSubtitleTime) {
-        const normalizedStart = validateAndNormalizeTime(tempStartTime);
-        const normalizedEnd = validateAndNormalizeTime(tempEndTime);
-        if (normalizedStart && normalizedEnd) {
-          const startChanged = normalizedStart !== sub.startTime;
-          const endChanged = normalizedEnd !== sub.endTime;
-          if (startChanged || endChanged) {
-            updateSubtitleTime(sub.id, normalizedStart, normalizedEnd);
-          }
-        }
+
+      if (timeChanged && updateSubtitleTime) {
+        updateSubtitleTime(sub.id, normalizedStart, normalizedEnd);
       }
+
       setEditing(false);
     };
 
@@ -374,7 +421,16 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
             )}
           </button>
         )}
-        <div className="flex flex-col text-[11px] sm:text-sm font-mono text-slate-400 min-w-[75px] sm:min-w-[95px] pt-1">
+        <div className="flex flex-col text-[11px] sm:text-sm font-mono text-slate-400 min-w-[75px] sm:min-w-[95px] pt-1 relative">
+          {validationError && (
+            <div className="absolute bottom-full left-0 mb-2 z-50 animate-fade-in-up">
+              <div className="bg-red-500 text-white text-[11px] sm:text-xs py-1 px-2 rounded shadow-lg whitespace-nowrap relative font-sans font-medium">
+                {validationError}
+                {/* Tooltip arrow */}
+                <div className="absolute top-full left-4 -translate-y-px border-8 border-transparent border-t-red-500" />
+              </div>
+            </div>
+          )}
           {editing ? (
             // Editable time inputs - compact style matching display
             <>
@@ -494,12 +550,15 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
             </div>
           )}
           {editing ? (
-            <div className="space-y-1">
+            <div className="space-y-1 relative">
               {showSourceText && (
                 <input
                   type="text"
                   value={tempOriginal}
-                  onChange={(e) => setTempOriginal(e.target.value)}
+                  onChange={(e) => {
+                    setTempOriginal(e.target.value);
+                    setValidationError(null);
+                  }}
                   onKeyDown={handleKeyDown}
                   placeholder={t('subtitleRow.sourcePlaceholder')}
                   className="w-full bg-slate-600/10 border border-slate-500/30 rounded px-2 py-1 text-xs sm:text-sm text-slate-300 placeholder-slate-500/50 focus:outline-none focus:border-slate-400/50 leading-relaxed"
@@ -508,7 +567,10 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
               <input
                 type="text"
                 value={tempText}
-                onChange={(e) => setTempText(e.target.value)}
+                onChange={(e) => {
+                  setTempText(e.target.value);
+                  setValidationError(null);
+                }}
                 onKeyDown={handleKeyDown}
                 autoFocus
                 placeholder={t('subtitleRow.translationPlaceholder')}
