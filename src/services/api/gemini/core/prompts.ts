@@ -1018,6 +1018,12 @@ export const getRefinementPrompt = (params: RefinementPromptParams): string => `
 
             RULES (Priority Order):
 
+            [P0 - COMPLETENESS] Process ALL Segments
+            → You MUST process EVERY segment in the input - NO EXCEPTIONS
+            → Output count MUST be >= input count (splitting allowed, dropping NOT allowed)
+            → NEVER skip or omit any speech content
+            → If input has ${params.payload.length} segments, output must have at least ${params.payload.length} segments
+
             [P1 - ACCURACY] Audio-Based Correction
             → Listen carefully to the attached audio
             → Fix misrecognized words and phrases in 'text'
@@ -1040,6 +1046,8 @@ ${getSearchEnhancedRefinementPrompt('refinement')}
             ${params.enableDiarization ? `→ INCLUDE "speaker" field for every segment (e.g., "Speaker 1")` : ''}
 
             FINAL VERIFICATION:
+            ✓ ALL ${params.payload.length} input segments are processed (no content dropped)
+            ✓ Output segment count >= ${params.payload.length}
             ✓ Long segments (>${MAX_SEGMENT_DURATION_SECONDS}s or >${SUBTITLE_MAX_WIDTH} visual width) properly split
             ✓ Timestamps are relative to chunk start
             ✓ Terminology from glossary is used correctly

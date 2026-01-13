@@ -2,6 +2,7 @@ import { type SubtitleItem } from '@/types/subtitle';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { toAssTime } from '@/services/subtitle/time';
 import { getSpeakerColorWithCustom } from '@/services/utils/colors';
+import { sanitizeSpeakerForStyle } from './utils';
 
 // Helper to convert Hex (#RRGGBB) to ASS BGR (&HBBGGRR)
 // Helper to convert Hex (#RRGGBB) to ASS BGR (&HBBGGRR)
@@ -63,10 +64,7 @@ export const generateAssContent = (
       // Inherit from Default but change PrimaryColour
       // Sanitize speaker name for style name - remove all ASS-illegal characters
       // ASS style names should only contain alphanumeric, underscore, and safe Unicode chars
-      const sanitizedSpeaker = speaker
-        .replace(/[\s,;:[\](){}\\/&]+/g, '_') // Replace whitespace and special chars with underscore
-        .replace(/_+/g, '_') // Collapse multiple underscores
-        .replace(/^_|_$/g, ''); // Trim leading/trailing underscores
+      const sanitizedSpeaker = sanitizeSpeakerForStyle(speaker);
       const styleName = `Speaker_${sanitizedSpeaker || 'Unknown'}`;
       return `Style: ${styleName},Arial,75,${bgrColor},&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,3,2,2,10,10,10,1`;
     })
@@ -109,7 +107,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       // Determine style
       let style = 'Default';
       if (useSpeakerColors && sub.speaker) {
-        style = `Speaker_${sub.speaker.replace(/\s+/g, '_')}`;
+        style = `Speaker_${sanitizeSpeakerForStyle(sub.speaker)}`;
       }
 
       let text = '';

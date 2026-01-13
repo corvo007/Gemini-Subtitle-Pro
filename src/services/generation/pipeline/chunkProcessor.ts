@@ -392,7 +392,7 @@ export class ChunkProcessor {
 
             const { result: processedSegments } = await withPostCheck(
               refinementGenerator,
-              createRefinementPostProcessor(toLocaleCode(detectedRefineLang)),
+              createRefinementPostProcessor(toLocaleCode(detectedRefineLang), rawSegments),
               { maxRetries: 1, stepName: `[Chunk ${index}]` }
             );
             refinedSegments = reconcile(rawSegments, processedSegments);

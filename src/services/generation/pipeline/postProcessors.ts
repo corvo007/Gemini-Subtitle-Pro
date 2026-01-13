@@ -15,6 +15,7 @@ import {
   markRegressionIssues,
   markCorruptedRange,
 } from '@/services/subtitle/timelineValidator';
+import { validateContentIntegrity } from '@/services/subtitle/contentValidator';
 import { type PostProcessOutput, type PostCheckResult } from '@/services/subtitle/postCheck';
 import { getTranslationBatchPrompt } from '@/services/api/gemini/core/prompts';
 import { generateContentWithRetry, formatGeminiError } from '@/services/api/gemini/core/client';
@@ -46,9 +47,13 @@ export interface RawTranslationResult {
  * 1. Clean non-speech annotations
  * 2. Filter empty segments
  * 3. Validate timeline
- * 4. Apply issue markers (if validation fails and not retryable)
+ * 4. Check segment count (must not drop segments)
+ * 5. Apply issue markers (if validation fails and not retryable)
  */
-export function createRefinementPostProcessor(detectedLocale: string = 'en') {
+export function createRefinementPostProcessor(
+  detectedLocale: string = 'en',
+  inputSegments?: SubtitleItem[]
+) {
   return (
     segments: SubtitleItem[],
     isFinalAttempt: boolean = false
@@ -83,7 +88,48 @@ export function createRefinementPostProcessor(detectedLocale: string = 'en') {
     // Step 5: Convert validation result to PostCheckResult
     const checkResult = mapValidationToCheckResult(validation);
 
-    // Step 6: Apply markers on final attempt (when no more retries)
+    // Step 6: Content Integrity & Count Check
+    if (inputSegments && inputSegments.length > 0) {
+      // A. Count Check
+      if (processed.length < inputSegments.length) {
+        const dropCount = inputSegments.length - processed.length;
+        logger.warn(
+          `Refinement dropped ${dropCount} segments (${inputSegments.length} -> ${processed.length})`
+        );
+
+        checkResult.issues.push({
+          type: 'corrupted_range',
+          affectedIds: [],
+          details: `Output has fewer segments than input (${processed.length} < ${inputSegments.length})`,
+          retryable: true,
+        });
+        checkResult.isValid = false;
+        checkResult.retryable = true;
+      }
+
+      // B. Content Check (Recall/Coverage)
+      // Run anyway to be specific about WHAT failed.
+
+      const sourceText = inputSegments.map((s) => s.original).join(' ');
+      const targetText = processed.map((s) => s.original).join(' ');
+
+      const contentCheck = validateContentIntegrity(sourceText, targetText);
+
+      if (!contentCheck.isValid) {
+        logger.warn(`Refinement Content Check Failed: ${contentCheck.details}`);
+
+        checkResult.issues.push({
+          type: 'corrupted_range',
+          affectedIds: [], // Global issue
+          details: contentCheck.details || 'Severe content loss detected',
+          retryable: true,
+        });
+        checkResult.isValid = false;
+        checkResult.retryable = true;
+      }
+    }
+
+    // Step 7: Apply markers on final attempt (when no more retries)
     if (isFinalAttempt && !checkResult.isValid) {
       if (validation.independentAnomalies.length > 0) {
         processed = markRegressionIssues(processed, validation.independentAnomalies);
