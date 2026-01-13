@@ -2,7 +2,7 @@
  * Color palette optimized for accessibility and visual distinction
  * WCAG AA compliant for text contrast on dark backgrounds
  */
-const SPEAKER_COLORS = [
+export const SPEAKER_COLORS = [
   '#00FFFF', // Cyan (High vis)
   '#FF3333', // Bright Red
   '#00FF00', // Lime Green

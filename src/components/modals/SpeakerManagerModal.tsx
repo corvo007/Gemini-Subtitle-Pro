@@ -4,7 +4,7 @@ import {
   Users,
   Pencil,
   Trash2,
-  GitMerge,
+  Merge,
   Check,
   User,
   Plus,
@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { getSpeakerColor, getSpeakerColorWithCustom } from '@/services/utils/colors';
 import { SimpleConfirmationModal } from '@/components/modals/SimpleConfirmationModal';
+import { ColorPicker } from '@/components/ui/ColorPicker';
 import { cn } from '@/lib/cn';
 
 interface SpeakerManagerModalProps {
@@ -342,7 +343,7 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
                   disabled={speakerProfiles.length < 2}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  <GitMerge className="w-4 h-4" />
+                  <Merge className="w-4 h-4" />
                   {t('speakerManager.merge')}
                 </button>
               </div>
@@ -362,19 +363,14 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 w-80">
             <h3 className="text-white font-medium mb-3">{t('speakerManager.colorPicker')}</h3>
-            <input
-              type="color"
-              value={editColor}
-              onChange={(e) => setEditColor(e.target.value)}
-              className="w-full h-32 rounded cursor-pointer"
-            />
+            <ColorPicker color={editColor} onChange={setEditColor} className="w-full" />
             <div className="flex items-center gap-2 mt-4">
               <button
                 onClick={() => {
                   onUpdateColor(editingColorId, editColor);
                   setEditingColorId(null);
                 }}
-                className="flex-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition-colors"
+                className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 {t('speakerManager.done')}
               </button>
@@ -386,13 +382,13 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
                     setEditColor(getSpeakerColor(profile.name));
                   }
                 }}
-                className="px-3 py-2 text-slate-400 hover:text-white transition-colors"
+                className="px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors"
               >
                 {t('speakerManager.resetColor')}
               </button>
               <button
                 onClick={() => setEditingColorId(null)}
-                className="px-3 py-2 text-slate-400 hover:text-white transition-colors"
+                className="px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors"
               >
                 {t('speakerManager.cancel')}
               </button>
