@@ -134,11 +134,9 @@ export function useFileOperations({
       const currentOpId = ++operationIdRef.current;
       setIsLoadingFile(true);
       try {
-        logger.info('File selected', {
-          name: selectedFile.name,
-          size: selectedFile.size,
-          type: selectedFile.type,
-        });
+        logger.info(
+          `File selected: ${selectedFile.name} (Size: ${selectedFile.size}, Type: ${selectedFile.type})`
+        );
 
         // Async operation: get duration
         let d = 0;

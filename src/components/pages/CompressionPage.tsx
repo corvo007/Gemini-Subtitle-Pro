@@ -17,6 +17,7 @@ import { DirectorySelector } from '@/components/ui/DirectorySelector';
 import { generateOutputPath, removeExtension } from '@/services/utils/path';
 import { join } from 'pathe';
 import { formatDuration } from '@/services/subtitle/time';
+import { logger } from '@/services/utils/logger';
 import { cn } from '@/lib/cn';
 
 interface CompressionPageProps {
@@ -127,7 +128,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
         setOutputPath(generateOutputPath(downloadedVideoPath, filename));
         setShowDownloadedVideoPrompt(false);
       } catch (e: any) {
-        console.error('Failed to load downloaded video:', e);
+        logger.error('Failed to load downloaded video', e);
         setShowDownloadedVideoPrompt(false);
       }
     }
@@ -166,7 +167,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
         setOutputPath(join(result.path, `${name}_compressed.mp4`));
       }
     } catch (err) {
-      console.error('Failed to select directory', err);
+      logger.error('Failed to select directory', err);
     }
   };
 
@@ -635,7 +636,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                       try {
                         await window.electronAPI.compression.cancel();
                       } catch (e) {
-                        console.error('Failed to cancel compression:', e);
+                        logger.error('Failed to cancel compression', e);
                       }
                     }}
                     className="w-full py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 text-sm font-medium transition-colors flex items-center justify-center gap-2"

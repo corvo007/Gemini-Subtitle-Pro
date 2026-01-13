@@ -30,7 +30,7 @@ export const AlignmentSettings: React.FC<AlignmentSettingsProps> = ({
   // Handle aligner executable selection
   const handleSelectAligner = async () => {
     if (!window.electronAPI) {
-      console.error('[AlignmentSettings] electronAPI not available for selection');
+      logger.error('[AlignmentSettings] electronAPI not available for selection');
       return;
     }
     try {
@@ -39,7 +39,7 @@ export const AlignmentSettings: React.FC<AlignmentSettingsProps> = ({
         updateSetting('alignerPath', result.path);
       } else if (result && result.error) {
         addToast(t('enhance.alignment.selectError', { error: result.error }), 'error');
-        console.error('[AlignmentSettings] Aligner selection error:', result.error);
+        logger.error('[AlignmentSettings] Aligner selection error', result.error);
       }
     } catch (error: any) {
       logger.error('[AlignmentSettings] Aligner selection failed', error);
@@ -50,7 +50,7 @@ export const AlignmentSettings: React.FC<AlignmentSettingsProps> = ({
   // Handle model directory selection
   const handleSelectModelDir = async () => {
     if (!window.electronAPI) {
-      console.error('[AlignmentSettings] electronAPI not available for selection');
+      logger.error('[AlignmentSettings] electronAPI not available for selection');
       return;
     }
     try {
@@ -59,7 +59,7 @@ export const AlignmentSettings: React.FC<AlignmentSettingsProps> = ({
         updateSetting('alignmentModelPath', result.path);
       } else if (result && result.error) {
         addToast(t('enhance.alignment.selectError', { error: result.error }), 'error');
-        console.error('[AlignmentSettings] Model dir selection error:', result.error);
+        logger.error('[AlignmentSettings] Model dir selection error', result.error);
       }
     } catch (error: any) {
       logger.error('[AlignmentSettings] Model dir selection failed', error);

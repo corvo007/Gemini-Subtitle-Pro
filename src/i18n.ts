@@ -1,13 +1,14 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import { logger } from './services/utils/logger';
 
 // 翻译资源
 import zhCN from './locales/zh-CN';
 import enUS from './locales/en-US';
 import jaJP from './locales/ja-JP';
 
-i18n
+void i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
@@ -32,7 +33,7 @@ i18n.on('languageChanged', (lng) => {
   const electronAPI = (window as any).electronAPI;
   if (electronAPI?.i18n?.changeLanguage) {
     electronAPI.i18n.changeLanguage(lng).catch((err: Error) => {
-      console.warn('[i18n] Failed to sync language to main process:', err);
+      logger.warn('[i18n] Failed to sync language to main process', err);
     });
   }
 });

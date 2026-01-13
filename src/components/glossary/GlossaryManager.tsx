@@ -25,6 +25,7 @@ import {
   type ConflictMode,
 } from '@/components/modals/GlossaryImportDialog';
 import { cn } from '@/lib/cn';
+import { logger } from '@/services/utils/logger';
 
 interface GlossaryManagerProps {
   glossaries: Glossary[];
@@ -154,7 +155,7 @@ export const GlossaryManager: React.FC<GlossaryManagerProps> = ({
           filename: imported.name,
         });
       } catch (err) {
-        console.error('Import failed', err);
+        logger.error('Import failed', err);
         // Could add toast here
       }
     };

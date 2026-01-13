@@ -24,6 +24,7 @@ import type { SubtitleItem } from '@/types/subtitle';
 import type { SpeakerUIProfile } from '@/types/speaker';
 import { formatDuration } from '@/services/subtitle/time';
 import { cn } from '@/lib/cn';
+import { logger } from '@/services/utils/logger';
 import { useTranslation } from 'react-i18next';
 import ASS from 'assjs';
 import { generateAssContent } from '@/services/subtitle/generator';
@@ -225,14 +226,14 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
           resampling: 'video_width',
         });
       } catch (error) {
-        console.error('Failed to initialize ASS renderer:', error);
+        logger.error('Failed to initialize ASS renderer', error);
       }
 
       // 4. Resume playback if it was playing
       if (wasPlaying) {
         // Use a small timeout to allow the renderer to attach listeners properly
         setTimeout(() => {
-          video.play().catch((e) => console.warn('Failed to resume playback:', e));
+          video.play().catch((e) => logger.warn('Failed to resume playback', e));
         }, 10);
       }
 
@@ -416,7 +417,9 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
                       }
                       // Restore playback state if it was playing
                       if (playing) {
-                        videoRef.current.play().catch(console.error);
+                        videoRef.current
+                          .play()
+                          .catch(() => logger.error('Failed to play video', 'Playback error'));
                       }
                       // Restore mute state
                       if (muted) {

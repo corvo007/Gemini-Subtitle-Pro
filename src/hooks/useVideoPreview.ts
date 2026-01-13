@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { logger } from '@/services/utils/logger';
 import type { VideoPlayerPreviewRef } from '@/components/editor/VideoPlayerPreview';
 
 const SUPPORTED_FORMATS = ['mp4', 'webm', 'm4v'];
@@ -47,6 +48,13 @@ export function useVideoPreview(): UseVideoPreviewReturn {
     }
   }, []);
 
+  // Log video src changes to avoid side-effects during render
+  useEffect(() => {
+    if (videoSrc) {
+      logger.info(`[VideoPreview] Setting video src: ${videoSrc}`);
+    }
+  }, [videoSrc]);
+
   /**
    * Prepare video for playback - handles format detection and transcoding
    */
@@ -73,7 +81,6 @@ export function useVideoPreview(): UseVideoPreviewReturn {
         const videoUrl = `local-video://file/${encodedPath}${query}`;
         setVideoSrc((prev) => {
           if (prev === videoUrl) return prev;
-          console.log('[VideoPreview] Setting video src:', videoUrl);
           return videoUrl;
         });
       };
@@ -90,7 +97,7 @@ export function useVideoPreview(): UseVideoPreviewReturn {
 
         try {
           if (!window.electronAPI?.transcodeForPreview) {
-            console.error('[VideoPreview] Electron API not available for transcoding');
+            logger.error('[VideoPreview] Electron API not available for transcoding');
             setIsTranscoding(false);
             return;
           }
@@ -117,9 +124,8 @@ export function useVideoPreview(): UseVideoPreviewReturn {
           if (window.electronAPI.onTranscodeStart) {
             const cleanupStart = window.electronAPI.onTranscodeStart(
               (data: { outputPath: string; duration?: number }) => {
-                console.log(
-                  '[VideoPreview] Transcoding started, playing progressive:',
-                  data.outputPath
+                logger.info(
+                  `[VideoPreview] Transcoding started, playing progressive: ${data.outputPath}`
                 );
                 setLocalVideoSrc(data.outputPath);
                 // Set duration immediately so progress bar shows correct total length

@@ -4,6 +4,7 @@ import { Languages, Cpu, Info, Copy, ExternalLink } from 'lucide-react';
 import pkg from '../../../../package.json';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { cn } from '@/lib/cn';
+import { logger } from '@/services/utils/logger';
 
 // About Tab Cache
 let cachedAboutInfo: any = null;
@@ -27,7 +28,7 @@ export const AboutTab: React.FC = () => {
           setInfo(data);
         }
       } catch (error) {
-        console.error('[AboutTab] Failed to load info:', error);
+        logger.error('[AboutTab] Failed to load info', error);
       }
     }
   }, []);

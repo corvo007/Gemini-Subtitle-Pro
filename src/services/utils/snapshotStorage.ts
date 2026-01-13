@@ -1,4 +1,5 @@
 import { type SubtitleSnapshot } from '@/types/subtitle';
+import { logger } from '@/services/utils/logger';
 
 const STORAGE_KEY = 'gemini-subtitle-snapshots';
 
@@ -19,7 +20,7 @@ export const snapshotStorage = {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots));
       return true;
     } catch (error) {
-      console.error('Failed to save snapshots:', error);
+      logger.error('Failed to save snapshots', error);
       return false;
     }
   },
@@ -38,7 +39,7 @@ export const snapshotStorage = {
       if (!data) return [];
       return JSON.parse(data);
     } catch (error) {
-      console.error('Failed to load snapshots:', error);
+      logger.error('Failed to load snapshots', error);
       return [];
     }
   },
@@ -54,7 +55,7 @@ export const snapshotStorage = {
       localStorage.removeItem(STORAGE_KEY);
       return true;
     } catch (error) {
-      console.error('Failed to clear snapshots:', error);
+      logger.error('Failed to clear snapshots', error);
       return false;
     }
   },

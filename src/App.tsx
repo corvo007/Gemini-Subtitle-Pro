@@ -140,7 +140,7 @@ export default function App() {
       if (window.electronAPI && window.electronAPI.getMainLogs) {
         try {
           const historyLogs = await window.electronAPI.getMainLogs();
-          console.log(`[App] Loaded ${historyLogs.length} historical logs from backend`);
+          logger.info(`[App] Loaded ${historyLogs.length} historical logs from backend`);
 
           const { parseBackendLog } = await import('@/services/utils/logParser');
 
@@ -166,18 +166,18 @@ export default function App() {
             return newLogs;
           });
         } catch (err) {
-          console.error('Failed to load backend log history:', err);
+          logger.error('Failed to load backend log history', err);
         }
       }
     };
 
     if (window.electronAPI && window.electronAPI.onNewLog) {
       // Initialize history first
-      initBackendLogs().catch((err) => console.error('[App] Failed to init backend logs:', err));
+      initBackendLogs().catch((err) => logger.error('[App] Failed to init backend logs', err));
 
       unsubscribeBackend = window.electronAPI.onNewLog(async (logLine) => {
         // Print to DevTools console for visibility
-        console.log(`[Main] ${logLine}`);
+        // logger.debug(`[Main] ${logLine}`);
 
         try {
           const { parseBackendLog } = await import('@/services/utils/logParser');
@@ -187,7 +187,7 @@ export default function App() {
             return [...prev, parsed];
           });
         } catch (err) {
-          console.error('Error parsing real-time log:', err);
+          logger.error('Error parsing real-time log', err);
         }
       });
     }

@@ -2,6 +2,7 @@ import React from 'react';
 import { RefreshCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { logger } from '@/services/utils/logger';
 
 interface FileUploaderProps {
   hasFile: boolean;
@@ -72,7 +73,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         onFileSelectNative(fileStub);
       }
     } catch (err) {
-      console.error('Failed to select media file:', err);
+      logger.error('Failed to select media file', err);
     }
   };
 

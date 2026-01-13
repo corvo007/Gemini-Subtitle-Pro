@@ -19,13 +19,13 @@ export const LocalWhisperSettings: React.FC<LocalWhisperSettingsProps> = ({
   // Select model
   const handleSelect = async () => {
     if (!window.electronAPI) {
-      console.error('[LocalWhisperSettings] electronAPI not available for selection');
+      logger.error('[LocalWhisperSettings] electronAPI not available for selection');
       return;
     }
-    console.log('[LocalWhisperSettings] Requesting model selection...');
+    logger.info('[LocalWhisperSettings] Requesting model selection...');
     try {
       const result = await window.electronAPI.selectWhisperModel();
-      console.log('[LocalWhisperSettings] Model selection result:', result);
+      logger.info(`[LocalWhisperSettings] Model selection result: ${JSON.stringify(result)}`);
 
       if (result && result.success && result.path) {
         onModelPathChange(result.path);
@@ -35,7 +35,7 @@ export const LocalWhisperSettings: React.FC<LocalWhisperSettingsProps> = ({
           t('services.transcription.localWhisperSettings.selectError', { error: result.error }),
           'error'
         );
-        console.error('[LocalWhisperSettings] Model selection error:', result.error);
+        logger.error('[LocalWhisperSettings] Model selection error', result.error);
       }
     } catch (error: any) {
       logger.error('[LocalWhisperSettings] Model selection failed', error);

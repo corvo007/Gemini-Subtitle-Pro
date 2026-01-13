@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { HardwareAccelInfo } from '@/types/compression';
+import { logger } from '@/services/utils/logger';
 
 export function useHardwareAcceleration() {
   const [hwAccelInfo, setHwAccelInfo] = useState<HardwareAccelInfo | null>(null);
@@ -28,10 +29,7 @@ export function useHardwareAcceleration() {
           // Cache to sessionStorage
           sessionStorage.setItem('hwAccelInfo', JSON.stringify(info));
         } catch (error) {
-          console.error(
-            '[useHardwareAcceleration] Failed to get hardware acceleration info:',
-            error
-          );
+          logger.error('[useHardwareAcceleration] Failed to get hardware acceleration info', error);
         }
       }
       setIsLoading(false);

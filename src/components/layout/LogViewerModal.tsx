@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, FileText, Download, Filter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { LogEntry } from '@/services/utils/logger';
+import { logger, type LogEntry } from '@/services/utils/logger';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { cn } from '@/lib/cn';
 
@@ -37,7 +37,8 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, logs, on
 
     return logs.filter((log) => {
       const logPriority = levelPriority[log.level] ?? 0;
-      return logPriority >= minPriority;
+      const hasMessage = log.message && log.message.trim().length > 0;
+      return logPriority >= minPriority && hasMessage;
     });
   }, [logs, filterLevel]);
 
@@ -64,12 +65,12 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, logs, on
       try {
         const result = await window.electronAPI.saveLogsDialog(logText);
         if (result.success) {
-          console.log('Logs exported to:', result.filePath);
+          logger.info(`Logs exported to: ${result.filePath}`);
         } else if (!result.canceled) {
-          console.error('Failed to export logs:', result.error);
+          logger.error('Failed to export logs', result.error);
         }
-      } catch (error) {
-        console.error('Export logs error:', error);
+      } catch (error: any) {
+        logger.error('Export logs error', error);
       }
     } else {
       // Fallback to browser download (Web App)
@@ -133,12 +134,12 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, logs, on
               <p>{t('logs.emptyLevel')}</p>
             </div>
           ) : (
-            <div className="space-y-2 font-mono text-sm">
+            <div className="space-y-1 font-mono text-sm">
               {filteredLogs.map((log, idx) => (
                 <div
                   key={idx}
                   className={cn(
-                    'p-3 rounded-lg border',
+                    'p-2 rounded-lg border',
                     log.level === 'ERROR' && 'bg-red-500/10 border-red-500/30 text-red-300',
                     log.level === 'WARN' && 'bg-amber-500/10 border-amber-500/30 text-amber-300',
                     log.level === 'INFO' && 'bg-blue-500/10 border-blue-500/30 text-blue-300',
@@ -148,29 +149,44 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, logs, on
                       'bg-slate-800/50 border-slate-700 text-slate-400'
                   )}
                 >
-                  <div className="flex items-start gap-3">
-                    <span className="text-xs opacity-70 whitespace-nowrap">{log.timestamp}</span>
-                    <span
-                      className={cn(
-                        'text-xs font-bold px-1.5 py-0.5 rounded',
-                        log.level === 'ERROR' && 'bg-red-500 text-white',
-                        log.level === 'WARN' && 'bg-amber-500 text-white',
-                        log.level === 'INFO' && 'bg-blue-500 text-white',
-                        log.level !== 'ERROR' &&
-                          log.level !== 'WARN' &&
-                          log.level !== 'INFO' &&
-                          'bg-slate-600 text-slate-200'
-                      )}
-                    >
-                      {log.level}
-                    </span>
-                    <span className="flex-1">{log.message}</span>
+                  <div className="flex flex-col gap-1 w-full min-w-0">
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs opacity-70 whitespace-nowrap">{log.timestamp}</span>
+                      <span
+                        className={cn(
+                          'text-xs font-bold px-1.5 py-0.5 rounded',
+                          log.level === 'ERROR' && 'bg-red-500 text-white',
+                          log.level === 'WARN' && 'bg-amber-500 text-white',
+                          log.level === 'INFO' && 'bg-blue-500 text-white',
+                          log.level !== 'ERROR' &&
+                            log.level !== 'WARN' &&
+                            log.level !== 'INFO' &&
+                            'bg-slate-600 text-slate-200'
+                        )}
+                      >
+                        {log.level}
+                      </span>
+                      <span className="flex-1 break-all whitespace-pre-wrap">{log.message}</span>
+                    </div>
+                    {log.data &&
+                      (() => {
+                        let dataToShow = log.data;
+                        if (
+                          typeof log.data === 'object' &&
+                          log.data !== null &&
+                          !Array.isArray(log.data)
+                        ) {
+                          const { raw, source, ...rest } = log.data;
+                          if (Object.keys(rest).length === 0) return null;
+                          dataToShow = rest;
+                        }
+                        return (
+                          <div className="text-xs opacity-70 pl-24 break-all whitespace-pre-wrap font-mono">
+                            {JSON.stringify(dataToShow)}
+                          </div>
+                        );
+                      })()}
                   </div>
-                  {log.data && (
-                    <pre className="mt-2 text-xs opacity-80 overflow-x-auto">
-                      {JSON.stringify(log.data, null, 2)}
-                    </pre>
-                  )}
                 </div>
               ))}
             </div>

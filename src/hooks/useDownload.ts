@@ -13,6 +13,7 @@ import {
   onDownloadProgress,
   downloadThumbnail as downloadThumbnailService,
 } from '@/services/download';
+import { logger } from '@/services/utils/logger';
 
 interface UseDownloadReturn {
   // State
@@ -53,7 +54,9 @@ export function useDownload(): UseDownloadReturn {
   useEffect(() => {
     // Check if download API is available before calling
     if (window.electronAPI?.download) {
-      getDefaultOutputDir().then(setOutputDir).catch(console.error);
+      getDefaultOutputDir()
+        .then(setOutputDir)
+        .catch((err) => logger.error('[useDownload] Failed to get default output dir', err));
     }
   }, []);
 
@@ -125,7 +128,7 @@ export function useDownload(): UseDownloadReturn {
       setThumbnailPath(path);
       return path;
     } catch (err: any) {
-      console.error('Thumbnail download failed:', err);
+      logger.error('Thumbnail download failed', err);
       // Don't set error state for thumbnail failures - it's not critical
       // But show a toast to notify the user
       if (typeof window !== 'undefined' && (window as any).showToast) {
