@@ -70,6 +70,10 @@ export function useSpeakerProfiles({ subtitles, setSubtitles }: UseSpeakerProfil
     [speakerProfiles, setSubtitles]
   );
 
+  const updateSpeakerColor = useCallback((profileId: string, color: string) => {
+    setSpeakerProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, color } : p)));
+  }, []);
+
   // Sync speaker profiles from subtitles (when subtitles change)
   useEffect(() => {
     const uniqueSpeakers = new Set<string>();
@@ -97,5 +101,6 @@ export function useSpeakerProfiles({ subtitles, setSubtitles }: UseSpeakerProfil
     renameSpeaker,
     deleteSpeaker,
     mergeSpeakers,
+    updateSpeakerColor,
   };
 }

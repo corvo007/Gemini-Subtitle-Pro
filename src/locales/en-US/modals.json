@@ -58,7 +58,10 @@
     "done": "Done",
     "deleteTitle": "Delete Speaker",
     "deleteConfirm": "Are you sure you want to delete speaker \"{{name}}\"? This speaker will be removed from all subtitles.",
-    "deleteConfirmBtn": "Delete"
+    "deleteConfirmBtn": "Delete",
+    "editColor": "Edit Color",
+    "colorPicker": "Choose Color",
+    "resetColor": "Reset to Default"
   },
   "glossaryImport": {
     "title": "Import Glossary",

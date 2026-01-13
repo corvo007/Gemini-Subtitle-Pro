@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { type SubtitleItem, type SubtitleIssueType } from '@/types';
 import { type SpeakerUIProfile } from '@/types/speaker';
-import { getSpeakerColor } from '@/services/utils/colors';
+import { getSpeakerColorWithCustom } from '@/services/utils/colors';
 import { cn } from '@/lib/cn';
 import { useDropdownDirection } from '@/hooks/useDropdownDirection';
 
@@ -476,7 +476,9 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                       <div className="flex items-center space-x-2 overflow-hidden">
                         <span
                           className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: getSpeakerColor(profile.name) }}
+                          style={{
+                            backgroundColor: getSpeakerColorWithCustom(profile.name, profile.color),
+                          }}
                         />
                         <span
                           className={cn(

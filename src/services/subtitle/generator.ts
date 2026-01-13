@@ -1,7 +1,7 @@
 import { type SubtitleItem } from '@/types/subtitle';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { toAssTime } from '@/services/subtitle/time';
-import { getSpeakerColor } from '@/services/utils/colors';
+import { getSpeakerColorWithCustom } from '@/services/utils/colors';
 
 // Helper to convert Hex (#RRGGBB) to ASS BGR (&HBBGGRR)
 // Helper to convert Hex (#RRGGBB) to ASS BGR (&HBBGGRR)
@@ -57,13 +57,8 @@ export const generateAssContent = (
   // Generate speaker styles
   const speakerStyles = uniqueSpeakers
     .map((speaker) => {
-      let color = getSpeakerColor(speaker);
-      if (speakerProfiles) {
-        const profile = speakerProfiles.find((p) => p.name === speaker);
-        if (profile?.color) {
-          color = profile.color;
-        }
-      }
+      const profile = speakerProfiles?.find((p) => p.name === speaker);
+      const color = getSpeakerColorWithCustom(speaker, profile?.color);
       const bgrColor = hexToAssBgr(color);
       // Inherit from Default but change PrimaryColour
       // Sanitize speaker name for style name - remove all ASS-illegal characters

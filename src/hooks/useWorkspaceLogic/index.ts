@@ -137,6 +137,7 @@ export const useWorkspaceLogic = ({
     renameSpeaker,
     deleteSpeaker,
     mergeSpeakers,
+    updateSpeakerColor,
   } = useSpeakerProfiles({ subtitles, setSubtitles });
 
   // ============================================
@@ -396,6 +397,7 @@ export const useWorkspaceLogic = ({
       renameSpeaker,
       deleteSpeaker,
       mergeSpeakers,
+      updateSpeakerColor,
     }),
     [
       file,

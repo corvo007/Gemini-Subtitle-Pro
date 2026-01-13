@@ -47,3 +47,14 @@ export function getSpeakerColor(speaker: string): string {
   const index = (hash >>> 0) % SPEAKER_COLORS.length;
   return SPEAKER_COLORS[index];
 }
+
+/**
+ * Get speaker color with custom color override
+ * @param speaker - Speaker identifier
+ * @param customColor - Optional custom color (hex format)
+ * @returns Hex color code (custom if provided, otherwise auto-generated)
+ */
+export function getSpeakerColorWithCustom(speaker: string, customColor?: string): string {
+  if (customColor) return customColor;
+  return getSpeakerColor(speaker);
+}

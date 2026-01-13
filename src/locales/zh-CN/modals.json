@@ -58,7 +58,10 @@
     "done": "完成",
     "deleteTitle": "删除说话人",
     "deleteConfirm": "确定要删除说话人「{{name}}」吗？该说话人的所有字幕将不再关联任何说话人。",
-    "deleteConfirmBtn": "删除"
+    "deleteConfirmBtn": "删除",
+    "editColor": "编辑颜色",
+    "colorPicker": "选择颜色",
+    "resetColor": "重置为默认"
   },
   "glossaryImport": {
     "title": "导入术语表",

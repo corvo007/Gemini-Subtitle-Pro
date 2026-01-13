@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronDown, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { type SpeakerUIProfile } from '@/types/speaker';
-import { getSpeakerColor } from '@/services/utils/colors';
+import { getSpeakerColorWithCustom } from '@/services/utils/colors';
 import { cn } from '@/lib/cn';
 import { useDropdownDirection } from '@/hooks/useDropdownDirection';
 
@@ -45,7 +45,8 @@ export const SpeakerSelect: React.FC<SpeakerSelectProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownRef]);
 
-  const speakerColor = getSpeakerColor(currentSpeaker || '');
+  const currentProfile = speakerProfiles.find((p) => p.name === currentSpeaker);
+  const speakerColor = getSpeakerColorWithCustom(currentSpeaker || '', currentProfile?.color);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -86,7 +87,9 @@ export const SpeakerSelect: React.FC<SpeakerSelectProps> = ({
               >
                 <span
                   className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: getSpeakerColor(profile.name) }}
+                  style={{
+                    backgroundColor: getSpeakerColorWithCustom(profile.name, profile.color),
+                  }}
                 />
                 <span className="text-slate-200">{profile.name}</span>
               </button>

@@ -11,10 +11,11 @@ import {
   Square,
   CheckSquare,
   Loader2,
+  Palette,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { type SpeakerUIProfile } from '@/types/speaker';
-import { getSpeakerColor } from '@/services/utils/colors';
+import { getSpeakerColor, getSpeakerColorWithCustom } from '@/services/utils/colors';
 import { SimpleConfirmationModal } from '@/components/modals/SimpleConfirmationModal';
 import { cn } from '@/lib/cn';
 
@@ -27,6 +28,7 @@ interface SpeakerManagerModalProps {
   onDelete: (id: string) => void;
   onMerge: (sourceIds: string[], targetId: string) => void;
   onCreate?: (name: string) => string;
+  onUpdateColor: (id: string, color: string) => void;
 }
 
 export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
@@ -38,6 +40,7 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
   onDelete,
   onMerge,
   onCreate,
+  onUpdateColor,
 }) => {
   const { t } = useTranslation('modals');
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -47,6 +50,8 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
   const [isCreating, setIsCreating] = React.useState(false);
   const [newSpeakerName, setNewSpeakerName] = React.useState('');
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [editingColorId, setEditingColorId] = React.useState<string | null>(null);
+  const [editColor, setEditColor] = React.useState('');
 
   // Delete confirmation state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
@@ -77,6 +82,8 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
     setSelectedForMerge(new Set());
     setIsCreating(false);
     setNewSpeakerName('');
+    setEditingColorId(null);
+    setEditColor('');
     onClose();
   };
 
@@ -216,7 +223,9 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
                         )}
                         <span
                           className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: getSpeakerColor(profile.name) }}
+                          style={{
+                            backgroundColor: getSpeakerColorWithCustom(profile.name, profile.color),
+                          }}
                         />
                         <span className="text-white font-medium">{profile.name}</span>
                         {speakerCounts && speakerCounts[profile.name] !== undefined && (
@@ -233,6 +242,16 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
                             title={t('speakerManager.rename')}
                           >
                             <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingColorId(profile.id);
+                              setEditColor(profile.color || getSpeakerColor(profile.name));
+                            }}
+                            className="p-1.5 text-slate-500 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                            title={t('speakerManager.editColor')}
+                          >
+                            <Palette className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteClick(profile.id)}
@@ -337,6 +356,50 @@ export const SpeakerManagerModal: React.FC<SpeakerManagerModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Color Picker Modal */}
+      {editingColorId && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 w-80">
+            <h3 className="text-white font-medium mb-3">{t('speakerManager.colorPicker')}</h3>
+            <input
+              type="color"
+              value={editColor}
+              onChange={(e) => setEditColor(e.target.value)}
+              className="w-full h-32 rounded cursor-pointer"
+            />
+            <div className="flex items-center gap-2 mt-4">
+              <button
+                onClick={() => {
+                  onUpdateColor(editingColorId, editColor);
+                  setEditingColorId(null);
+                }}
+                className="flex-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition-colors"
+              >
+                {t('speakerManager.done')}
+              </button>
+              <button
+                onClick={() => {
+                  const profile = speakerProfiles.find((p) => p.id === editingColorId);
+                  if (profile) {
+                    onUpdateColor(editingColorId, '');
+                    setEditColor(getSpeakerColor(profile.name));
+                  }
+                }}
+                className="px-3 py-2 text-slate-400 hover:text-white transition-colors"
+              >
+                {t('speakerManager.resetColor')}
+              </button>
+              <button
+                onClick={() => setEditingColorId(null)}
+                className="px-3 py-2 text-slate-400 hover:text-white transition-colors"
+              >
+                {t('speakerManager.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       <SimpleConfirmationModal

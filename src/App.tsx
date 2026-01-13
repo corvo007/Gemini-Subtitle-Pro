@@ -467,6 +467,7 @@ export default function App() {
         onDelete={workspace.deleteSpeaker}
         onMerge={workspace.mergeSpeakers}
         onCreate={workspace.addSpeaker}
+        onUpdateColor={workspace.updateSpeakerColor}
       />
       <SimpleConfirmationModal
         isOpen={confirmation.isOpen}

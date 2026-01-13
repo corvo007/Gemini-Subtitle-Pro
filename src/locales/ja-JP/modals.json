@@ -58,7 +58,10 @@
     "done": "完了",
     "deleteTitle": "話者を削除",
     "deleteConfirm": "話者「{{name}}」を削除しますか？削除すると、この話者が割り当てられているすべての字幕から話者情報が解除されます。",
-    "deleteConfirmBtn": "削除"
+    "deleteConfirmBtn": "削除",
+    "editColor": "色を編集",
+    "colorPicker": "色を選択",
+    "resetColor": "デフォルトにリセット"
   },
   "glossaryImport": {
     "title": "用語集をインポート",
