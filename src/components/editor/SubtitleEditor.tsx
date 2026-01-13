@@ -8,6 +8,7 @@ import { SubtitleBatch } from '@/components/editor/SubtitleBatch';
 import { SubtitleRow, validateSubtitle } from '@/components/editor/SubtitleRow';
 import { BatchHeader, type SubtitleFilters, defaultFilters } from '@/components/editor/BatchHeader';
 import { SimpleConfirmationModal } from '@/components/modals/SimpleConfirmationModal';
+import { isVideoFile } from '@/services/utils/file';
 import { Virtuoso } from 'react-virtuoso';
 
 interface SubtitleEditorProps {
@@ -473,7 +474,14 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
             conservativeBatchMode={conservativeBatchMode}
             onToggleConservativeMode={onToggleConservativeMode}
             autoScrollEnabled={autoScrollEnabled}
-            onToggleAutoScroll={() => setAutoScrollEnabled((prev) => !prev)}
+            onToggleAutoScroll={
+              typeof window !== 'undefined' &&
+              !!window.electronAPI?.isElectron &&
+              file &&
+              isVideoFile(file)
+                ? () => setAutoScrollEnabled((prev) => !prev)
+                : undefined
+            }
           />
         )}
 

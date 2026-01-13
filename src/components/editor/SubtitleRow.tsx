@@ -25,7 +25,7 @@ import { useDropdownDirection } from '@/hooks/useDropdownDirection';
 import { timeToSeconds, formatTime, calculateDuration } from '@/services/subtitle/time';
 
 // Validation thresholds (from prompts.ts rules)
-const MAX_DURATION_SECONDS = 5;
+const MAX_DURATION_SECONDS = 10;
 const MAX_CHINESE_CHARACTERS = 25;
 
 /**

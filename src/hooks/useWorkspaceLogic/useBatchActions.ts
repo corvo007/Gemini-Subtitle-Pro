@@ -115,7 +115,8 @@ export function useBatchActions({
         subtitles,
         batchComments,
         fileId,
-        fileName
+        fileName,
+        speakerProfiles
       );
 
       // Create new AbortController
