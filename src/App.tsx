@@ -377,7 +377,8 @@ export default function App() {
                     workspace.subtitles,
                     workspace.batchComments,
                     currentFileId || 'unknown',
-                    workspace.file?.name || t('confirmations.restoreSnapshot.unknownFile')
+                    workspace.file?.name || t('confirmations.restoreSnapshot.unknownFile'),
+                    workspace.speakerProfiles
                   );
                 }
 
@@ -385,15 +386,19 @@ export default function App() {
                 workspace.setSubtitles(JSON.parse(JSON.stringify(snap.subtitles)));
                 workspace.setBatchComments({ ...snap.batchComments });
 
-                // 3. Sync speakerProfiles (extract from subtitles)
-                const uniqueSpeakers = Array.from(
-                  new Set(snap.subtitles.map((s) => s.speaker).filter(Boolean))
-                ) as string[];
-                const profiles: SpeakerUIProfile[] = uniqueSpeakers.map((name) => ({
-                  id: name,
-                  name: name,
-                }));
-                workspace.setSpeakerProfiles(profiles);
+                // 3. Sync speakerProfiles (use saved profiles if available, otherwise extract from subtitles)
+                if (snap.speakerProfiles && snap.speakerProfiles.length > 0) {
+                  workspace.setSpeakerProfiles(JSON.parse(JSON.stringify(snap.speakerProfiles)));
+                } else {
+                  const uniqueSpeakers = Array.from(
+                    new Set(snap.subtitles.map((s) => s.speaker).filter(Boolean))
+                  ) as string[];
+                  const profiles: SpeakerUIProfile[] = uniqueSpeakers.map((name) => ({
+                    id: name,
+                    name: name,
+                  }));
+                  workspace.setSpeakerProfiles(profiles);
+                }
 
                 // 4. Sync subtitle file name
                 workspace.setSubtitleFileName(snap.fileName || null);

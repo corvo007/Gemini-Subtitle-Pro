@@ -42,7 +42,14 @@
       "Bash(gh run list:*)",
       "Bash(gh run watch:*)",
       "Bash(gh release view:*)",
-      "Skill(superpowers:using-superpowers)"
+      "Skill(superpowers:using-superpowers)",
+      "Bash(npx tsc --noEmit)",
+      "Skill(superpowers:writing-plans)",
+      "Bash(yarn format)",
+      "Bash(yarn build:main)",
+      "mcp__serena__find_referencing_symbols",
+      "mcp__serena__think_about_collected_information",
+      "Bash(if not exist \"D:\\\\onedrive\\\\codelab\\\\Gemini-Subtitle-Pro\\\\docs\\\\plans\" mkdir \"D:\\\\onedrive\\\\codelab\\\\Gemini-Subtitle-Pro\\\\docs\\\\plans\")"
     ]
   },
   "hooks": {

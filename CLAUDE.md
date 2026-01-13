@@ -16,35 +16,41 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Install dependencies
 yarn install
 
-# Web development
+# Web development (Vite dev server)
 yarn dev
 
-# Electron development (full desktop app)
+# Electron development (full desktop app with hot reload)
 yarn electron:dev
 
-# Build web
+# Build web (Vite production build)
 yarn build
 
-# Build Electron main process
+# Build Electron main process only
 yarn build:main
 
-# Build distributable desktop app
+# Build distributable desktop app (main + web + electron-builder)
 yarn electron:build
 
-# Debug desktop build
+# Debug desktop build (with DEBUG_BUILD=true)
 yarn build:debug
 
-# Preview web build
+# Preview web production build
 yarn preview
 
-# Extract i18n strings
+# Extract i18n strings from source
 yarn i18n:extract
 
-# Format code
+# Check i18n completeness
+yarn i18n:check
+
+# Format code with Prettier
 yarn format
+
+# Setup git hooks (runs automatically on yarn install)
+yarn prepare
 ```
 
-**Note**: There are no lint or test scripts currently defined in `package.json`.
+**Note**: Lint is configured via `lint-staged` and runs automatically on git commit. No standalone lint or test scripts are defined.
 
 ## Architecture
 
@@ -157,6 +163,10 @@ Web: Variables are injected via Vite `define` in `vite.config.ts`.
 - **Co-location**: Component-specific utils stay with the component
 - **Styling**: TailwindCSS 4 with `clsx` and `tw-merge`
 - **State**: React Context for global state (e.g., `useWorkspaceLogic`)
+
+## Git Workflow
+
+- **Do NOT commit changes automatically**. Wait for user to verify the changes and give explicit commit instructions before running `git commit`.
 
 ## Directories to Avoid Modifying
 

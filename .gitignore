@@ -51,3 +51,8 @@ aligner_readme.md
 dev/
 docs/plans/
 implementation_plan.md
+
+# Claude Code temp files
+tmpclaude-*
+temp_logs
+scripts/test_data
