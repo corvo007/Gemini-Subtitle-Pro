@@ -5,7 +5,8 @@
     "services": "Services",
     "performance": "Performance",
     "enhance": "Enhance",
-    "debug": "Debug"
+    "debug": "Debug",
+    "about": "About"
   },
   "general": {
     "display": {
@@ -215,7 +216,7 @@
     "customPaths": "Custom Paths",
     "ffmpegPath": "Custom ffmpeg.exe Path",
     "ffprobePath": "Custom ffprobe.exe Path",
-    "whisperPath": "Custom whisper-cli.exe Path",
+    "whisperPath": "Whisper-cli.exe Path",
     "defaultAutoDetected": "Default (Auto-detected)"
   },
   "languages": {
@@ -249,6 +250,8 @@
     "userDataPath": "Config & Log Path",
     "exePath": "Executable Path",
     "copyPath": "Copy Path",
-    "showInFolder": "Show in Folder"
+    "showInFolder": "Show in Folder",
+    "tagline": "AI-powered subtitle generation and translation",
+    "whisperGpuSupported": "Supported (GPU)"
   }
 }

@@ -5,7 +5,8 @@
     "services": "サービス",
     "performance": "処理設定",
     "enhance": "高度な機能",
-    "debug": "開発者向け"
+    "debug": "開発者向け",
+    "about": "情報"
   },
   "general": {
     "display": {
@@ -215,7 +216,7 @@
     "customPaths": "カスタムパス",
     "ffmpegPath": "カスタム ffmpeg.exe パス",
     "ffprobePath": "カスタム ffprobe.exe パス",
-    "whisperPath": "カスタム whisper-cli.exe パス",
+    "whisperPath": "Whisper-cli.exe パス",
     "defaultAutoDetected": "デフォルト（自動検出）"
   },
   "languages": {
@@ -249,6 +250,8 @@
     "userDataPath": "設定とログのパス",
     "exePath": "実行ファイルパス",
     "copyPath": "パスをコピー",
-    "showInFolder": "フォルダで開く"
+    "showInFolder": "フォルダで開く",
+    "tagline": "AI字幕生成・翻訳ツール",
+    "whisperGpuSupported": "対応 (GPU)"
   }
 }

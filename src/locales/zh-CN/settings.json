@@ -216,7 +216,7 @@
     "customPaths": "自定义路径",
     "ffmpegPath": "自定义 ffmpeg.exe 路径",
     "ffprobePath": "自定义 ffprobe.exe 路径",
-    "whisperPath": "自定义 whisper-cli.exe 路径",
+    "whisperPath": "Whisper-cli.exe 路径",
     "defaultAutoDetected": "默认（自动检测）"
   },
   "languages": {
@@ -255,6 +255,8 @@
     "userDataPath": "配置与日志路径",
     "exePath": "执行文件路径",
     "copyPath": "复制路径",
-    "showInFolder": "在文件夹中显示"
+    "showInFolder": "在文件夹中显示",
+    "tagline": "AI 字幕生成与翻译工具",
+    "whisperGpuSupported": "支持 (GPU)"
   }
 }
