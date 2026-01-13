@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { type SubtitleItem } from '@/types/subtitle';
+import { type SpeakerUIProfile } from '@/types/speaker';
 import { GenerationStatus } from '@/types/api';
 import { logger } from '@/services/utils/logger';
 import { type SnapshotsValuesProps } from '@/types/workspace';
@@ -9,6 +10,7 @@ interface UseAutoSaveProps {
   batchComments: Record<number, string>;
   status: GenerationStatus;
   file: File | null;
+  speakerProfiles: SpeakerUIProfile[];
   snapshotsValues: Pick<SnapshotsValuesProps, 'createAutoSaveSnapshot'>;
 }
 
@@ -22,6 +24,7 @@ export function useAutoSave({
   batchComments,
   status,
   file,
+  speakerProfiles,
   snapshotsValues,
 }: UseAutoSaveProps): void {
   // Debounced auto-save: triggers 30 seconds after last edit
@@ -39,7 +42,8 @@ export function useAutoSave({
         subtitles,
         batchComments,
         fileId,
-        file.name
+        file.name,
+        speakerProfiles
       );
       if (saved) {
         logger.info('Debounced auto-save snapshot created');
@@ -47,5 +51,5 @@ export function useAutoSave({
     }, DEBOUNCE_DELAY);
 
     return () => clearTimeout(timeoutId);
-  }, [subtitles, batchComments, status, file, snapshotsValues]);
+  }, [subtitles, batchComments, status, file, speakerProfiles, snapshotsValues]);
 }

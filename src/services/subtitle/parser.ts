@@ -184,6 +184,79 @@ export const parseSrt = (content: string): SubtitleItem[] => {
   return items;
 };
 
+/**
+ * Convert ASS BGR color (&HBBGGRR or &HAABBGGRR) to hex RGB (#RRGGBB)
+ */
+const assBgrToHex = (assBgr: string): string => {
+  // Remove &H prefix and any alpha channel
+  const clean = assBgr.replace(/^&H/i, '').toUpperCase();
+  // Handle both &HBBGGRR (6 chars) and &HAABBGGRR (8 chars)
+  const bgr = clean.length === 8 ? clean.substring(2) : clean;
+  if (bgr.length !== 6) return '';
+  const b = bgr.substring(0, 2);
+  const g = bgr.substring(2, 4);
+  const r = bgr.substring(4, 6);
+  return `#${r}${g}${b}`;
+};
+
+/**
+ * Parse ASS styles section and extract speaker colors
+ * Returns a map of speaker name to hex color
+ */
+export const parseAssStyles = (content: string): Record<string, string> => {
+  const lines = content.split(/\r?\n/);
+  const speakerColors: Record<string, string> = {};
+  let inStyles = false;
+  let styleFormat: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (trimmed === '[V4+ Styles]' || trimmed === '[V4 Styles]') {
+      inStyles = true;
+      continue;
+    }
+    if (trimmed.startsWith('[') && inStyles) {
+      // Exited styles section
+      break;
+    }
+    if (!inStyles) continue;
+
+    if (trimmed.startsWith('Format:')) {
+      styleFormat = trimmed
+        .substring(7)
+        .split(',')
+        .map((s) => s.trim().toLowerCase());
+      continue;
+    }
+
+    if (trimmed.startsWith('Style:') && styleFormat.length > 0) {
+      const parts = trimmed
+        .substring(6)
+        .split(',')
+        .map((s) => s.trim());
+      const nameIdx = styleFormat.indexOf('name');
+      const colorIdx = styleFormat.indexOf('primarycolour');
+
+      if (nameIdx === -1 || colorIdx === -1) continue;
+
+      const styleName = parts[nameIdx];
+      const color = parts[colorIdx];
+
+      // Only extract Speaker_ styles
+      if (styleName?.startsWith('Speaker_') && color) {
+        const speakerName = styleName.substring(8); // Remove "Speaker_" prefix
+        const hexColor = assBgrToHex(color);
+        if (hexColor) {
+          speakerColors[speakerName] = hexColor;
+        }
+      }
+    }
+  }
+
+  return speakerColors;
+};
+
 export const parseAss = (content: string): SubtitleItem[] => {
   const lines = content.split(/\r?\n/);
   const items: SubtitleItem[] = [];

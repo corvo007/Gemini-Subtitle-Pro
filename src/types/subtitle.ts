@@ -6,6 +6,8 @@ export type SubtitleIssueType =
   | 'regression'
   | 'corrupted';
 
+import { type SpeakerUIProfile } from './speaker';
+
 export interface SubtitleItem {
   id: string;
   startTime: string; // Format: HH:MM:SS,ms
@@ -30,6 +32,7 @@ export interface SubtitleSnapshot {
   batchComments: Record<string, string>; // Store batch comments with snapshot
   fileId: string; // File path or unique identifier for grouping
   fileName: string; // Display name of the file
+  speakerProfiles?: SpeakerUIProfile[]; // Speaker profiles with custom colors
 }
 
 export type OutputFormat = 'srt' | 'ass' | 'json';

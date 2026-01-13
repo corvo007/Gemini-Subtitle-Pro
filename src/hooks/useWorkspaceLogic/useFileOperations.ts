@@ -7,6 +7,8 @@ import { GenerationStatus } from '@/types/api';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { logger } from '@/services/utils/logger';
 import { type SnapshotsValuesProps } from '@/types/workspace';
+import { parseAssStyles } from '@/services/subtitle/parser';
+import { sanitizeSpeakerForStyle } from '@/services/subtitle/utils';
 
 interface UseFileOperationsProps {
   // State reading
@@ -309,13 +311,15 @@ export function useFileOperations({
           setSubtitles(parsed);
           setSubtitleFileName(subFile.name);
 
-          // Extract and set speaker profiles
+          // Extract and set speaker profiles with colors from ASS styles
           const uniqueSpeakers = Array.from(
             new Set(parsed.map((s) => s.speaker).filter(Boolean))
           ) as string[];
+          const speakerColors = fileType === 'ass' ? parseAssStyles(content) : {};
           const profiles: SpeakerUIProfile[] = uniqueSpeakers.map((name) => ({
             id: name,
             name: name,
+            color: speakerColors[sanitizeSpeakerForStyle(name)], // Lookup with sanitized name
           }));
           // Actually, import replaces subtitles, so we should replace profiles too.
           setSpeakerProfiles(profiles);
@@ -328,7 +332,8 @@ export function useFileOperations({
             parsed,
             {},
             fileId,
-            subFile.name
+            subFile.name,
+            profiles
           );
         } catch (error: unknown) {
           if (currentOpId !== operationIdRef.current) return;
@@ -382,13 +387,15 @@ export function useFileOperations({
       setSubtitles(parsed);
       setSubtitleFileName(result.fileName);
 
-      // Extract and set speaker profiles
+      // Extract and set speaker profiles with colors from ASS styles
       const uniqueSpeakers = Array.from(
         new Set(parsed.map((s) => s.speaker).filter(Boolean))
       ) as string[];
+      const speakerColors = fileType === 'ass' ? parseAssStyles(result.content) : {};
       const profiles: SpeakerUIProfile[] = uniqueSpeakers.map((name) => ({
         id: name,
         name: name,
+        color: speakerColors[sanitizeSpeakerForStyle(name)], // Lookup with sanitized name
       }));
       setSpeakerProfiles(profiles);
 
@@ -400,7 +407,8 @@ export function useFileOperations({
         parsed,
         {},
         fileId,
-        result.fileName
+        result.fileName,
+        profiles
       );
     } catch (error: unknown) {
       if (currentOpId !== operationIdRef.current) return;

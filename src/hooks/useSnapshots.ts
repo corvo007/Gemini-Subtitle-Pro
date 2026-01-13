@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { type SubtitleSnapshot, type SubtitleItem } from '@/types/subtitle';
+import { type SpeakerUIProfile } from '@/types/speaker';
 import { snapshotStorage } from '@/services/utils/snapshotStorage';
 
 /**
@@ -7,7 +8,8 @@ import { snapshotStorage } from '@/services/utils/snapshotStorage';
  */
 const computeContentHash = (
   subtitles: SubtitleItem[],
-  batchComments: Record<string, string>
+  batchComments: Record<string, string>,
+  speakerProfiles?: SpeakerUIProfile[]
 ): string => {
   const subtitleContent = subtitles
     .map(
@@ -19,7 +21,9 @@ const computeContentHash = (
     .sort(([a], [b]) => Number(a) - Number(b))
     .map(([k, v]) => `${k}:${v}`)
     .join('|');
-  const content = subtitleContent + '||BATCH||' + batchContent;
+  const speakerContent =
+    speakerProfiles?.map((p) => `${p.id}|${p.name}|${p.color || ''}`).join('|') || '';
+  const content = subtitleContent + '||BATCH||' + batchContent + '||SPEAKERS||' + speakerContent;
   let hash = 0;
   for (let i = 0; i < content.length; i++) {
     const char = content.charCodeAt(i);
@@ -46,7 +50,8 @@ export const useSnapshots = () => {
       subtitles: SubtitleItem[],
       batchComments: Record<string, string>,
       fileId: string = '',
-      fileName: string = ''
+      fileName: string = '',
+      speakerProfiles?: SpeakerUIProfile[]
     ) => {
       const newSnapshot: SubtitleSnapshot = {
         id: Date.now().toString(),
@@ -56,6 +61,7 @@ export const useSnapshots = () => {
         batchComments: { ...batchComments },
         fileId,
         fileName,
+        speakerProfiles: speakerProfiles ? JSON.parse(JSON.stringify(speakerProfiles)) : undefined,
       };
       // Keep最多20个快照
       setSnapshots((prev) => {
@@ -65,7 +71,7 @@ export const useSnapshots = () => {
         return updated;
       });
       // Update last hash
-      lastSnapshotHashRef.current = computeContentHash(subtitles, batchComments);
+      lastSnapshotHashRef.current = computeContentHash(subtitles, batchComments, speakerProfiles);
     },
     []
   );
@@ -75,11 +81,12 @@ export const useSnapshots = () => {
       subtitles: SubtitleItem[],
       batchComments: Record<string, string>,
       fileId: string = '',
-      fileName: string = ''
+      fileName: string = '',
+      speakerProfiles?: SpeakerUIProfile[]
     ): boolean => {
       if (subtitles.length === 0) return false;
 
-      const currentHash = computeContentHash(subtitles, batchComments);
+      const currentHash = computeContentHash(subtitles, batchComments, speakerProfiles);
       if (currentHash === lastSnapshotHashRef.current) {
         // No changes since last snapshot
         return false;
@@ -93,6 +100,7 @@ export const useSnapshots = () => {
         batchComments: { ...batchComments },
         fileId,
         fileName,
+        speakerProfiles: speakerProfiles ? JSON.parse(JSON.stringify(speakerProfiles)) : undefined,
       };
       setSnapshots((prev) => {
         const updated = [newSnapshot, ...prev].slice(0, 20);

@@ -1,5 +1,6 @@
 import { type RefObject } from 'react';
 import { type SubtitleItem, type SubtitleSnapshot } from '@/types/subtitle';
+import { type SpeakerUIProfile } from '@/types/speaker';
 import {
   type GlossaryItem,
   type GlossaryExtractionResult,
@@ -40,13 +41,15 @@ export interface SnapshotsValuesProps {
     subtitles: SubtitleItem[],
     batchComments?: Record<number, string>,
     fileId?: string,
-    fileName?: string
+    fileName?: string,
+    speakerProfiles?: SpeakerUIProfile[]
   ) => void;
   createAutoSaveSnapshot: (
     subtitles: SubtitleItem[],
     batchComments: Record<number, string>,
     fileId?: string,
-    fileName?: string
+    fileName?: string,
+    speakerProfiles?: SpeakerUIProfile[]
   ) => boolean;
   deleteSnapshot: (id: string) => void;
 }

@@ -164,6 +164,7 @@ export const useWorkspaceLogic = ({
     batchComments,
     status,
     file,
+    speakerProfiles,
     snapshotsValues,
   });
 
