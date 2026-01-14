@@ -1,4 +1,10 @@
-## ADDED Requirements
+# chunk-processing Specification
+
+## Purpose
+
+TBD - created by archiving change refactor-generation-pipeline. Update Purpose after archive.
+
+## Requirements
 
 ### Requirement: BaseStep Abstract Class
 

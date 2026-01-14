@@ -1,6 +1,6 @@
 # Change: Refactor ChunkProcessor with Pipeline Pattern
 
-## Problem Analysis
+## Why
 
 `ChunkProcessor.ts` 存在以下架构问题：
 
@@ -9,13 +9,37 @@
 3. **Rigid Control Flow** - 流程硬编码，无法复用单个步骤
 4. **Duplicated Boilerplate** - 每步重复相同模式：Progress → Semaphore → Cancel → Execute → Artifact → Error
 
-## Goal
+## What Changes
 
-采用 **Pipeline Pattern** 重构，分离：
+采用 **Pipeline Pattern** 重构 ChunkProcessor，将 800+ 行 God Function 拆分为可复用的 Step 类：
 
-- **What** (Pipeline Orchestration)
-- **How** (Individual Steps)
-- **Cross-Cutting Concerns** (Mocking, Logging, Artifacts)
+### 新增文件
+
+| 文件                         | 描述                                   |
+| ---------------------------- | -------------------------------------- |
+| `core/BaseStep.ts`           | 抽象基类，Template Method Pattern      |
+| `core/types.ts`              | StepName, StepContext, StepResult 类型 |
+| `core/index.ts`              | 导出入口                               |
+| `steps/TranscriptionStep.ts` | Whisper API 调用                       |
+| `steps/WaitForDepsStep.ts`   | 等待 Glossary/Speaker 分析             |
+| `steps/RefinementStep.ts`    | Gemini 精炼 + 后处理验证               |
+| `steps/AlignmentStep.ts`     | CTC 对齐 + 临时文件管理                |
+| `steps/TranslationStep.ts`   | 翻译 + 回退处理                        |
+| `steps/index.ts`             | 导出所有 Step                          |
+
+### 修改文件
+
+| 文件                | 变更说明                         |
+| ------------------- | -------------------------------- |
+| `chunkProcessor.ts` | 从 800+ 行简化为 ~250 行编排逻辑 |
+
+### 架构分离
+
+- **What** (Pipeline Orchestration) → `chunkProcessor.ts`
+- **How** (Individual Steps) → `steps/*.ts`
+- **Cross-Cutting Concerns** (Mocking, Logging, Artifacts) → `core/BaseStep.ts`
+
+---
 
 ## Architecture Design
 
@@ -63,7 +87,7 @@ return runPipeline(steps, initialInput);
 src/services/generation/pipeline/
 ├── core/
 │   ├── BaseStep.ts         # 抽象基类 (Template Method)
-│   ├── PipelineRunner.ts   # 步骤执行器
+│   ├── index.ts             # 导出入口
 │   └── types.ts            # 共享类型
 ├── steps/
 │   ├── TranscriptionStep.ts
