@@ -6,7 +6,7 @@ import {
   MessageCircle,
   Eye,
   EyeOff,
-  Clock,
+  RefreshCw,
   Sparkles,
   Search,
   X,
@@ -17,8 +17,8 @@ import {
   User,
   Users,
   Trash2,
-  Shield,
   ArrowDownCircle,
+  Timer,
 } from 'lucide-react';
 import { type SubtitleItem, type SubtitleIssueType } from '@/types';
 import { type SpeakerUIProfile } from '@/types/speaker';
@@ -45,7 +45,8 @@ interface BatchHeaderProps {
   showSourceText: boolean;
   setShowSourceText: (show: boolean) => void;
   file: File | null;
-  handleBatchAction: (action: 'proofread' | 'fix_timestamps', index?: number) => void;
+  handleBatchAction: (action: 'proofread' | 'regenerate', index?: number) => void;
+  onRegenerateRequest?: () => void; // Opens regenerate modal
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   filters: SubtitleFilters;
@@ -61,9 +62,7 @@ interface BatchHeaderProps {
   onSelectAllForDelete?: () => void;
   onConfirmDelete?: () => void;
   totalVisibleCount?: number;
-  // Conservative mode
-  conservativeBatchMode?: boolean;
-  onToggleConservativeMode?: () => void;
+
   // Auto-scroll logic
   autoScrollEnabled?: boolean;
   onToggleAutoScroll?: () => void;
@@ -78,6 +77,7 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
   setShowSourceText,
   file,
   handleBatchAction,
+  onRegenerateRequest,
   searchQuery,
   setSearchQuery,
   filters,
@@ -93,9 +93,7 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
   onSelectAllForDelete,
   onConfirmDelete,
   totalVisibleCount,
-  // Conservative mode
-  conservativeBatchMode,
-  onToggleConservativeMode,
+
   autoScrollEnabled,
   onToggleAutoScroll,
 }) => {
@@ -253,7 +251,7 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                   className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-800 transition-colors"
                 >
                   <div className="flex items-center space-x-2">
-                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <Timer className="w-3.5 h-3.5 text-amber-400" />
                     <span
                       className={
                         filters.issues.has('duration') ? 'text-amber-300' : 'text-slate-300'
@@ -545,34 +543,11 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
         {/* Right: Primary Actions */}
         {!isDeleteMode && (
           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-            {/* Conservative Mode Toggle */}
-            {onToggleConservativeMode && (
+            {file && onRegenerateRequest && (
               <button
-                onClick={onToggleConservativeMode}
-                title={
-                  conservativeBatchMode
-                    ? t('batchHeader.conservativeModeDesc')
-                    : t('batchHeader.normalModeDesc')
-                }
-                className={cn(
-                  'flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs transition-all border',
-                  conservativeBatchMode
-                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
-                )}
-              >
-                <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                <span className="hidden sm:inline">
-                  {conservativeBatchMode ? t('batchHeader.conservative') : t('batchHeader.normal')}
-                </span>
-              </button>
-            )}
-
-            {file && (
-              <button
-                onClick={() => handleBatchAction('fix_timestamps')}
+                onClick={onRegenerateRequest}
                 disabled={selectedBatches.size === 0}
-                title={t('batchHeader.fixTimestampsDesc')}
+                title={t('batchHeader.regenerateDesc')}
                 className={cn(
                   'flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-bold transition-all shadow-sm border',
                   selectedBatches.size > 0
@@ -580,8 +555,8 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                     : 'bg-slate-800 border-slate-800 text-slate-600 cursor-not-allowed'
                 )}
               >
-                <Clock className="w-3 h-3" />
-                <span className="hidden sm:inline">{t('batchHeader.fixTimestamps')}</span>
+                <RefreshCw className="w-3 h-3" />
+                <span className="hidden sm:inline">{t('batchHeader.regenerate')}</span>
               </button>
             )}
 

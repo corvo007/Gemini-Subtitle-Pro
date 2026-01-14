@@ -1,12 +1,13 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Languages, Search } from 'lucide-react';
-import { type SubtitleItem, type SubtitleIssueType } from '@/types';
+import { type SubtitleItem, type SubtitleIssueType, type RegeneratePrompts } from '@/types';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { GenerationStatus } from '@/types/api';
 import { SubtitleBatch } from '@/components/editor/SubtitleBatch';
 import { SubtitleRow, validateSubtitle } from '@/components/editor/SubtitleRow';
 import { BatchHeader, type SubtitleFilters, defaultFilters } from '@/components/editor/BatchHeader';
+import { RegenerateModal } from '@/components/editor/RegenerateModal';
 import { SimpleConfirmationModal } from '@/components/modals/SimpleConfirmationModal';
 import { isVideoFile } from '@/services/utils/file';
 import { Virtuoso } from 'react-virtuoso';
@@ -22,7 +23,11 @@ interface SubtitleEditorProps {
   showSourceText: boolean;
   setShowSourceText: (show: boolean) => void;
   file: File | null;
-  handleBatchAction: (action: 'proofread' | 'fix_timestamps', index?: number) => void;
+  handleBatchAction: (
+    action: 'proofread' | 'regenerate',
+    index?: number,
+    prompts?: RegeneratePrompts
+  ) => void;
   batchComments: Record<string, string>;
   toggleBatch: (index: number) => void;
   updateBatchComment: (index: number, comment: string) => void;
@@ -40,9 +45,7 @@ interface SubtitleEditorProps {
   speakerProfiles?: SpeakerUIProfile[];
   onManageSpeakers?: () => void;
   scrollContainerRef?: React.RefObject<HTMLDivElement>;
-  // Conservative mode
-  conservativeBatchMode?: boolean;
-  onToggleConservativeMode?: () => void;
+
   // Video sync
   currentPlayTime?: number;
   onRowClick?: (startTime: string) => void;
@@ -78,9 +81,7 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
 
     onManageSpeakers,
     scrollContainerRef: _scrollContainerRef, // Unused but kept for interface consistency
-    // Conservative mode
-    conservativeBatchMode,
-    onToggleConservativeMode,
+
     // Video sync
     currentPlayTime,
     onRowClick,
@@ -107,10 +108,12 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
       }
     }, [deleteCandidateId, deleteSubtitle]);
 
-    // Delete mode state
     const [isDeleteMode, setIsDeleteMode] = React.useState(false);
     const [selectedForDelete, setSelectedForDelete] = React.useState<Set<string>>(new Set());
     const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = React.useState(false);
+
+    // Regenerate modal state
+    const [regenerateModalOpen, setRegenerateModalOpen] = React.useState(false);
 
     const toggleDeleteMode = React.useCallback(() => {
       if (isDeleteMode) {
@@ -471,9 +474,6 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
             onSelectAllForDelete={selectAllForDelete}
             onConfirmDelete={() => setBulkDeleteModalOpen(true)}
             totalVisibleCount={visibleSubtitles.length}
-            conservativeBatchMode={conservativeBatchMode}
-            onToggleConservativeMode={onToggleConservativeMode}
-            autoScrollEnabled={autoScrollEnabled}
             onToggleAutoScroll={
               typeof window !== 'undefined' &&
               !!window.electronAPI?.isElectron &&
@@ -482,6 +482,8 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
                 ? () => setAutoScrollEnabled((prev) => !prev)
                 : undefined
             }
+            autoScrollEnabled={autoScrollEnabled}
+            onRegenerateRequest={file ? () => setRegenerateModalOpen(true) : undefined}
           />
         )}
 
@@ -505,6 +507,7 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
                   ref={virtuosoRef}
                   style={{ height: '100%' }}
                   data={filteredSubtitles}
+                  context={{ speakerProfiles }}
                   itemContent={(index, sub) => {
                     const originalIndex = subtitles.findIndex((s) => s.id === sub.id);
                     const prevEndTime =
@@ -552,6 +555,7 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
               ref={virtuosoRef}
               style={{ height: '100%' }}
               data={chunks}
+              context={{ speakerProfiles }}
               itemContent={(chunkIdx, chunk) => (
                 <div className="mb-6">
                   <SubtitleBatch
@@ -608,6 +612,16 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
           message={t('editor.batchDeleteConfirm.message', { count: selectedForDelete.size })}
           confirmText={t('editor.batchDeleteConfirm.confirm')}
           type="danger"
+        />
+
+        <RegenerateModal
+          isOpen={regenerateModalOpen}
+          onClose={() => setRegenerateModalOpen(false)}
+          onConfirm={(prompts) => {
+            setRegenerateModalOpen(false);
+            handleBatchAction('regenerate', undefined, prompts);
+          }}
+          selectedCount={selectedBatches.size}
         />
       </div>
     );

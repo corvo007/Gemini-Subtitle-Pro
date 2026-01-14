@@ -44,6 +44,7 @@ export interface AppSettings {
   transcriptionModel: string; // 'whisper-1' | 'gpt-4o-audio-preview'
   genre: string; // Changed from Genre to string to support custom input
   customTranslationPrompt: string;
+  customRefinementPrompt?: string; // User hints for transcription/refinement step
   customProofreadingPrompt: string;
   outputMode: 'bilingual' | 'target_only';
   targetLanguage?: string; // Target language for translation (default: 'Simplified Chinese')
@@ -82,7 +83,7 @@ export interface AppSettings {
   enableSpeakerPreAnalysis?: boolean; // Perform an initial pass to analyze speakers (quality improvement)
 
   // Batch Operation Settings
-  conservativeBatchMode?: boolean; // Conservative mode for fix_timestamps/proofread (default: false)
+
   zoomLevel?: number; // UI Zoom level (0.5 - 2.0)
 
   // Alignment Settings

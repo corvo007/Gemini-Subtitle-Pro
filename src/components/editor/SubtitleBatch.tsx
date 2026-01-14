@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckSquare, Square, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { type SubtitleItem } from '@/types';
+import { type SubtitleItem, type RegeneratePrompts } from '@/types';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { SubtitleRow } from '@/components/editor/SubtitleRow';
 import { GenerationStatus } from '@/types/api';
@@ -17,7 +17,11 @@ interface SubtitleBatchProps {
   batchComment: string;
   toggleBatch: (index: number) => void;
   updateBatchComment: (index: number, comment: string) => void;
-  handleBatchAction: (action: 'proofread' | 'fix_timestamps', index?: number) => void;
+  handleBatchAction: (
+    action: 'proofread' | 'regenerate',
+    index?: number,
+    prompts?: RegeneratePrompts
+  ) => void;
   showSourceText: boolean;
   editingCommentId: string | null;
   setEditingCommentId: (id: string | null) => void;

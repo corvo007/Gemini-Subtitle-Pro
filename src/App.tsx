@@ -359,6 +359,7 @@ export default function App() {
           onGoBack={() => setView('home')}
           workspaceSubtitles={workspace.subtitles}
           workspaceVideoFile={workspace.file}
+          workspaceSpeakerProfiles={workspace.speakerProfiles}
           downloadedVideoPath={downloadedVideoPath}
           onShowLogs={() => setShowLogs(true)}
           onShowSettings={() => setShowSettings(true)}

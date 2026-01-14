@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { type SpeakerUIProfile } from '@/types/speaker';
 import { type CompressionOptions, type CompressionProgress } from '@/types/compression';
 import { FileVideo, Settings, Play, FolderOpen, FileText, AlertCircle, X } from 'lucide-react';
 import { PageHeader, HeaderButton } from '@/components/layout/PageHeader';
@@ -24,6 +25,7 @@ interface CompressionPageProps {
   onGoBack?: () => void;
   workspaceSubtitles?: SubtitleItem[];
   workspaceVideoFile?: File | null;
+  workspaceSpeakerProfiles?: SpeakerUIProfile[];
   downloadedVideoPath?: string | null;
   onShowLogs?: () => void;
   onShowSettings?: () => void;
@@ -35,6 +37,7 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
   onGoBack,
   workspaceSubtitles,
   workspaceVideoFile,
+  workspaceSpeakerProfiles,
   downloadedVideoPath,
   onShowLogs,
   onShowSettings,
@@ -549,7 +552,8 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
                           'Gemini Subtitle',
                           true,
                           false,
-                          true
+                          true,
+                          workspaceSpeakerProfiles
                         );
                         const res = await window.electronAPI.writeTempFile(assContent, 'ass');
                         if (res.success && res.path) {

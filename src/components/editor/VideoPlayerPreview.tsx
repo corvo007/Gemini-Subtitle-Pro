@@ -247,7 +247,7 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
           assRef.current = null;
         }
       };
-    }, [assContent, ready, isFloating]);
+    }, [assContent, ready, isFloating, isCollapsed]);
 
     // Update time for external sync (not handled by ASS automatically?)
     // ASS handles sync automatically via video events! We just need to manage lifecycle.

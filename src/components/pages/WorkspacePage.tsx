@@ -23,6 +23,7 @@ import {
   type SubtitleItem,
   type SubtitleSnapshot,
   type BatchOperationMode,
+  type RegeneratePrompts,
 } from '@/types/subtitle';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { type AppSettings } from '@/types/settings';
@@ -83,7 +84,11 @@ interface WorkspacePageProps {
   toggleAllBatches: (total: number) => void;
   selectBatchesWithComments: (chunks: SubtitleItem[][]) => void;
   setShowSourceText: (show: boolean) => void;
-  handleBatchAction: (mode: BatchOperationMode, batchIndex: number, prompt?: string) => void;
+  handleBatchAction: (
+    mode: BatchOperationMode,
+    batchIndex?: number,
+    prompts?: RegeneratePrompts
+  ) => void;
   toggleBatch: (index: number) => void;
   updateBatchComment: (index: number, comment: string) => void;
   setEditingCommentId: (id: string | null) => void;
@@ -784,10 +789,6 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
                         addSubtitle={addSubtitle}
                         onManageSpeakers={onManageSpeakers}
                         scrollContainerRef={subtitleListRef}
-                        conservativeBatchMode={settings.conservativeBatchMode}
-                        onToggleConservativeMode={() =>
-                          onUpdateSetting('conservativeBatchMode', !settings.conservativeBatchMode)
-                        }
                         currentPlayTime={currentTime}
                         onRowClick={_handleSubtitleRowClick}
                       />

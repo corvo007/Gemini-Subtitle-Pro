@@ -179,6 +179,7 @@ export const AboutTab: React.FC = () => {
           {[
             { label: t('about.appPath', 'App Path'), value: info?.paths.appPath },
             { label: t('about.userDataPath', 'User Data'), value: info?.paths.userDataPath },
+            { label: t('about.logPath', 'Log Path'), value: info?.paths.logPath },
             { label: t('about.exePath', 'Executable'), value: info?.paths.exePath },
             {
               label: t('debug.whisperPath', 'Whisper Path'),
