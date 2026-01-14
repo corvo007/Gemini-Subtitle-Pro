@@ -56,3 +56,6 @@ implementation_plan.md
 tmpclaude-*
 temp_logs
 scripts/test_data
+
+# Claude Code local settings
+.claude/settings.local.json
