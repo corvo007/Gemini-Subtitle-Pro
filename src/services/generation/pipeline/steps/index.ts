@@ -7,3 +7,4 @@ export { WaitForDepsStep, type WaitForDepsInput, type WaitForDepsOutput } from '
 export { RefinementStep, type RefinementInput } from './RefinementStep';
 export { AlignmentStep, type AlignmentInput } from './AlignmentStep';
 export { TranslationStep, type TranslationInput } from './TranslationStep';
+export { ProofreadStep, type ProofreadInput, type ProofreadContext } from './ProofreadStep';

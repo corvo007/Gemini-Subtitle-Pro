@@ -1,12 +1,11 @@
-import { GoogleGenAI } from '@google/genai';
 import { MockFactory } from '@/services/generation/debug/mockFactory';
 import { ArtifactSaver } from '@/services/generation/debug/artifactSaver';
-import { UsageReporter } from './usageReporter';
 import { preprocessAudio } from './preprocessor';
 import { SmartSegmenter } from '@/services/audio/segmenter';
 import { SpeakerAnalyzer } from './speakerAnalyzer';
 import { GlossaryHandler } from './glossaryHandler';
-import { type PipelineContext, type VideoInfo } from '@/types/pipeline';
+import { initializePipelineContext, calculateMainLoopConcurrency } from './pipelineCore';
+import { type VideoInfo } from '@/types/pipeline';
 import { type SubtitleItem } from '@/types/subtitle';
 import { type AppSettings } from '@/types/settings';
 import { type ChunkStatus } from '@/types/api';
@@ -19,10 +18,9 @@ import { selectChunksByDuration } from '@/services/glossary/selector';
 import { extractGlossaryFromAudio } from '@/services/generation/extractors/glossary';
 import { GlossaryState } from '@/services/generation/extractors/glossaryState';
 import { type SpeakerProfile } from '@/services/generation/extractors/speakerProfile';
-import { mapInParallel, Semaphore } from '@/services/utils/concurrency';
+import { mapInParallel } from '@/services/utils/concurrency';
 import { logger } from '@/services/utils/logger';
 import { ChunkProcessor } from './chunkProcessor';
-import { ENV } from '@/config';
 import i18n from '@/i18n';
 
 export const generateSubtitles = async (
@@ -35,37 +33,17 @@ export const generateSubtitles = async (
   signal?: AbortSignal,
   videoInfo?: VideoInfo
 ): Promise<{ subtitles: SubtitleItem[]; glossaryResults?: GlossaryExtractionResult[] }> => {
-  const geminiKey = ENV.GEMINI_API_KEY || settings.geminiKey?.trim();
-  const openaiKey = ENV.OPENAI_API_KEY || settings.openaiKey?.trim();
+  // Initialize pipeline context using shared core
+  const { context, usageReporter, trackUsage, semaphores, concurrency } = initializePipelineContext(
+    {
+      settings,
+      onProgress,
+      signal,
+      videoInfo,
+    }
+  );
 
-  if (!geminiKey) throw new Error(i18n.t('services:pipeline.errors.missingGeminiKey'));
-  if (!openaiKey && !settings.useLocalWhisper)
-    throw new Error(i18n.t('services:pipeline.errors.missingOpenAIKey'));
-
-  const ai = new GoogleGenAI({
-    apiKey: geminiKey,
-    httpOptions: {
-      ...(settings.geminiEndpoint ? { baseUrl: settings.geminiEndpoint } : {}),
-      timeout: (settings.requestTimeout || 600) * 1000, // Convert seconds to ms, default 600s if not set (UI defaults to 600)
-    },
-  });
-
-  // Token Usage Tracking
-  const usageReporter = new UsageReporter();
-  const trackUsage = usageReporter.getTracker();
-  const isDebug = window.electronAPI?.isDebug ?? false;
-
-  const context: PipelineContext = {
-    ai,
-    settings,
-    signal,
-    trackUsage,
-    onProgress,
-    isDebug,
-    geminiKey,
-    openaiKey,
-    videoInfo,
-  };
+  const { ai, isDebug } = context;
 
   // Check if we can skip audio preprocessing (decoding/segmentation)
   // This is possible if we are starting from a later stage (Mock Stage) AND NO subsequent stage needs audio.
@@ -145,29 +123,15 @@ export const generateSubtitles = async (
   const alignedChunksMap = new Map<number, SubtitleItem[]>();
   const translatedChunksMap = new Map<number, SubtitleItem[]>();
 
-  // PIPELINE CONCURRENCY CONFIGURATION
-  // We separate the "Transcription" concurrency from the "Overall Pipeline" concurrency.
-  // This allows chunks to proceed to Refinement/Translation (which use Gemini)
-  // even if the Transcription slot (Local Whisper) is busy or waiting.
-
-  // 1. Overall Pipeline Concurrency (Gemini Flash limit)
-  const pipelineConcurrency = settings.concurrencyFlash || 5;
-
-  // 2. Transcription Concurrency (Local Whisper limit or Cloud limit)
-  const transcriptionLimit = settings.useLocalWhisper
-    ? settings.localConcurrency || 1 // Use local concurrency for Local Whisper (heavy cpu)
-    : pipelineConcurrency; // For cloud whisper, we can match pipeline concurrency
-
-  const transcriptionSemaphore = new Semaphore(transcriptionLimit);
-  const refinementSemaphore = new Semaphore(pipelineConcurrency);
-
-  // 3. Alignment Concurrency (Heavy Local Process)
-  // Limit to 1 or 2 to avoid memory spike (each aligned uses PyTorch + Model)
-  const localConcurrency = settings.localConcurrency || 1;
-  const alignmentSemaphore = new Semaphore(localConcurrency);
+  // Use semaphores from pipelineCore
+  const {
+    transcription: transcriptionSemaphore,
+    refinement: refinementSemaphore,
+    alignment: alignmentSemaphore,
+  } = semaphores;
 
   logger.info(
-    `Pipeline Config: Overall Concurrency=${pipelineConcurrency}, Transcription Limit=${transcriptionLimit}, Alignment Limit=${localConcurrency}`
+    `Pipeline Config: Overall Concurrency=${concurrency.pipeline}, Transcription Limit=${concurrency.transcription}, Alignment Limit=${concurrency.local}`
   );
 
   // --- GLOSSARY EXTRACTION (Parallel) ---
@@ -275,7 +239,7 @@ export const generateSubtitles = async (
   // We use a reasonable upper bound to prevent excessive Promise creation for long videos
   // while still allowing enough concurrency for the pipeline to work efficiently.
   // Cap at 50 to balance memory usage vs pipeline throughput.
-  const mainLoopConcurrency = Math.min(Math.max(totalChunks, pipelineConcurrency, 20), 50);
+  const mainLoopConcurrency = calculateMainLoopConcurrency(totalChunks, concurrency.pipeline);
 
   await mapInParallel(chunksParams, mainLoopConcurrency, async (chunk, i) => {
     try {

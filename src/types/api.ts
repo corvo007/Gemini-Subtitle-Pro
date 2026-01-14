@@ -18,7 +18,8 @@ export interface ChunkStatus {
     | 'waiting_speakers'
     | 'refining'
     | 'aligning'
-    | 'translating';
+    | 'translating'
+    | 'proofing';
   message?: string;
   toast?: {
     message: string;

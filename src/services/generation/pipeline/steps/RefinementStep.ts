@@ -68,7 +68,7 @@ export class RefinementStep extends BaseStep<RefinementInput, SubtitleItem[]> {
     // Generate prompts
     const refineSystemInstruction = getSystemInstructionWithDiarization(
       settings.genre,
-      undefined,
+      settings.customRefinementPrompt,
       'refinement',
       glossary,
       settings.enableDiarization,

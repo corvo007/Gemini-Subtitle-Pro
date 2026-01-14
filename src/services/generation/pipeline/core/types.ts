@@ -10,7 +10,13 @@ import { type GlossaryItem } from '@/types/glossary';
 import { type GlossaryState } from '@/services/generation/extractors/glossaryState';
 import { type PostCheckResult } from '@/services/subtitle/postCheck';
 
-export type StepName = 'transcribe' | 'waitDeps' | 'refinement' | 'alignment' | 'translation';
+export type StepName =
+  | 'transcribe'
+  | 'waitDeps'
+  | 'refinement'
+  | 'alignment'
+  | 'translation'
+  | 'proofread';
 
 export interface StepResult<T> {
   output: T;

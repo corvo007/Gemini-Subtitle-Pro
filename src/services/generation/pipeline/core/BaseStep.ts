@@ -15,7 +15,13 @@ import { type StepName, type StepContext, type StepResult, type PostCheckResult 
 import { logger } from '@/services/utils/logger';
 import i18n from '@/i18n';
 
-const STEP_ORDER: StepName[] = ['transcribe', 'refinement', 'alignment', 'translation'];
+const STEP_ORDER: StepName[] = [
+  'transcribe',
+  'refinement',
+  'alignment',
+  'translation',
+  'proofread',
+];
 
 export type StageKey =
   | 'transcribing'
@@ -23,7 +29,8 @@ export type StageKey =
   | 'waiting_speakers'
   | 'refining'
   | 'aligning'
-  | 'translating';
+  | 'translating'
+  | 'proofing';
 
 export abstract class BaseStep<TInput, TOutput> {
   abstract name: StepName;
@@ -172,6 +179,7 @@ export abstract class BaseStep<TInput, TOutput> {
       refinement: 'refinement',
       alignment: 'alignment',
       translation: 'translation',
+      proofread: 'refinement', // Proofread uses same mock as refinement
     };
     return mockApi[keyMap[this.name]] === true;
   }
