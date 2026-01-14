@@ -933,14 +933,23 @@ class YtDlpService {
           console.log(`[DEBUG] [Download] 下载完成: ${outputPath}`);
           resolve(outputPath);
         } else {
-          console.error(`[Download] 下载失败: 退出码 ${code}`);
+          console.error('[Download] 下载失败', {
+            exitCode: code,
+            url,
+            formatId,
+            outputDir,
+          });
           reject(new Error(`yt-dlp exited with code ${code}`));
         }
       });
 
-      this.process.on('error', (err) => {
+      this.process.on('error', (err: any) => {
         this.process = null;
-        console.error(`[Download] 进程错误: ${err.message}`);
+        console.error('[Download] 进程错误', {
+          error: err.message,
+          code: err.code,
+          binaryPath: this.binaryPath,
+        });
         reject(err);
       });
     });
@@ -1040,8 +1049,12 @@ class YtDlpService {
     try {
       const ytdlpOutput = await this.execute(['--version']);
       ytdlpVersion = ytdlpOutput.trim();
-    } catch (error) {
-      console.warn('[YtDlpService] Failed to get yt-dlp version:', error);
+    } catch (error: any) {
+      console.warn('[YtDlpService] Failed to get yt-dlp version', {
+        error: error.message,
+        code: error.code,
+        binaryPath: this.binaryPath,
+      });
     }
 
     try {
@@ -1053,8 +1066,12 @@ class YtDlpService {
       if (firstLine.includes('QuickJS version')) {
         qjsVersion = firstLine.replace('QuickJS version ', '').trim();
       }
-    } catch (error) {
-      console.warn('[YtDlpService] Failed to get QuickJS version:', error);
+    } catch (error: any) {
+      console.warn('[YtDlpService] Failed to get QuickJS version', {
+        error: error.message,
+        code: error.code,
+        quickjsPath: this.quickjsPath,
+      });
     }
 
     return { ytdlp: ytdlpVersion, qjs: qjsVersion };

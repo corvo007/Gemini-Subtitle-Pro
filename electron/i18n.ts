@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 const zhCN = JSON.parse(fs.readFileSync(path.join(__dirname, 'locales', 'zh-CN.json'), 'utf-8'));
 const enUS = JSON.parse(fs.readFileSync(path.join(__dirname, 'locales', 'en-US.json'), 'utf-8'));
 
-i18n.init({
+void i18n.init({
   resources: {
     'zh-CN': { translation: zhCN },
     'en-US': { translation: enUS },

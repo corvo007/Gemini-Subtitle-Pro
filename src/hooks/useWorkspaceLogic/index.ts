@@ -444,6 +444,7 @@ export const useWorkspaceLogic = ({
       renameSpeaker,
       deleteSpeaker,
       mergeSpeakers,
+      updateSpeakerColor,
       setSelectedBatches,
       setBatchComments,
       setIsLoadingFile,

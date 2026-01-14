@@ -180,6 +180,7 @@ export function useBatchActions({
       selectedBatches,
       settings,
       batchComments,
+      speakerProfiles,
       snapshotsValues,
       addToast,
 
