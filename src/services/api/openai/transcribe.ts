@@ -38,7 +38,13 @@ export const transcribeAudio = async (
         customBinaryPath
       );
     } catch (error: any) {
-      logger.warn('Local failed, fallback to API:', error.message);
+      logger.warn('Local Whisper failed, attempting fallback to API', {
+        error: error.message,
+        code: error.code,
+        localModelPath,
+        localThreads,
+        customBinaryPath,
+      });
 
       if (apiKey) {
         // Show fallback toast

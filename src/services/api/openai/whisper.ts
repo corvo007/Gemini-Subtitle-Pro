@@ -163,7 +163,21 @@ export const transcribeWithWhisper = async (
         translated: '', // Filled later by Gemini
       }));
     } catch (e: any) {
-      logger.warn(`Whisper attempt ${attempt + 1} failed:`, e);
+      logger.warn(`Whisper API attempt ${attempt + 1} failed`, {
+        error: e.message,
+        status: e.status,
+        code: e.code,
+        type: e.type,
+        cause: e.cause?.message || e.cause,
+        requestUrl: `${baseUrl}/audio/transcriptions`,
+        // Request parameters
+        requestParams: {
+          model,
+          timeout,
+          audioSize: audioBlob.size,
+          responseFormat: 'verbose_json',
+        },
+      });
       lastError = e;
 
       // Don't retry for authentication/permission errors - they won't resolve

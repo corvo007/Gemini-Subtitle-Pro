@@ -97,7 +97,12 @@
       "waitingSpeakerAnalysis": "正在等待说话人分析...",
       "refinementFailed": "优化失败 (第 {{index}} 块)",
       "audioLoaded": "音频已加载",
-      "cancelled": "已取消"
+      "cancelled": "已取消",
+      "waitingTranscribe": "等待转录...",
+      "waitingRefinement": "等待优化...",
+      "waitingAlignment": "等待对齐...",
+      "waitingTranslation": "等待翻译...",
+      "waitingWaitDeps": "等待依赖..."
     },
     "errors": {
       "translationFailed": "翻译失败: {{error}}",

@@ -425,11 +425,28 @@ export async function generateContentWithRetry<T = any>(
       // Use comprehensive retry check (covers timeout, 429, 503, 500, network errors, JSON errors)
       if (isRetryableError(e) && i < retries - 1) {
         const delay = Math.pow(2, i) * 2000 + Math.random() * 1000; // 2s, 4s, 8s + jitter
+        // Extract baseUrl from apiClient (protected but accessible at runtime)
+        const baseUrl =
+          (ai as any).apiClient?.getBaseUrl?.() || 'generativelanguage.googleapis.com';
         logger.warn(`Gemini API Error (retryable). Retrying in ${Math.round(delay)}ms...`, {
           attempt: i + 1,
           maxRetries: retries,
           error: e.message,
           status: e.status,
+          code: e.code,
+          cause: e.cause?.message || e.cause,
+          requestUrl: `${baseUrl}/models/${params.model}:generateContent`,
+          timeoutMs,
+          // Request parameters (actual params used by this app)
+          requestParams: {
+            model: params.model,
+            maxOutputTokens: params.config?.maxOutputTokens,
+            responseMimeType: params.config?.responseMimeType,
+            responseSchema: params.config?.responseSchema,
+            thinkingLevel: params.config?.thinkingConfig?.thinkingLevel,
+            useSearch: !!params.config?.tools?.some((t: any) => t.googleSearch),
+            systemInstruction: params.config?.systemInstruction?.substring?.(0, 100) || undefined,
+          },
         });
         await new Promise((r) => setTimeout(r, delay));
       } else {
@@ -440,13 +457,20 @@ export async function generateContentWithRetry<T = any>(
   throw new Error(i18n.t('services:api.errors.retryFailed'));
 }
 
+/** Step configuration for API calls */
+export interface StepApiConfig {
+  maxOutputTokens?: number;
+  tools?: any[];
+  thinkingConfig?: { thinkingLevel: string };
+}
+
 export async function generateContentWithLongOutput(
   ai: GoogleGenAI,
   modelName: string,
   systemInstruction: string,
   parts: Part[],
   schema: any,
-  tools?: any[],
+  stepConfig?: StepApiConfig, // Use centralized step config instead of separate tools param
   signal?: AbortSignal,
   onUsage?: (usage: TokenUsage) => void,
   timeoutMs?: number // Custom timeout in milliseconds
@@ -477,8 +501,9 @@ export async function generateContentWithLongOutput(
           responseSchema: schema,
           systemInstruction: systemInstruction,
           safetySettings: SAFETY_SETTINGS,
-          maxOutputTokens: 65536,
-          tools: tools, // Pass tools for Search Grounding
+          maxOutputTokens: stepConfig?.maxOutputTokens ?? 65536,
+          tools: stepConfig?.tools, // Pass tools for Search Grounding
+          ...(stepConfig?.thinkingConfig && { thinkingConfig: stepConfig.thinkingConfig }),
         },
       },
       3,
@@ -582,7 +607,7 @@ export async function generateContentWithLongOutput(
       throw new Error(i18n.t('services:api.errors.parseFailed'));
     }
   } catch (e: any) {
-    logger.error('generateContentWithLongOutput failed', e);
+    logger.error('generateContentWithLongOutput failed', formatGeminiError(e));
     throw e;
   }
 }

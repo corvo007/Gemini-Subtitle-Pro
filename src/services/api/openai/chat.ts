@@ -106,6 +106,21 @@ export const transcribeWithOpenAIChat = async (
       translated: '',
     }));
   } catch (e: any) {
+    logger.warn('OpenAI Chat API request failed', {
+      error: e.message,
+      status: e.status,
+      code: e.code,
+      type: e.type,
+      cause: e.cause?.message || e.cause,
+      requestUrl: `${baseUrl}/chat/completions`,
+      // Request parameters
+      requestParams: {
+        model,
+        timeout,
+        audioSize: audioBlob.size,
+        promptPreview: (requestBody.messages[0]?.content as any[])?.[0]?.text?.substring(0, 100),
+      },
+    });
     throw new Error(i18n.t('services:api.openai.errors.transcriptionFailed', { error: e.message }));
   }
 };

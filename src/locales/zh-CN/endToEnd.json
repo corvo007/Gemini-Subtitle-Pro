@@ -99,7 +99,9 @@
       "glossary": {
         "label": "使用术语表",
         "desc": "选择已有的术语表辅助翻译",
-        "none": "(无)"
+        "none": "(无)",
+        "autoConfirmHint": "端到端模式下，新提取的术语将自动合并至此术语表",
+        "noGlossaryHint": "新提取的术语将自动保存至新建的术语表"
       },
       "diarization": {
         "label": "启用说话人区分",

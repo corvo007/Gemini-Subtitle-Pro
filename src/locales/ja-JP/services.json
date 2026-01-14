@@ -98,7 +98,12 @@
       "waitingSpeakerAnalysis": "話者を分析中...",
       "refinementFailed": "精製失敗 (Chunk {{index}})",
       "audioLoaded": "音声を読み込みました",
-      "cancelled": "キャンセルされました"
+      "cancelled": "キャンセルされました",
+      "waitingTranscribe": "文字起こしを待っています...",
+      "waitingRefinement": "精製を待っています...",
+      "waitingAlignment": "タイムスタンプ調整を待っています...",
+      "waitingTranslation": "翻訳を待っています...",
+      "waitingWaitDeps": "依存関係を待っています..."
     },
     "errors": {
       "translationFailed": "翻訳に失敗しました: {{error}}",
