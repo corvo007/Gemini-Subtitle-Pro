@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HexColorPicker } from 'react-colorful';
 import { cn } from '@/lib/cn';
 import { SPEAKER_COLORS } from '@/services/utils/colors';
@@ -10,16 +11,17 @@ interface ColorPickerProps {
 }
 
 export const ColorPicker: React.FC<ColorPickerProps> = ({ color, onChange, className }) => {
+  const { t } = useTranslation('common');
   // 确保颜色值有效，如果是空字符串则默认为白色
   const validColor = useMemo(() => {
     return color || '#ffffff';
   }, [color]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // 简单的hex验证
-    if (/^#[0-9A-Fa-f]{0,6}$/.test(value)) {
-      onChange(value);
+    const value = e.target.value.toUpperCase();
+    // 验证是否为有效的 hex 字符（不包含 #）
+    if (/^[0-9A-F]{0,6}$/.test(value)) {
+      onChange(`#${value}`);
     }
   };
 
@@ -34,7 +36,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ color, onChange, class
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs font-medium text-slate-400">预设颜色</label>
+        <label className="text-xs font-medium text-slate-400">{t('presetColors')}</label>
         <div className="grid grid-cols-8 gap-2">
           {SPEAKER_COLORS.map((presetColor) => (
             <button
@@ -66,7 +68,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ color, onChange, class
             <input
               type="text"
               value={validColor.replace('#', '')}
-              onChange={(e) => onChange(`#${e.target.value}`)}
+              onChange={handleInputChange}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 pl-7 pr-3 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors uppercase font-mono"
               placeholder="FFFFFF"
               maxLength={6}

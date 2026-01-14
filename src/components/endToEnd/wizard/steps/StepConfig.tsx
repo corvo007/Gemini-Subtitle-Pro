@@ -188,6 +188,12 @@ export function StepConfig({
                 />
               </div>
             </div>
+            {/* Auto-confirm hint - always show */}
+            <p className="text-xs text-violet-400/70 mt-1 pl-0.5">
+              {config.selectedGlossaryId
+                ? t('config.subtitle.glossary.autoConfirmHint')
+                : t('config.subtitle.glossary.noGlossaryHint')}
+            </p>
 
             {/* Speaker Count - Only visible if Global Diarization is enabled */}
             {settings?.enableDiarization && (
