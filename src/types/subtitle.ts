@@ -37,7 +37,15 @@ export interface SubtitleSnapshot {
 
 export type OutputFormat = 'srt' | 'ass' | 'json';
 
-export type BatchOperationMode = 'fix_timestamps' | 'proofread';
+export type BatchOperationMode = 'regenerate' | 'proofread';
+
+/**
+ * User-provided hints for the regenerate operation
+ */
+export interface RegeneratePrompts {
+  transcriptionHint?: string; // Injected into refinement prompt
+  translationHint?: string; // Injected into translation prompt
+}
 
 // Gemini Response Schema Helper Types
 export interface GeminiSubtitleSchema {

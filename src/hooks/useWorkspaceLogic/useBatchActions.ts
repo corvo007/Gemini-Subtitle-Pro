@@ -2,14 +2,19 @@ import { type RefObject } from 'react';
 import type React from 'react';
 import { useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type SubtitleItem, type BatchOperationMode } from '@/types/subtitle';
+import {
+  type SubtitleItem,
+  type BatchOperationMode,
+  type RegeneratePrompts,
+} from '@/types/subtitle';
 import { type SpeakerUIProfile } from '@/types/speaker';
 import { type AppSettings } from '@/types/settings';
 import { GenerationStatus, type ChunkStatus } from '@/types/api';
 import { generateSrtContent, generateAssContent } from '@/services/subtitle/generator';
 import { downloadFile } from '@/services/subtitle/downloader';
 import { logger } from '@/services/utils/logger';
-import { runBatchOperation } from '@/services/generation/batch/operations';
+import { runProofreadOperation } from '@/services/generation/batch/proofread';
+import { runRegenerateOperation } from '@/services/generation/batch/regenerate';
 import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { retryGlossaryExtraction } from '@/services/generation/extractors/glossary';
 import { ENV } from '@/config';
@@ -53,7 +58,11 @@ interface UseBatchActionsProps {
 }
 
 interface UseBatchActionsReturn {
-  handleBatchAction: (mode: BatchOperationMode, singleIndex?: number) => Promise<void>;
+  handleBatchAction: (
+    mode: BatchOperationMode,
+    singleIndex?: number,
+    prompts?: RegeneratePrompts
+  ) => Promise<void>;
   handleDownload: (format: 'srt' | 'ass') => void;
   handleRetryGlossary: () => Promise<void>;
 }
@@ -87,7 +96,7 @@ export function useBatchActions({
   const snapshotBeforeOperationRef = useRef<SubtitleItem[] | null>(null);
 
   const handleBatchAction = useCallback(
-    async (mode: BatchOperationMode, singleIndex?: number) => {
+    async (mode: BatchOperationMode, singleIndex?: number, prompts?: RegeneratePrompts) => {
       const indices: number[] =
         singleIndex !== undefined ? [singleIndex] : (Array.from(selectedBatches) as number[]);
       if (indices.length === 0) return;
@@ -95,8 +104,8 @@ export function useBatchActions({
         setError(t('services:pipeline.errors.missingGeminiKey'));
         return;
       }
-      if (mode === 'fix_timestamps' && !file) {
-        setError(t('workspace:hooks.batch.errors.fixTimestamps.audioRequired'));
+      if (mode === 'regenerate' && !file) {
+        setError(t('workspace:hooks.batch.errors.regenerate.audioRequired'));
         return;
       }
 
@@ -105,8 +114,8 @@ export function useBatchActions({
 
       // Create snapshot BEFORE AI operation for user recovery
       const actionName =
-        mode === 'fix_timestamps'
-          ? t('workspace:hooks.batch.actions.fixTimestamps')
+        mode === 'regenerate'
+          ? t('workspace:hooks.batch.actions.regenerate')
           : t('workspace:hooks.batch.actions.refineTranslation');
       const fileId = file ? window.electronAPI?.getFilePath?.(file) || file.name : '';
       const fileName = file?.name || '';
@@ -129,16 +138,34 @@ export function useBatchActions({
       setStartTime(Date.now());
       logger.info(`Starting batch action: ${mode}`, { indices, mode });
       try {
-        const refined = await runBatchOperation(
-          file,
-          subtitles,
-          indices,
-          settings,
-          mode,
-          batchComments,
-          handleProgress,
-          signal
-        );
+        let refined: SubtitleItem[];
+
+        if (mode === 'regenerate') {
+          // Use the new regenerate operation for full pipeline re-run
+          refined = await runRegenerateOperation(
+            file!,
+            subtitles,
+            indices,
+            settings,
+            prompts || {},
+            undefined, // speakerProfiles - regenerate will use existing context
+            settings.glossary,
+            handleProgress,
+            signal
+          );
+        } else {
+          // Use existing proofread operation
+          refined = await runProofreadOperation(
+            file,
+            subtitles,
+            indices,
+            settings,
+            mode,
+            batchComments,
+            handleProgress,
+            signal
+          );
+        }
         setSubtitles(refined);
         setStatus(GenerationStatus.COMPLETED);
         setBatchComments((prev) => {

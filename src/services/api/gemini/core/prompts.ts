@@ -116,7 +116,7 @@ function getFillerWordsRule(): string {
  */
 function formatGlossaryForPrompt(
   glossary: GlossaryItem[] | undefined,
-  mode: 'refinement' | 'translation' | 'proofread' | 'fix_timestamps'
+  mode: 'refinement' | 'translation' | 'proofread'
 ): string {
   if (!glossary || glossary.length === 0) return '';
 
@@ -158,7 +158,7 @@ function getGenreSpecificGuidance(genre: string): string {
 export const getSystemInstructionWithDiarization = (
   genre: string,
   customPrompt: string | undefined,
-  mode: 'refinement' | 'translation' | 'proofread' | 'fix_timestamps',
+  mode: 'refinement' | 'translation' | 'proofread',
   glossary?: GlossaryItem[],
   enableDiarization?: boolean,
   speakerProfiles?: SpeakerProfile[],
@@ -166,8 +166,8 @@ export const getSystemInstructionWithDiarization = (
   maxSpeakers?: number,
   targetLanguage: string = 'Simplified Chinese'
 ): string => {
-  // For non-supported modes or disabled diarization, delegate to original function
-  if ((mode !== 'fix_timestamps' && mode !== 'refinement') || !enableDiarization) {
+  // For non-refinement modes or disabled diarization, delegate to original function
+  if (mode !== 'refinement' || !enableDiarization) {
     return getSystemInstruction(
       genre,
       customPrompt,
@@ -178,7 +178,7 @@ export const getSystemInstructionWithDiarization = (
     );
   }
 
-  // For fix_timestamps with diarization, build custom prompt
+  // For refinement with diarization, build custom prompt
   const glossaryText = formatGlossaryForPrompt(glossary, mode);
 
   let diarizationSection = '';
@@ -306,8 +306,8 @@ Before returning, confirm:
     }
   }
 
-  if (mode === 'refinement') {
-    return `You are a professional Subtitle QA Specialist. 
+  // Note: Only refinement mode with diarization enabled reaches this point
+  return `You are a professional Subtitle QA Specialist. 
     You will receive an audio chunk and a raw JSON transcription.
     
     YOUR TASKS:
@@ -330,63 +330,12 @@ Before returning, confirm:
     9. FINAL CHECK: Before outputting, strictly verify that ALL previous rules have been perfectly followed. Correct any remaining errors.
     
     Genre Context: ${genre}${glossaryText}`;
-  }
-
-  return `You are a professional Subtitle Timing and Synchronization Specialist.
-Your PRIMARY GOAL is to perfect timestamp alignment and segment timing for ${genre} content.
-
-TASK RULES (Priority Order):
-
-[P0 - HIGHEST] User Directives
-→ If a subtitle has a "comment" field, follow that instruction exactly
-→ User corrections override all other rules
-
-[P1 - PRIMARY FOCUS] Timestamp Alignment
-→ Listen to audio and align start/end times to actual speech boundaries
-→ Whisper timestamps may drift, especially in long audio - correct any misalignment you detect
-→ Ensure timestamps are strictly within the provided audio duration
-→ Timestamps must be relative to provided audio file (starting at 00:00:00)
-→ **NEVER MERGE** multiple segments into one - only SPLIT long segments when needed
-
-${diarizationSection}
-
-[P3 - READABILITY] Segment Splitting
-→ ${getSegmentSplittingRule()}
-${getTimestampSplittingInstructions()}
-
-[P4 - CONTENT ACCURACY] Audio Content Verification
-→ If you hear CLEAR, MEANINGFUL speech NOT in subtitles → ADD new subtitle entries
-→ Do NOT add: background noise, music lyrics, ambient sounds, or unintelligible speech
-→ ${getFillerWordsRule()} from 'text_original'
-
-[P5 - ABSOLUTE RULE] Translation Preservation
-→ DO NOT modify 'text_translated' field under ANY circumstances
-→ Even if translation is incorrect → LEAVE IT UNCHANGED
-→ Your job is TIMING and SPEAKER IDENTIFICATION, not translation
-→ Translation fixes belong in the Proofread function
-
-OUTPUT REQUIREMENTS:
-✓ Valid JSON matching input structure
-✓ Preserve all IDs (assign new IDs only for inserted/split segments)
-✓ All timestamps in HH:MM:SS,mmm format
-✓ Ensure start < end for all segments
-${enableDiarization ? '✓ Every subtitle has a "speaker" field' : ''}
-
-FINAL QUALITY CHECK:
-Before returning, verify:
-✓ All timestamps aligned to audio speech
-✓ Long segments properly split
-✓ No missed speech from audio
-✓ 'text_translated' completely unchanged from input
-${enableDiarization ? '✓ Speaker assignments are consistent and accurate' : ''}
-
-Context: ${genre}${glossaryText}`;
 };
 
 export const getSystemInstruction = (
   genre: string,
   customPrompt: string | undefined,
-  mode: 'refinement' | 'translation' | 'proofread' | 'fix_timestamps' = 'translation',
+  mode: 'refinement' | 'translation' | 'proofread' = 'translation',
   glossary?: GlossaryItem[],
   speakerProfiles?: SpeakerProfile[],
   targetLanguage: string = 'Simplified Chinese'
@@ -416,8 +365,22 @@ export const getSystemInstruction = (
     8. FORMAT: Return a valid JSON array.
     9. FINAL CHECK: Before outputting, strictly verify that ALL previous rules (1-8) have been perfectly followed. Correct any remaining errors.
     
+    ---
+    CONTEXT INFORMATION:
     
-    Genre Context: ${genre}${glossaryText}`;
+    Genre: ${genre}${
+      customPrompt
+        ? `
+    
+    **USER-PROVIDED INSTRUCTIONS** (Follow these additional guidelines from the user):
+    ${customPrompt}`
+        : ''
+    }${
+      glossaryText
+        ? `
+    ${glossaryText}`
+        : ''
+    }`;
   }
 
   // 2. Translation Prompt (Flash 2.5) - Initial Pass
@@ -487,7 +450,21 @@ export const getSystemInstruction = (
     ✓ Is the ${targetLanguage} fluent and natural?
     ✓ Did I remove all filler words?
 
-    ${genreContext}${customPrompt ? `\n    ${customPrompt}\n` : ''}${glossaryText}${
+    ---
+    CONTEXT INFORMATION:
+    ${genreContext}${
+      customPrompt
+        ? `
+    
+    **USER-PROVIDED INSTRUCTIONS** (Follow these additional guidelines from the user):
+    ${customPrompt}`
+        : ''
+    }${
+      glossaryText
+        ? `
+    ${glossaryText}`
+        : ''
+    }${
       speakerProfiles && speakerProfiles.length > 0
         ? `
 
@@ -514,55 +491,6 @@ Speaker (formal): "すごいですね" → "真是令人印象深刻。"
 `
         : ''
     }`;
-  }
-
-  // 3. Fix Timestamps Prompt (Flash 2.5)
-  if (mode === 'fix_timestamps') {
-    return `You are a Subtitle Timing and Synchronization Specialist.
-      Your PRIMARY GOAL is to perfect timestamp alignment and segment timing for ${genre} content.
-      
-      TASK RULES (Strict Priority):
-      
-      [P0 - HIGHEST] User Directives
-      → If a subtitle has a "comment" field, follow that instruction exactly
-      → User corrections override all other rules
-      
-      [P1 - PRIMARY FOCUS] Timestamp Alignment
-      → Listen to audio and align start/end times to actual speech boundaries
-      → Whisper timestamps may drift, especially in long audio - correct any misalignment you detect
-      → Ensure timestamps are strictly within the provided audio duration
-      → Timestamps must be relative to provided audio file (starting at 00:00:00)
-      → **NEVER MERGE** multiple segments into one - only SPLIT long segments when needed
-      
-      [P2 - READABILITY] Segment Splitting
-      → ${getSegmentSplittingRule()}
-      ${getTimestampSplittingInstructions()}
-      
-      [P3 - CONTENT ACCURACY] Audio Content Verification
-      → If you hear CLEAR, MEANINGFUL speech NOT in subtitles → ADD new subtitle entries
-      → Do NOT add: background noise, music lyrics, ambient sounds, or unintelligible speech
-      → ${getFillerWordsRule()} from 'text_original'
-      
-      [P4 - ABSOLUTE RULE] Translation Preservation
-      → DO NOT modify 'text_translated' field under ANY circumstances
-      → Even if the translation is wrong, in English, or nonsensical → LEAVE IT
-      → Your job is TIMING, not translation quality
-      → Translation fixes belong in the Proofread function
-      
-      OUTPUT REQUIREMENTS:
-      ✓ Valid JSON matching input structure
-      ✓ Preserve all IDs (assign new IDs only for inserted/split segments)
-      ✓ All timestamps in HH:MM:SS,mmm format
-      ✓ Ensure start < end for all segments
-      
-      FINAL QUALITY CHECK:
-      Before returning, verify:
-      ✓ All timestamps aligned to audio speech
-      ✓ Long segments properly split
-      ✓ No missed speech from audio
-      ✓ 'text_translated' completely unchanged from input
-      
-      Context: ${genre}`;
   }
 
   return `You are an expert Subtitle Translation Quality Specialist.
@@ -607,7 +535,21 @@ Speaker (formal): "すごいですね" → "真是令人印象深刻。"
     ✓ All 'text_translated' are fluent ${targetLanguage}
     ✓ No missed speech from audio
     ✓ Translation quality significantly improved
-    ${getGenreSpecificGuidance(genre)}${customPrompt ? `\n    ${customPrompt}\n` : ''}${glossaryText}`;
+    ---
+    CONTEXT INFORMATION:
+    ${getGenreSpecificGuidance(genre)}${
+      customPrompt
+        ? `
+    
+    **USER-PROVIDED INSTRUCTIONS** (Follow these additional guidelines from the user):
+    ${customPrompt}`
+        : ''
+    }${
+      glossaryText
+        ? `
+    ${glossaryText}`
+        : ''
+    }`;
 };
 
 export const GLOSSARY_EXTRACTION_PROMPT = (
@@ -858,82 +800,6 @@ export const getTranslationBatchPrompt = (
     Input JSON:
     ${JSON.stringify(payload)}
     `;
-
-/**
- * Parameters for fix timestamps prompt
- */
-export interface FixTimestampsPromptParams {
-  payload: any[];
-  glossaryContext: string;
-  specificInstruction: string;
-  conservativeMode?: boolean; // Only fine-tune, no splits/merges
-  targetLanguage?: string;
-}
-
-/**
- * Generate fix timestamps prompt
- */
-export const getFixTimestampsPrompt = (params: FixTimestampsPromptParams): string => {
-  const targetLanguage = params.targetLanguage || 'Simplified Chinese';
-  const conservativeRules = params.conservativeMode
-    ? `
-    **[CONSERVATIVE MODE - ONLY PROCESS COMMENTED LINES]**
-    → ONLY fix subtitles that have a "comment" field (user-marked for attention)
-    → Leave ALL other lines COMPLETELY UNCHANGED (do not touch timestamps, text, or anything)
-    → DO NOT split, merge, or add any segments
-    → Preserve original segment count and structure exactly
-    → Output must have EXACTLY the same number of items as input
-    `
-    : `
-    → If a line has a "comment" field, prioritize fixing it according to the user's instruction
-    
-    [P2 - MANDATORY] Segment Splitting for Readability
-    → ${getSegmentSplittingRule()}
-    ${getTimestampSplittingInstructions()}
-    → For NEW/SPLIT entries: provide appropriate translation in ${targetLanguage}
-    `;
-
-  const contentRules = params.conservativeMode
-    ? `
-    [P3 - CONTENT] Focus on Commented Lines Only
-    → Apply the user's requested fix from the "comment" field
-    → ${getFillerWordsRule()} from 'text_original' (commented lines only)
-    `
-    : `
-    [P3 - CONTENT] Audio Verification
-    → If you hear speech NOT in the text → ADD new subtitle entries with translation
-    → ${getFillerWordsRule()} from 'text_original'
-    `;
-
-  return `
-    TIMESTAMP ALIGNMENT TASK${params.conservativeMode ? ' (CONSERVATIVE MODE)' : ''}
-    ${params.glossaryContext}
-    ${params.specificInstruction}
-
-    TASK RULES (Priority Order):
-    
-    [P1 - PRIMARY] Perfect Timestamp Alignment
-    → Listen to audio carefully
-    → Align "start" and "end" to actual speech boundaries in audio
-    → Timestamps MUST be relative to provided audio file (starting at 00:00:00)
-    → Fix bunched-up or spread-out timing issues
-    ${conservativeRules}
-    ${contentRules}
-    [P4 - ABSOLUTE] Translation Preservation
-    → DO NOT modify 'text_translated' of EXISTING entries under ANY circumstances
-    → Even if it's English, wrong, or nonsensical → LEAVE IT
-    → Translation is handled by Proofread function, not here
-    
-    FINAL VERIFICATION:
-    ✓ ${params.conservativeMode ? 'ONLY commented lines were modified' : 'All timestamps aligned to audio'}
-    ${params.conservativeMode ? '✓ All non-commented lines unchanged' : '✓ Long segments split appropriately'}
-    ✓ Segment count ${params.conservativeMode ? 'unchanged from input' : 'appropriate'}
-    ✓ 'text_translated' of existing entries completely unchanged
-
-    Input JSON (${params.payload.length} items):
-    ${JSON.stringify(params.payload)}
-        `;
-};
 
 /**
  * Parameters for proofread prompt
