@@ -91,7 +91,11 @@ export function StepResult({
         <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl mb-8">
           <div className="text-red-200 text-sm">
             <p className="font-medium mb-1">
-              {t('wizard.resultStep.errorStage', { stage: result.errorDetails.stage })}
+              {t('wizard.resultStep.errorStage', {
+                stage: t(`progress.stages.${result.errorDetails.stage}.label`, {
+                  defaultValue: result.errorDetails.stage,
+                }),
+              })}
             </p>
             <p className="text-red-300/70">{result.errorDetails.message}</p>
           </div>
