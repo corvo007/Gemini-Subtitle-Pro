@@ -67,12 +67,8 @@
     "speaker": "話者",
     "clearSpeakerFilters": "話者フィルタをクリア",
     "manageSpeakers": "話者を管理",
-    "conservativeModeDesc": "控えめモード：コメント付きの行のみ処理し、タイムラインの微調整のみ行います。分割/マージ/追加は行いません。",
-    "normalModeDesc": "通常モード：AIによる長い段落の分割・結合、および欠落内容の補完を行います。",
-    "conservative": "控えめ",
-    "normal": "通常",
-    "fixTimestampsDesc": "タイムラインを校正します（翻訳は保持）",
-    "fixTimestamps": "タイムラインを校正",
+    "regenerateDesc": "字幕を再生成します（文字起こし + 改善 + 整列 + 翻訳）",
+    "regenerate": "再生成",
     "polishTranslationDesc": "翻訳を校正します（タイムラインは保持）",
     "polishTranslation": "翻訳を校正",
     "selectAll": "すべて選択",
@@ -88,5 +84,16 @@
     "disableAutoScroll": "自動スクロールを無効にする",
     "autoScrollOn": "自動スクロール: オン",
     "autoScrollOff": "自動スクロール: オフ"
+  },
+  "regenerateModal": {
+    "title": "字幕を再生成",
+    "subtitle": "{{count}} 個のバッチを再生成中",
+    "info": "選択されたバッチに対して完全なパイプライン（文字起こし → 改善 → 整列 → 翻訳）を再実行します。オプションのヒントを入力して AI を案内できます。",
+    "transcriptionHint": "文字起こしのヒント（オプション）",
+    "transcriptionHintPlaceholder": "例：話者の名前に日本語の発音がある、専門用語...",
+    "translationHint": "翻訳のヒント（オプション）",
+    "translationHintPlaceholder": "例：フォーマルなトーンを使用、文化的表現のローカライズ...",
+    "cancel": "キャンセル",
+    "confirm": "再生成"
   }
 }

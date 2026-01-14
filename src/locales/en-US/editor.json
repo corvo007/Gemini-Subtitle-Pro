@@ -67,12 +67,8 @@
     "speaker": "Speaker",
     "clearSpeakerFilters": "Clear speaker filters",
     "manageSpeakers": "Manage Speakers",
-    "conservativeModeDesc": "Conservative: Only process rows with comments + fine-tune timeline, no split/merge/add",
-    "normalModeDesc": "Normal: AI can split/merge long paragraphs, add missing content",
-    "conservative": "Conservative",
-    "normal": "Normal",
-    "fixTimestampsDesc": "Fix Timestamps (keep translation)",
-    "fixTimestamps": "Fix Timestamps",
+    "regenerateDesc": "Regenerate subtitles with full pipeline (transcription + refinement + alignment + translation)",
+    "regenerate": "Regenerate",
     "polishTranslationDesc": "Polish Translation (keep timeline)",
     "polishTranslation": "Polish Translation",
     "selectAll": "Select All",
@@ -88,5 +84,16 @@
     "disableAutoScroll": "Disable Auto Scroll",
     "autoScrollOn": "Auto Scroll: On",
     "autoScrollOff": "Auto Scroll: Off"
+  },
+  "regenerateModal": {
+    "title": "Regenerate Subtitles",
+    "subtitle": "Regenerating {{count}} selected batch(es)",
+    "info": "This will re-run the full pipeline (transcription → refinement → alignment → translation) for the selected batches. You can provide optional hints to guide the AI.",
+    "transcriptionHint": "Transcription Hint (Optional)",
+    "transcriptionHintPlaceholder": "E.g., speaker has Japanese name pronunciations, technical terms...",
+    "translationHint": "Translation Hint (Optional)",
+    "translationHintPlaceholder": "E.g., use formal tone, localize cultural references...",
+    "cancel": "Cancel",
+    "confirm": "Regenerate"
   }
 }

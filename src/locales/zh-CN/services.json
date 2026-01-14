@@ -102,7 +102,9 @@
       "waitingRefinement": "等待优化...",
       "waitingAlignment": "等待对齐...",
       "waitingTranslation": "等待翻译...",
-      "waitingWaitDeps": "等待依赖..."
+      "waitingWaitDeps": "等待依赖...",
+      "waitingProofread": "等待校对...",
+      "regenerating": "正在重新生成 ({{current}}/{{total}})..."
     },
     "errors": {
       "translationFailed": "翻译失败: {{error}}",

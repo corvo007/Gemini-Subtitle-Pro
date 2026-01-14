@@ -67,12 +67,8 @@
     "speaker": "说话人",
     "clearSpeakerFilters": "清除说话人筛选",
     "manageSpeakers": "管理说话人",
-    "conservativeModeDesc": "保守模式：仅处理有评论的行 + 微调时间轴，不拆分/合并/添加",
-    "normalModeDesc": "普通模式：AI可拆分/合并长段落，添加遗漏内容",
-    "conservative": "保守",
-    "normal": "普通",
-    "fixTimestampsDesc": "校对时间轴 (保留翻译)",
-    "fixTimestamps": "校对时间轴",
+    "regenerateDesc": "重新生成字幕 (转录 + 优化 + 对齐 + 翻译)",
+    "regenerate": "重新生成",
     "polishTranslationDesc": "润色翻译 (保留时间轴)",
     "polishTranslation": "润色翻译",
     "selectAll": "全选",
@@ -88,5 +84,16 @@
     "disableAutoScroll": "禁用自动滚动",
     "autoScrollOn": "自动滚动: 开",
     "autoScrollOff": "自动滚动: 关"
+  },
+  "regenerateModal": {
+    "title": "重新生成字幕",
+    "subtitle": "正在重新生成 {{count}} 个批次",
+    "info": "将对选中批次重新运行完整流程 (转录 → 优化 → 对齐 → 翻译)。您可以提供可选提示来引导AI。",
+    "transcriptionHint": "转录提示 (可选)",
+    "transcriptionHintPlaceholder": "例如：说话人有日语发音的名字、专业术语...",
+    "translationHint": "翻译提示 (可选)",
+    "translationHintPlaceholder": "例如：使用正式语气、本地化文化表达...",
+    "cancel": "取消",
+    "confirm": "重新生成"
   }
 }

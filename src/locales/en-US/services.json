@@ -102,7 +102,9 @@
       "waitingRefinement": "Waiting for refinement...",
       "waitingAlignment": "Waiting for alignment...",
       "waitingTranslation": "Waiting for translation...",
-      "waitingWaitDeps": "Waiting for dependencies..."
+      "waitingWaitDeps": "Waiting for dependencies...",
+      "waitingProofread": "Waiting for proofreading...",
+      "regenerating": "Regenerating ({{current}}/{{total}})..."
     },
     "errors": {
       "translationFailed": "Translation failed: {{error}}",

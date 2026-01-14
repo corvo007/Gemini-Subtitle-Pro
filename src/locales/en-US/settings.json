@@ -248,6 +248,7 @@
     "paths": "System Paths",
     "appPath": "Application Path",
     "userDataPath": "Config & Log Path",
+    "logPath": "Log Path",
     "exePath": "Executable Path",
     "copyPath": "Copy Path",
     "showInFolder": "Show in Folder",

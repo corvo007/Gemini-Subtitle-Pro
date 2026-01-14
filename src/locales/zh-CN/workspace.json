@@ -114,12 +114,12 @@
     },
     "batch": {
       "errors": {
-        "fixTimestamps": {
-          "audioRequired": "校对时间轴需要源视频或音频文件。"
+        "regenerate": {
+          "audioRequired": "重新生成需要源视频或音频文件。"
         }
       },
       "actions": {
-        "fixTimestamps": "校对时间轴",
+        "regenerate": "重新生成",
         "refineTranslation": "润色翻译"
       },
       "snapshot": {

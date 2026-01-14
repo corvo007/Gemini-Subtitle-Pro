@@ -114,12 +114,12 @@
     },
     "batch": {
       "errors": {
-        "fixTimestamps": {
-          "audioRequired": "Timestamp correction requires source video or audio file."
+        "regenerate": {
+          "audioRequired": "Regeneration requires source video or audio file."
         }
       },
       "actions": {
-        "fixTimestamps": "Fix Timestamps",
+        "regenerate": "Regenerate",
         "refineTranslation": "Refine Translation"
       },
       "snapshot": {

@@ -248,6 +248,7 @@
     "paths": "システムパス",
     "appPath": "アプリケーションパス",
     "userDataPath": "設定とログのパス",
+    "logPath": "ログのパス",
     "exePath": "実行ファイルパス",
     "copyPath": "パスをコピー",
     "showInFolder": "フォルダで開く",

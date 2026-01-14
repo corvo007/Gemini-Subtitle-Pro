@@ -114,12 +114,12 @@
     },
     "batch": {
       "errors": {
-        "fixTimestamps": {
-          "audioRequired": "タイムライン校正にはソースの動画または音声ファイルが必要です。"
+        "regenerate": {
+          "audioRequired": "再生成にはソースの動画または音声ファイルが必要です。"
         }
       },
       "actions": {
-        "fixTimestamps": "タイムラインを校正",
+        "regenerate": "再生成",
         "refineTranslation": "翻訳を校正"
       },
       "snapshot": {
