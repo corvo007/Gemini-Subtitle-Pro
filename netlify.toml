@@ -1,0 +1,9 @@
+[build]
+  command = "yarn docs:build"
+  publish = "docs/.vitepress/dist"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- docs/ package.json yarn.lock netlify.toml"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
