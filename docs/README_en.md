@@ -1,29 +1,64 @@
-# Gemini Subtitle Pro
+<div align="center">
+  <img src="../resources/icon.png" alt="Gemini Subtitle Pro" width="120" height="120">
+  <h1>Gemini Subtitle Pro</h1>
+  <p><strong>✨ Studio-Quality Subtitles, Zero Manual Work</strong></p>
+  <p>Glossary Extraction · Speaker Detection · Frame-Perfect · Hands-Free</p>
 
-[中文文档 (Chinese Documentation)](../README.md)
+  <!-- Badges -->
+  <p>
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/actions"><img src="https://img.shields.io/github/actions/workflow/status/corvo007/Gemini-Subtitle-Pro/release.yml?style=for-the-badge&logo=github&label=Build" alt="Build Status"></a>
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/stargazers"><img src="https://img.shields.io/github/stars/corvo007/Gemini-Subtitle-Pro?style=for-the-badge&logo=github&color=yellow" alt="GitHub Stars"></a>
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases"><img src="https://img.shields.io/github/v/release/corvo007/Gemini-Subtitle-Pro?style=for-the-badge&logo=github&color=blue" alt="GitHub Release"></a>
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases"><img src="https://img.shields.io/github/downloads/corvo007/Gemini-Subtitle-Pro/total?style=for-the-badge&logo=github&color=orange" alt="Downloads"></a>
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/Electron-Desktop-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron">
+    <img src="https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/blob/main/LICENSE"><img src="https://img.shields.io/github/license/corvo007/Gemini-Subtitle-Pro?style=flat-square&color=green" alt="License"></a>
+  </p>
 
-**Gemini Subtitle Pro** is an AI-powered subtitle creation, translation, and polishing tool. It leverages Google's Gemini models for high-quality translation and polishing, and uses OpenAI's Whisper for precise speech transcription.
+  <p>
+    <a href="./ARCHITECTURE.md">📖 Architecture</a> •
+    <a href="https://gemini-subtitle-pro-261157428277.asia-east1.run.app/">🚀 Live Demo</a> •
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases">📥 Download</a> •
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/issues">🐛 Report Bug</a> •
+    <a href="../README.md">🇨🇳 中文</a>
+  </p>
+</div>
 
-## 🔥 Core Features
+---
 
-**Design Goal**: Minimize manual intervention while increasing generated subtitle quality and efficiency.
+## ✨ Core Features
 
-Open-source subtitle tools on the market each have their focuses, but often have shortcomings in certain areas: timeline alignment requires manual adjustment, or proper noun translation is inaccurate without a glossary.
+|       Category       | Highlights                                                          |
+| :------------------: | ------------------------------------------------------------------- |
+|     ⚡ **Fast**      | **30 min video → 8 min processing**, smart concurrent processing    |
+|   🎯 **Accurate**    | Glossary extraction · Millisecond alignment · Speaker recognition   |
+| 🌍 **Multilingual**  | EN/CN/JP UI, auto-detect source language, translate to any language |
+|   🚀 **Full Auto**   | Paste link → Auto output, completely hands-free                     |
+|    🖥️ **Editor**     | WYSIWYG preview, floating player, search & filter, batch operations |
+| 📦 **Import/Export** | SRT/ASS import & edit, bilingual export, video encoding             |
 
-| Feature                              | Description                                                                                                                        |
-| :----------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
-| 🎧 **Auto Glossary Extraction**      | Intelligently extracts proper nouns from audio, verifying standard translations with Google Search                                 |
-| ⚡ **Long Context Translation**      | Splits by semantics into 5-10 minute segments, retaining full context for translation                                              |
-| 💎 **Post-Transcription Processing** | Smart sentence splitting, timeline correction, and term replacement in one go                                                      |
-| 🎯 **Forced Alignment**              | High-precision timeline alignment based on CTC technology, supporting millisecond-level accuracy                                   |
-| 🗣️ **Speaker Recognition**           | Automatically infers and labels multiple speakers, with custom color editing and merge support                                     |
-| 🧠 **Smart Concurrency**             | Dynamically adjusts concurrency based on models; ~8-10 mins to process a 30 min video                                              |
-| 🚀 **Full Auto Mode**                | Input a video link to automatically complete download, transcription, translation, and encoding                                    |
-| 📺 **WYSIWYG Preview**               | Real-time subtitle rendering using `assjs` for accurate style representation (font, color, etc.)                                   |
-| 🔄 **Batch Regenerate**              | One-click full pipeline re-run (transcription → refinement → alignment → translation) on selected segments                         |
-| 🎬 **Video Download**                | Supports YouTube / Bilibili video download (Desktop version)                                                                       |
-| ✂️ **Video Encoding**                | Built-in FFmpeg with hardware acceleration (NVENC/QSV/AMF), supporting H.264/H.265 encoding and subtitle burning (Desktop version) |
-| 📦 **Other Features**                | Bilingual SRT/ASS export, version snapshots, custom API endpoints, cache management, log viewer                                    |
+---
+
+**Demo Videos (One-shot generation, no manual editing):**
+
+<!-- TODO: Replace Bilibili links with YouTube links -->
+
+| Type                 | Link                                                         | Details                                        |
+| -------------------- | ------------------------------------------------------------ | ---------------------------------------------- |
+| 🎙️ Voice Actor Radio | [BV1XBrsBZE92](https://www.bilibili.com/video/BV1XBrsBZE92/) | Japanese, 30 min, speaker labels (v2.13.0)     |
+| 🚃 Railway Vlog      | [BV1k1mgBJEEY](https://www.bilibili.com/video/BV1k1mgBJEEY/) | Japanese, 29 min, railway terminology (v2.8.3) |
+
+**Live Demo (Web version, core features only):**
+
+- 🌐 [Try Online](https://gemini-subtitle-pro-261157428277.asia-east1.run.app/)
+
+**Interface Preview:**
+
+<div align="center">
+  <img src="../resources/editor_en.png" alt="Gemini Subtitle Pro Interface" width="800">
+</div>
 
 ---
 
@@ -32,368 +67,237 @@ Open-source subtitle tools on the market each have their focuses, but often have
 We provide auto-built installation packages so you can use it directly without configuring a development environment.
 
 1.  Visit the project's [Releases](https://github.com/corvo007/gemini-subtitle-pro/releases) page.
-2.  Download the latest version:
-    - **Portable**: `Gemini-Subtitle-Pro-x.x.x-win-x64.zip`
+2.  Download the latest version: `Gemini-Subtitle-Pro-x.x.x-win-x64.zip`
 3.  Unzip to any location and double-click `Gemini Subtitle Pro.exe` to launch the program.
 4.  Open settings, verify your Gemini and OpenAI API KEYs, and configure other options.
 
     **⚠️ Notes:**
     1.  If you need to use a local Whisper model, please refer to the next section for configuration.
-    2.  You need to ensure your API KEY can access **Gemini 3 Flash**, **Gemini 3 Pro** and **Gemini 2.5 Flash** models. Using API proxy services/sites is recommended (Personal recommendation: [YunWu API](https://yunwu.ai/register?aff=wmHr)).
+    2.  You need to ensure your API KEY can access **Gemini 3 Flash**, **Gemini 3 Pro** and **Gemini 2.5 Flash** models. Using API proxy services/sites is recommended.
     3.  To ensure translation quality, custom models are currently not supported.
 
 5.  Enjoy!
 
 ---
 
-## 📖 Feature Details
+## 🧠 Technical Details
 
-### 🎧 Extract Terms from Audio
+Dive deeper into how each core technology works:
 
-**Problem Solved**: Manually maintaining glossaries is a heavy workload and easy to miss terms.
+<details>
+<summary><strong>🎧 Auto Glossary Extraction</strong></summary>
 
-**Technical Solution**:
+- Intelligently extracts proper nouns from audio (names, places, titles, etc.)
+- Verifies standard translations via Google Search
+- Generates glossary for consistent translation throughout
 
-- Directly analyzes audio content to extract proper nouns
-- Uses Google Search API to verify standard term translations
-- Automatically applies to the translation workflow
-- Especially suitable for raw content with no subtitles
+</details>
 
-**Implementation Details**: Based on Gemini 3 Pro multimodal capabilities, combined with Search Grounding features.
+<details>
+<summary><strong>⚡ Long Context Translation</strong></summary>
 
----
+- Splits by semantics into 5-10 minute segments
+- Retains full context for accurate translation
+- Supports scene presets (anime, movie, news, tech) for style optimization
 
-### ⚡ Long Context Translation
+</details>
 
-**Problem Solved**: Line-by-line or small batch translation loses context information.
+<details>
+<summary><strong>💎 Post-Transcription Processing</strong></summary>
 
-**Technical Solution**:
+- **Smart Splitting**: Automatically segments subtitles by semantics and pauses
+- **Timeline Correction**: Fixes Whisper output time drift
+- **Term Replacement**: Applies glossary for consistent terminology
 
-- Uses VAD (Voice Activity Detection) to split semantically into 5-10 minute segments
-- Provides both audio and full text to the AI model simultaneously
-- Processes multiple segments in parallel to improve efficiency
+</details>
 
----
+<details>
+<summary><strong>🎯 Forced Alignment</strong></summary>
 
-### � WYSIWYG Video Preview
+- CTC-based high-precision timeline alignment
+- Millisecond-level character alignment
+- Optional, requires additional alignment model configuration
 
-**Problem Solved**: Standard video players cannot render complex subtitle styles (ASS), and constant rendering is slow.
+</details>
 
-**Technical Features**:
+<details>
+<summary><strong>🗣️ Speaker Recognition</strong></summary>
 
-- **Real-time Rendering**: Built-in `assjs` engine for accurate rendering of fonts, colors, and positions.
-- **Smart Caching**: Efficiently caches transcoded previews to ensure smooth seeking and playback.
-- **Cache Management**: Dedicated UI to monitor and clean up preview caches, keeping your disk lean.
-- **Source Toggle**: One-click toggle between source text and translation for quick proofreading.
+- Automatically infers and labels multiple speakers
+- Custom speaker names and colors
+- Merge adjacent same-speaker subtitles
 
----
+</details>
 
-### �💎 Post-Transcription Processing
+<details>
+<summary><strong>✨ Refinement & Regeneration</strong></summary>
 
-**Problem Solved**: Whisper raw output has issues like overly long sentences and timeline drift.
+- **Batch Regenerate**: One-click full pipeline re-run (transcription → refinement → alignment → translation)
+- **Proofread Translation**: Optimize translation quality while maintaining context
+- Auto-saves version snapshot before operations, rollback anytime
 
-**Processing Flow**:
+</details>
 
-1.  Corrects recognition errors based on the glossary
-2.  Intelligently splits long sentences (≤22 characters per line)
-3.  Secondary validation of timeline alignment
-4.  Uses Gemini 3 Flash for translation and polishing
+<details>
+<summary><strong>🚀 Full Auto Mode</strong></summary>
 
----
+Just paste a video link (YouTube/Bilibili), the entire process runs automatically:
 
-### 🎯 Forced Alignment
+1. **Auto Download**: yt-dlp fetches best quality video
+2. **Audio Extraction**: Extract audio and VAD segmentation
+3. **Smart Transcription**: Whisper speech-to-text
+4. **AI Translation**: Gemini context-aware translation and proofreading
+5. **Auto Encoding**: FFmpeg burns bilingual subtitles (GPU accelerated)
+6. **Final Output**: Ready-to-share MP4 with hardcoded subtitles
 
-**Problem Solved**: Standard transcription models (like Whisper) often provide timestamp precision at the segment level, which may not be accurate enough for professional subtitle alignment, leading to slight drifts.
+</details>
 
-**Technical Features**:
+<details>
+<summary><strong>🧠 Smart Concurrency</strong></summary>
 
-- Uses CTC (Connectionist Temporal Classification) based forced alignment.
-- Aligns text to audio at the character level.
-- Significantly improves timeline accuracy, ensuring subtitles appear exactly when spoken.
+Dynamically adjusts concurrency based on model to maximize speed while avoiding rate limits:
 
----
+- Gemini Flash: Concurrency 5 (Speed priority)
+- Gemini Pro: Concurrency 2 (Avoid limits)
 
-### 🗣️ Speaker Recognition
+**Result**: 30 min video processed in ~8-10 minutes
 
-**Problem Solved**: Sometimes unable to distinguish who is speaking when listening to radio programs.
+</details>
 
-**Function Description**: Automatically infers speaker identity, name, etc., based on context, automatically labeling different speakers (Hina Yomiya, Rin Tateishi, Hina Aoki, Mika Kohinata, Coco Hayashi, ...).
+<details>
+<summary><strong>📺 Video Preview</strong></summary>
 
-**New in v2.13**: Speaker Manager now supports custom color editing and speaker merging for better organization.
+- **Real-time Rendering**: Built-in assjs engine for accurate font, color, position rendering
+- **Smart Caching**: Efficient transcode preview caching for smooth playback
+- **Source/Translation Toggle**: One-click switch for quick proofreading
+- **Floating Player**: Picture-in-picture mode, draggable and resizable
 
-**Applicable Scenarios**:
-
-- Multi-person dialogue scenarios (interviews, radio)
-- Multi-role content (anime, movies)
-
----
-
-### 🧠 Smart Concurrency Control
-
-**Problem Solved**: Few similar open-source tools support concurrent processing, leading to long wait times when processing long videos or audio.
-
-**Technical Features**: Dynamically adjusts concurrency count based on different models
-
-- Gemini 3 Flash: Concurrency 5 (Speed priority)
-- Gemini 3 Pro: Concurrency 2 (Avoid limits)
-
-**Effect**: A 30-minute video is processed in about 8-10 minutes.
-
----
-
-### 🔄 Batch Regenerate (New in v2.13)
-
-**Problem Solved**: Previously, fixing problematic segments required manually re-running the entire pipeline or using limited "Fix Timestamps" functionality.
-
-**Function Description**: Select any subtitle segments and trigger a complete pipeline re-run with optional user hints:
-
-1. **Re-transcription**: Fresh Whisper transcription of the audio segment
-2. **Refinement**: Apply glossary terms and sentence splitting
-3. **Alignment**: CTC forced alignment for precise timestamps
-4. **Translation**: Context-aware translation with your glossary
-
-**Use Cases**:
-
-- Fix segments with transcription errors
-- Improve translations with additional context hints
-- Re-process segments after updating glossary terms
+</details>
 
 ---
 
-### 🎬 Video Download Support (Desktop Only)
+## 🎙️ Local Whisper Configuration
 
-Supports downloading videos from YouTube and Bilibili, with built-in yt-dlp engine.
+This project supports integrating [whisper.cpp](https://github.com/ggerganov/whisper.cpp) for completely offline speech transcription.
 
-#### ✅ Supported Link Formats
+- **Built-in**: Installation package includes CPU version Whisper (`whisper-cli.exe`)
+- **Model Required**: Download model files (`.bin`) separately
+- **GPU Acceleration**: Manually replace with GPU version for faster speed
 
-| Platform     | Type           | Example                        |
-| :----------- | :------------- | :----------------------------- |
-| **YouTube**  | Standard Video | `youtube.com/watch?v=xxx`      |
-|              | Short Link     | `youtu.be/xxx`                 |
-|              | Shorts         | `youtube.com/shorts/xxx`       |
-|              | Embedded       | `youtube.com/embed/xxx`        |
-| **Bilibili** | BV/av ID       | `bilibili.com/video/BVxxx`     |
-|              | Multi-P Video  | `bilibili.com/video/BVxxx?p=2` |
-|              | B23 Short Link | `b23.tv/xxx`                   |
+<details>
+<summary><strong>⚡ Quick Start</strong></summary>
 
-#### ❌ Not Currently Supported
+1. **Download Model**: Visit [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp/tree/main) to download GGML format model
+2. **Enable Feature**: Settings > Services > Speech Recognition, select "Local Whisper"
+3. **Load Model**: Click "Browse" and select the downloaded `.bin` model file
+4. **Start Using**: Ready after model path is configured
 
-| Platform | Type                     | Reason                        |
-| :------- | :----------------------- | :---------------------------- |
-| YouTube  | Playlists/Channels       | Please use single video links |
-| Bilibili | Anime/Movies             | Copyright restrictions        |
-|          | Paid Courses             | Requires purchase             |
-|          | Live Streaming           | Real-time stream              |
-|          | Premium/Charging Videos  | Requires login cookies        |
-|          | Favorites/Personal Space | Please use single video links |
+</details>
 
----
+<details>
+<summary><strong>📦 Model Download Guide</strong></summary>
 
-### 🚀 Full Auto End-to-End Mode (Full Auto)
+#### Recommended Models
 
-**Problem Solved**: Not only wanting subtitles, but wanting to directly get a "cooked" video with subtitles, without manually operating complex download, transcription, and encoding steps.
+Download **Standard Version** models, filename format: `ggml-[model].bin`
 
-**Function Description**:
-Just input a video link (YouTube/Bilibili), and Gemini Subtitle Pro will automatically handle all subsequent steps:
+| Model        | Filename            | Size   | Memory  | Speed     | Use Case         |
+| :----------- | :------------------ | :----- | :------ | :-------- | :--------------- |
+| **Tiny**     | `ggml-tiny.bin`     | 75 MB  | ~390 MB | Very Fast | Quick Testing    |
+| **Base**     | `ggml-base.bin`     | 142 MB | ~500 MB | Fast      | Daily Use ⭐     |
+| **Small**    | `ggml-small.bin`    | 466 MB | ~1 GB   | Medium    | Podcast/Video ⭐ |
+| **Medium**   | `ggml-medium.bin`   | 1.5 GB | ~2.6 GB | Slow      | Complex Audio    |
+| **Large-v3** | `ggml-large-v3.bin` | 2.9 GB | ~4.7 GB | Slowest   | Professional     |
 
-1.  **Auto Download**: Calls yt-dlp to download the best quality video.
-2.  **Audio Extraction**: Automatically extracts audio and performs VAD segmentation.
-3.  **Smart Transcription**: Uses Whisper for speech transcription.
-4.  **AI Translation/Polishing**: Gemini models perform context-aware translation and proofreading.
-5.  **Auto Encoding**: Uses FFmpeg to burn generated bilingual subtitles into the video (supports GPU acceleration).
-6.  **Final Output**: Directly generates an MP4 video file with hard subtitles.
+#### Filename Suffix Guide
 
----
+- **`.en`**: English-only model, doesn't support other languages
+- **`q5_0`, `q8_0`**: Quantized versions, smaller size, slightly reduced precision
 
-### ✂️ Video Encoding Export (Desktop Only)
+</details>
 
-Built-in FFmpeg engine, supporting high-performance video encoding and subtitle burning. Includes **intelligent hardware acceleration detection**, automatically prioritizing GPU (NVENC/QSV/AMF) for encoding.
+<details>
+<summary><strong>🛠️ GPU Acceleration (NVIDIA)</strong></summary>
 
-#### Functional Features
+For 5-10x performance improvement with NVIDIA GPUs:
 
-| Feature                | Description                                                        |
-| :--------------------- | :----------------------------------------------------------------- |
-| **Encoder**            | H.264 (AVC) / H.265 (HEVC) with hardware acceleration              |
-| **Hardware Accel**     | Auto-detects NVIDIA NVENC, Intel QSV, AMD AMF                      |
-| **Quality Control**    | CRF mode (0-51, smaller value means higher quality)                |
-| **Resolution**         | Original / 1080P / 720P / 480P / Custom                            |
-| **Subtitle Embedding** | Supports local ASS/SRT files or direct use of workspace subtitles  |
-| **One-Click Encoding** | Directly jump to encoding page after subtitle generation completes |
+1. **Download**: Get GPU version from [whisper.cpp Releases](https://github.com/ggerganov/whisper.cpp/releases) (`whisper-cublas-bin-x64.zip`)
+2. **Extract**: Unzip to get `whisper-cli.exe` and `.dll` files
+3. **Place Files**: Put all files in the app's `resources` folder or same directory as the app
+4. **Verify**: Restart app and test - significant speed improvement indicates success
 
-#### Workflow
-
-1.  Complete subtitle generation/editing in the Subtitle Workbench
-2.  Click the **"Encode Video"** button in the sidebar
-3.  Automatically imports video and subtitles, adjust parameters and start encoding
-4.  One-click open output directory after encoding completes
-
----
-
-## 🎙️ Local Whisper Configuration (Desktop Only)
-
-This project supports integrating [whisper.cpp](https://github.com/ggerganov/whisper.cpp) to achieve completely offline speech transcription.
-
-- **Default Support**: Our installation package **has built-in CPU version** Whisper core component (`whisper-cli.exe`).
-- **Manual Download Required**: You need to **download** model files (`.bin`) **yourself** to use it.
-- **GPU Acceleration**: If you need faster speed, you can manually replace it with GPU version components.
-
-### ⚡ Quick Start
-
-1.  **Download Model**:
-    - Visit [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp/tree/main) to download GGML format model files (refer to the model download guide below for model selection).
-    - You can save the model file in **any location** on your computer.
-2.  **Enable Function**:
-    - Open the application, go to **Settings** > **General**, select **"Use Local Whisper"**.
-3.  **Load Model**:
-    - Click the **"Browse"** button.
-    - Find and select the `.bin` model file you downloaded in the file browser window.
-4.  **Start Using**:
-    - You can start using it after the model path setting is completed.
-
-### 📦 Model Download Guide
-
-In the Hugging Face file list, you will see a large number of files with different suffixes. Please refer to the following guide for selection:
-
-#### 1. Recommended Download (Safest)
-
-Please download the **Standard Version** model, filename format is `ggml-[model].bin`.
-
-- **Base**: `ggml-base.bin` (Balanced Recommendation)
-- **Small**: `ggml-small.bin` (Better Accuracy)
-- **Medium**: `ggml-medium.bin` (High Quality, Requires More Memory)
-
-#### 2. Filename Suffix Explanation
-
-- **`.en` (e.g. `ggml-base.en.bin`)**: **English Only** model. If you only transcribe English videos, it is more accurate than multilingual models of the same level; but **does not support** Chinese or other languages.
-- **`q5_0`, `q8_0` (e.g. `ggml-base-q5_0.bin`)**: **Quantized Version** model. Smaller size, faster speed, but slightly reduced precision.
-  - `q8_0`: Almost lossless, recommended.
-  - `q5_0`: Small loss of precision, significantly reduced size.
-- **`.mlmodelc.zip`**: ❌ **Do not download**. This is a macOS CoreML dedicated format, Windows cannot use it.
-
-#### 3. Performance Comparison Reference
-
-| Model        | Recommended Filename | Size   | Memory  | Speed     | Applicable Scenarios             |
-| :----------- | :------------------- | :----- | :------ | :-------- | :------------------------------- |
-| **Tiny**     | `ggml-tiny.bin`      | 75 MB  | ~390 MB | Very Fast | Quick Testing                    |
-| **Base**     | `ggml-base.bin`      | 142 MB | ~500 MB | Fast      | Daily Conversation (Recommended) |
-| **Small**    | `ggml-small.bin`     | 466 MB | ~1 GB   | Medium    | Podcast/Video (Recommended)      |
-| **Medium**   | `ggml-medium.bin`    | 1.5 GB | ~2.6 GB | Slow      | Complex Audio                    |
-| **Large-v3** | `ggml-large-v3.bin`  | 2.9 GB | ~4.7 GB | Slowest   | Professional Needs               |
-
-### 🛠️ Advanced: GPU Acceleration (NVIDIA Graphics Card)
-
-If you have an NVIDIA graphics card, it is strongly recommended to enable GPU acceleration to get 5-10 times performance improvement.
-
-**Prerequisites**:
-
-- Installed latest version **NVIDIA Graphics Driver**.
-
-**Installation Steps**:
-
-1.  **Download Components**:
-    - Visit [whisper.cpp Releases](https://github.com/ggerganov/whisper.cpp/releases).
-    - Find the latest Windows GPU version, filename is usually `whisper-cublas-bin-x64.zip`.
-2.  **Unzip Files**:
-    - Unzip the downloaded compressed package. You will see `whisper-cli.exe` and multiple `.dll` files (e.g. `cublas64_12.dll`, `cudart64_12.dll`, etc.).
-3.  **Place Files**:
-    - Please create a folder named `resources` in the same directory as the `.exe` file, and put all unzipped files into it; or directly put the files in the same directory as the `.exe`.
-    - Note: Must ensure `whisper-cli.exe` exists, and `.dll` dynamic library files are in the same folder as `whisper-cli.exe`.
-4.  **Verification**:
-    - Restart the application. Attempt transcription, if speed improves significantly, it means GPU acceleration is effective.
-
-### ❓ FAQ
-
-- **Cannot find option?**: Please confirm you are using the **Desktop Version**, the web version does not support this feature.
-- **Status Error?**: Check if `.bin` model file is selected correctly.
-- **Slow Speed?**: Speed under CPU mode depends on processor performance, recommend using `Base` or `Small` models. For extreme speed please configure GPU acceleration.
+</details>
 
 ---
 
 ## 🎯 Forced Alignment Configuration
 
-Use the forced alignment model to obtain higher precision character-level timestamps, especially suitable for scenarios with high requirements for timeline accuracy.
+Use forced alignment for higher precision character-level timestamps.
 
-1.  **Prepare Tools**:
-    - On the Releases page, you need to **separately download** the aligner component (e.g., `aligner-windows-x64.zip`).
-    - Unzip the archive to get `align.exe`.
+<details>
+<summary><strong>📋 Setup Steps</strong></summary>
 
-2.  **Download Model**:
-    - Visit Hugging Face to download [mms-300m-1130-forced-aligner](https://huggingface.co/MahmoudAshraf/mms-300m-1130-forced-aligner).
-    - Download and unzip the model to any location on your local machine.
+1. **Prepare Tools**: Download `aligner-windows-x64.zip` from Releases, extract to get `align.exe`
+2. **Download Model**: Get [mms-300m-1130-forced-aligner](https://huggingface.co/MahmoudAshraf/mms-300m-1130-forced-aligner) from Hugging Face (also available in Releases)
+3. **Configure**:
+   - Settings > Enhancement > Timestamp Alignment > Alignment Mode: Select "CTC"
+   - Settings > Enhancement > Timestamp Alignment > Aligner Executable: Select `align.exe`
+   - Settings > Enhancement > Timestamp Alignment > Model Directory: Select model folder
+4. **Enable**: Toggle on to start using
 
-3.  **Configure Application**:
-    - Open the application **Settings**.
-    - In the **"Alignment"** settings:
-      - **Executable Path**: Select the unzipped `align.exe` file.
-      - **Model Path**: Select the model folder you downloaded and unzipped.
-    - Enable the feature to start using it.
+</details>
 
 ---
 
 ## ☁️ Deploy Web Version
 
-You can deploy this application to various Serverless platforms, but using local Whisper is not supported.
+You can deploy this application to various Serverless platforms (local Whisper not supported).
 
-> **Note:** Serverless configuration files (`netlify.toml`, `render.yaml`, `vercel.json`, `wrangler.toml`) are located in the `deploy/` directory.
+> **Note:** Config files (`netlify.toml`, `vercel.json`, `wrangler.toml`) are in the `deploy/` directory.
 
-### Vercel
-
-The simplest way to deploy is using Vercel.
+<details>
+<summary><strong>Vercel (Recommended)</strong></summary>
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcorvo007%2Fgemini-subtitle-pro&env=GEMINI_API_KEY,OPENAI_API_KEY)
 
-1.  Click the button above.
-2.  Connect your GitHub repository.
-3.  Vercel will automatically detect Vite configuration.
-4.  **Important:** Add `GEMINI_API_KEY` and `OPENAI_API_KEY` in the Environment Variables section.
+1. Click the button above
+2. Connect your GitHub repository
+3. Add `GEMINI_API_KEY` and `OPENAI_API_KEY` in Environment Variables
 
-### Google Cloud Run
+</details>
 
-Deploy as a containerized application on Google Cloud Run.
+<details>
+<summary><strong>Google Cloud Run</strong></summary>
 
 [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
 
-1.  Click the button above.
-2.  Select your project and repository.
-3.  **Manual Step:** Since the `Dockerfile` is moved to `deploy/Dockerfile`, you may need to specify the Dockerfile path in your build settings or use:
-    `gcloud builds submit --config cloudbuild.yaml .` (if using Cloud Build) or ensure the build tool points to `deploy/Dockerfile`.
-4.  In **Variables & Secrets** step, add your `GEMINI_API_KEY` and `OPENAI_API_KEY`.
+1. Click the button above
+2. Select your project and repository
+3. Specify Dockerfile path: `deploy/Dockerfile`
+4. Add your API keys in Variables & Secrets
 
-### Cloudflare Pages
+</details>
 
-1.  Push code to GitHub repository.
-2.  Log in to Cloudflare Dashboard and go to **Pages**.
-3.  Select **Connect to Git** and choose your repository.
-4.  **Build Settings:**
-    - **Framework Preset:** Vite
-    - **Build Command:** `npm run build`
-    - **Build Output Directory:** `dist`
-5.  **Environment Variables:**
-    - Add `GEMINI_API_KEY` and `OPENAI_API_KEY`.
-
-### Netlify
-
-Deploy to Netlify using the configured `deploy/netlify.toml`.
+<details>
+<summary><strong>Netlify</strong></summary>
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/corvo007/gemini-subtitle-pro)
 
-1.  Click the button above.
-2.  Connect your GitHub repository.
-3.  Netlify will detect settings from `deploy/netlify.toml`. The `base = ".."` setting ensures it builds from the repository root.
-4.  Go to **Site settings > Build & deploy > Environment** and add your API keys.
+1. Click the button above
+2. Connect your GitHub repository
+3. Add API keys in Site settings > Build & deploy > Environment
 
-### Cloudflare Pages
+</details>
 
-1.  Push code to GitHub repository.
-2.  Log in to Cloudflare Dashboard and go to **Pages**.
-3.  Select **Connect to Git** and choose your repository.
-4.  **Build Settings:**
-    - **Framework Preset:** Vite
-    - **Build Command:** `npm run build`
-    - **Build Output Directory:** `dist`
-5.  **Environment Variables:**
-    - Add `GEMINI_API_KEY` and `OPENAI_API_KEY`.
-6.  **Advanced:** If deploying via Wrangler CLI, use `wrangler pages deploy --config deploy/wrangler.toml`.
+<details>
+<summary><strong>Cloudflare Pages</strong></summary>
+
+1. Push code to GitHub
+2. Go to Cloudflare Dashboard > Pages > Connect to Git
+3. Build Settings: Framework `Vite`, Command `npm run build`, Output `dist`
+4. Add `GEMINI_API_KEY` and `OPENAI_API_KEY` in Environment Variables
+
+</details>
 
 ---
 

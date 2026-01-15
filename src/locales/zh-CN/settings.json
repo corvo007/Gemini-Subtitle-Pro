@@ -159,8 +159,8 @@
       "selectError": "选择失败: {{error}}",
       "selectErrorGeneric": "选择失败",
       "instructions": "设置说明：",
-      "instructionAligner": "从项目发布页面下载 align.exe",
-      "instructionModel": "下载 MMS 模型 (~1.2GB) 并解压到文件夹"
+      "instructionAligner": "从<a href=\"https://github.com/corvo007/Gemini-Subtitle-Pro/releases\" target=\"_blank\" class=\"text-indigo-400 hover:text-indigo-300 underline\">项目发布页面</a>下载 align.exe",
+      "instructionModel": "下载 <a href=\"https://huggingface.co/MahmoudAshraf/mms-300m-1130-forced-aligner\" target=\"_blank\" class=\"text-indigo-400 hover:text-indigo-300 underline\">MMS 模型</a>（~1.2GB）并解压到文件夹（<a href=\"https://github.com/corvo007/Gemini-Subtitle-Pro/releases\" target=\"_blank\" class=\"text-indigo-400 hover:text-indigo-300 underline\">Releases</a> 也有提供）"
     }
   },
   "debug": {

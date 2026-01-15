@@ -141,8 +141,8 @@ export const AlignmentSettings: React.FC<AlignmentSettingsProps> = ({
           <div className="text-xs text-slate-400 bg-slate-900/50 p-2 rounded border border-slate-700/50">
             <p className="font-medium mb-1 text-slate-300">{t('enhance.alignment.instructions')}</p>
             <ul className="list-disc list-inside space-y-1">
-              <li>{t('enhance.alignment.instructionAligner')}</li>
-              <li>{t('enhance.alignment.instructionModel')}</li>
+              <li dangerouslySetInnerHTML={{ __html: t('enhance.alignment.instructionAligner') }} />
+              <li dangerouslySetInnerHTML={{ __html: t('enhance.alignment.instructionModel') }} />
             </ul>
           </div>
         </div>

@@ -1,56 +1,208 @@
-# Gemini Subtitle Pro
+<div align="center">
+  <img src="./resources/icon.png" alt="Gemini Subtitle Pro" width="120" height="120">
+  <h1>Gemini Subtitle Pro</h1>
+  <p><strong>✨ 专业级字幕，零人工校对</strong></p>
+  <p>术语自动提取 · 说话人识别 · 毫秒对齐 · 一键完成</p>
 
-[English Documentation](./docs/README_en.md)
+  <!-- Badges -->
+  <p>
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/actions"><img src="https://img.shields.io/github/actions/workflow/status/corvo007/Gemini-Subtitle-Pro/release.yml?style=for-the-badge&logo=github&label=Build" alt="Build Status"></a>
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/stargazers"><img src="https://img.shields.io/github/stars/corvo007/Gemini-Subtitle-Pro?style=for-the-badge&logo=github&color=yellow" alt="GitHub Stars"></a>
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases"><img src="https://img.shields.io/github/v/release/corvo007/Gemini-Subtitle-Pro?style=for-the-badge&logo=github&color=blue" alt="GitHub Release"></a>
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases"><img src="https://img.shields.io/github/downloads/corvo007/Gemini-Subtitle-Pro/total?style=for-the-badge&logo=github&color=orange" alt="Downloads"></a>
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/Electron-Desktop-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron">
+    <img src="https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/blob/main/LICENSE"><img src="https://img.shields.io/github/license/corvo007/Gemini-Subtitle-Pro?style=flat-square&color=green" alt="License"></a>
+  </p>
 
-**Gemini Subtitle Pro** 是一款基于 AI 的字幕创建、翻译和润色工具。它利用 Google 的 Gemini 模型进行高质量的翻译和润色，并使用 OpenAI 的 Whisper 进行精准的语音转写。
+  <p>
+    <a href="./docs/ARCHITECTURE_zh.md">📖 架构文档</a> •
+    <a href="https://gemini-subtitle-pro-261157428277.asia-east1.run.app/">🚀 在线体验</a> •
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases">📥 下载</a> •
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/issues">🐛 反馈问题</a> •
+    <a href="./docs/README_en.md">🌐 English</a>
+  </p>
+</div>
 
-## 🔥 核心特色
+---
 
-**设计目标**：减少甚至无需人工干预，提升字幕生成质量和效率。
+<!-- 目录 -->
+<details>
+<summary><strong>📑 目录</strong></summary>
 
-**翻译成片（一次生成，无人工核对、修改）：**  
-声优电台（日语，30分钟长，含说话人标注，使用版本v2.13.0）：  
-[https://www.bilibili.com/video/BV1XBrsBZE92/](https://www.bilibili.com/video/BV1XBrsBZE92/)  
-铁道vlog（日语，29分钟长，大量地名和铁路专有术语，使用版本v2.8.3）：  
-[https://www.bilibili.com/video/BV1k1mgBJEEY/](https://www.bilibili.com/video/BV1k1mgBJEEY/)
+- [✨ 核心特性](#-核心特性)
+- [🎬 效果展示](#-效果展示)
+- [📥 快速开始](#-快速开始)
+- [🎙️ 本地 Whisper 配置](#-本地-whisper-配置)
+- [🎯 时间轴强制对齐配置](#-时间轴强制对齐配置)
+- [🎬 视频下载支持](#-视频下载支持)
+- [🚀 本地开发](#-本地开发)
+- [🤝 贡献](#-贡献)
+- [📜 许可证](#-许可证)
+- [🙏 致谢](#-致谢)
+- [⭐ Star History](#-star-history)
 
-**快速体验demo（网页版，仅包含核心功能）：**  
-[https://gemini-subtitle-pro.vercel.app/](https://gemini-subtitle-pro.vercel.app/)  
-[https://gemini-subtitle-pro-261157428277.asia-east1.run.app/](https://gemini-subtitle-pro-261157428277.asia-east1.run.app/)（国内可访问）
+</details>
 
-| 功能                  | 说明                                                             |
-| --------------------- | ---------------------------------------------------------------- |
-| 🎧 **术语自动提取**   | 从音频中智能提取专有名词，配合 Google Search 验证标准译法        |
-| ⚡ **长上下文翻译**   | 按语义切分为 5-10 分钟片段，保留完整上下文进行翻译               |
-| 💎 **转录后处理**     | 智能断句、时间轴校正、术语替换一气呵成                           |
-| 🎯 **强制对齐**       | 基于 CTC 技术的高精度时间轴对齐，支持毫秒级字符对齐              |
-| 🗣️ **说话人识别**     | 自动推测并标注多说话人身份，支持自定义颜色和合并                 |
-| 🧠 **智能并发**       | 根据模型动态调整并发数，30 分钟视频约 8-10 分钟处理完成          |
-| 🚀 **全自动模式**     | 输入视频链接，自动完成下载、转写、翻译、压制全流程               |
-| 📺 **所见即所得预览** | 使用 `assjs` 实现实时字幕渲染，精确展示字体、颜色、位置等样式    |
-| 🔄 **批量重新生成**   | 选中片段一键重跑完整流程（转录→润色→对齐→翻译）                  |
-| 🎬 **视频下载**       | 支持 YouTube / Bilibili 视频下载（桌面版）                       |
-| ✂️ **视频压制**       | 内置 FFmpeg，支持 H.264/H.265 硬件加速编码与字幕压制（桌面版）   |
-| 📦 **其他功能**       | 双语 SRT/ASS 导出、版本快照、自定义 API 端点、缓存管理、日志查看 |
+---
+
+## ✨ 核心特性
+
+|      类别       | 亮点                                        |
+| :-------------: | ------------------------------------------- |
+|   ⚡ **高效**   | **30 分钟视频 → 8 分钟出片**，智能并发处理  |
+|   🎯 **精准**   | 术语提取 · 毫秒对齐 · 说话人识别，三重保障  |
+|  🌍 **多语言**  | 中/英/日 UI，自动检测源语言，翻译到任意语言 |
+|  🚀 **全自动**  | 粘贴链接 → 自动出成品，全程无人值守         |
+|  🖥️ **编辑器**  | 所见即所得、悬浮播放、搜索筛选、批量操作    |
+| 📦 **导入导出** | SRT/ASS 导入编辑，双语字幕导出，视频压制    |
+
+---
+
+## 🧠 技术细节
+
+深入了解各项核心技术的实现方式：
+
+<details>
+<summary><strong>🎧 术语自动提取</strong></summary>
+
+- 从音频中智能提取专有名词（人名、地名、作品名等）
+- 配合 Google Search 验证标准译法
+- 生成术语表供后续翻译参考，确保译名一致
+
+</details>
+
+<details>
+<summary><strong>⚡ 长上下文翻译</strong></summary>
+
+- 按语义切分为 5-10 分钟片段
+- 保留完整上下文进行翻译，避免断章取义
+- 支持场景预设（动漫、电影、新闻、科技），自动优化翻译风格
+
+</details>
+
+<details>
+<summary><strong>💎 转录后处理</strong></summary>
+
+- 智能断句：根据语义和停顿自动分割字幕
+- 时间轴校正：修复 Whisper 输出的时间偏差
+- 术语替换：自动应用术语表，统一译名
+
+</details>
+
+<details>
+<summary><strong>🎯 强制对齐</strong></summary>
+
+- 基于 CTC 技术的高精度时间轴对齐
+- 支持毫秒级字符对齐
+- 需额外配置对齐模型（可选）
+
+</details>
+
+<details>
+<summary><strong>🗣️ 说话人识别</strong></summary>
+
+- 自动推测并标注多说话人身份
+- 支持自定义说话人名称和颜色
+- 支持合并相邻同说话人字幕
+
+</details>
+
+<details>
+<summary><strong>✨ 润色与重新生成</strong></summary>
+
+- **批量重新生成**：选中片段一键重跑完整流程（转录→润色→对齐→翻译）
+- **润色翻译**：对选中片段进行翻译质量优化，保持上下文连贯
+- 操作前自动保存版本快照，可随时回滚
+
+</details>
+
+<details>
+<summary><strong>🚀 全自动模式</strong></summary>
+
+只需粘贴视频链接（YouTube/Bilibili），自动完成全部流程：
+
+1. **自动下载**：调用 yt-dlp 下载最佳画质视频
+2. **音频提取**：自动提取音频并进行 VAD 分段
+3. **智能转写**：使用 Whisper 进行语音转录
+4. **AI 翻译润色**：Gemini 进行上下文感知的翻译和校对
+5. **自动压制**：FFmpeg 将双语字幕烧录到视频（支持 GPU 加速）
+6. **输出成品**：直接生成带硬字幕的 MP4 文件
+
+</details>
+
+<details>
+<summary><strong>🧠 智能并发控制</strong></summary>
+
+根据不同模型动态调整并发数，避免限流的同时最大化速度：
+
+- Gemini Flash：并发 5（速度优先）
+- Gemini Pro：并发 2（避免限流）
+
+**效果**：30 分钟视频约 8-10 分钟处理完成
+
+</details>
+
+<details>
+<summary><strong>📺 视频预览优化</strong></summary>
+
+- **实时渲染**：内置 assjs 引擎，精确渲染字体、颜色、位置
+- **智能缓存**：高效缓存转码预览，确保流畅播放
+- **源文/译文切换**：一键切换原文和译文，快速校对
+- **悬浮播放**：支持画中画模式，播放器可拖拽调整
+
+</details>
+
+---
+
+## 🎬 效果展示
+
+**翻译成片（一次生成，无人工核对、修改）：**
+
+| 类型         | 链接                                                         | 说明                                      |
+| ------------ | ------------------------------------------------------------ | ----------------------------------------- |
+| 🎙️ 声优电台  | [BV1XBrsBZE92](https://www.bilibili.com/video/BV1XBrsBZE92/) | 日语，30分钟，含说话人标注 (v2.13.0)      |
+| 🚃 铁道 vlog | [BV1k1mgBJEEY](https://www.bilibili.com/video/BV1k1mgBJEEY/) | 日语，29分钟，大量地名和铁路术语 (v2.8.3) |
+
+**快速体验 Demo（网页版，仅核心功能）：**
+
+- 🌐 [在线体验](https://gemini-subtitle-pro-261157428277.asia-east1.run.app/)
+
+**界面预览（支持实时字幕预览、自动滚动、说话人显示）：**
+
+<div align="center">
+  <img src="./resources/editor.png" alt="Gemini Subtitle Pro 界面截图" width="800">
+</div>
 
 ---
 
 ## 📥 快速开始
 
-我们提供了自动构建的安装包，您无需配置开发环境即可直接使用。
+我们提供了自动构建的安装包，无需配置开发环境即可直接使用。
 
-1.  访问项目的 [Releases](https://github.com/corvo007/gemini-subtitle-pro/releases) 页面。
-2.  下载最新版本：
-    - **便携版**: `Gemini-Subtitle-Pro-x.x.x-win-x64.zip`
-3.  解压到任意位置，双击 `Gemini Subtitle Pro.exe` 启动程序。
-4.  打开设置，填写 Gemini 及 OpenAI API KEY，及配置其他选项。
+### 1️⃣ 下载安装
 
-    **⚠️ 注意事项：**
-    1. 如果需要使用本地 Whisper 模型的话，请参考下一节进行配置。
-    2. 你需要保证你的 API KEY 能请求 **Gemini 3 Flash**, **Gemini 3 Pro** 及 **Gemini 2.5 Flash** 模型。推荐使用公益站/中转站的API KEY（个人推荐：[云雾API](https://yunwu.ai/register?aff=wmHr)）。
-    3. 为了保证翻译质量，目前暂不支持自定义模型。
+1. 访问 [Releases](https://github.com/corvo007/Gemini-Subtitle-Pro/releases) 页面
+2. 下载程序: `Gemini-Subtitle-Pro-x.x.x-win-x64.zip`
+3. 解压到任意位置，双击 `Gemini Subtitle Pro.exe` 启动
 
-5.  Enjoy！
+### 2️⃣ 配置 API Key
+
+打开设置，填写 Gemini 及 OpenAI API Key。
+
+> [!IMPORTANT]
+> **注意事项：**
+>
+> 1. 如需使用本地 Whisper 模型，请参考 [本地 Whisper 配置](#%EF%B8%8F-本地-whisper-配置)
+> 2. 需保证 API Key 能请求 **Gemini 3 Flash**、**Gemini 3 Pro** 及 **Gemini 2.5 Flash** 模型
+> 3. 推荐使用中转站 API（如 [云雾 API](https://yunwu.ai/register?aff=wmHr)）
+> 4. 为保证翻译质量，暂不支持自定义模型
+
+### 3️⃣ 开始使用
+
+Enjoy! 🎉
 
 ---
 
@@ -58,108 +210,90 @@
 
 本项目支持集成 [whisper.cpp](https://github.com/ggerganov/whisper.cpp) 实现完全离线的语音转写。
 
-- **默认支持**: 我们的安装包 **已内置 CPU 版** 的 Whisper 核心组件 (`whisper-cli.exe`)。
-- **需手动下载**: 您需要**自行下载**模型文件 (`.bin`) 才能使用。
-- **GPU 加速**: 如需更快的速度，可手动替换为 GPU 版组件。
+- **默认支持**: 安装包已内置 CPU 版 Whisper 核心组件 (`whisper-cli.exe`)
+- **需手动下载**: 需自行下载模型文件 (`.bin`)
+- **GPU 加速**: 可手动替换为 GPU 版组件获得更快速度
 
-### ⚡ 快速开始
+<details>
+<summary><strong>⚡ 快速开始</strong></summary>
 
-1.  **下载模型**:
-    - 访问 [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp/tree/main) 下载 GGML 格式的模型文件 (可参考下方的模型下载指南进行模型选择)。
-    - 您可以将模型文件保存在电脑的**任意位置**。
-2.  **启用功能**:
-    - 打开应用，进入 **设置** > **常规**，选择 **"使用本地 Whisper"**。
-3.  **加载模型**:
-    - 点击 **"浏览"** 按钮。
-    - 在弹出的文件浏览窗口中，找到并选中您下载的 `.bin` 模型文件。
-4.  **开始使用**:
-    - 模型路径设置完成后即可开始使用。
+1. **下载模型**: 访问 [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp/tree/main) 下载 GGML 格式模型
+2. **启用功能**: 设置 > 服务 > 语音识别 选择「本地 Whisper」
+3. **加载模型**: 点击「浏览」选择下载的 `.bin` 模型文件
+4. **开始使用**: 模型路径设置完成后即可使用
 
-### 📦 模型下载指南
+</details>
 
-在 Hugging Face 的文件列表中，您会看到大量不同后缀的文件。请参考以下指南进行选择：
+<details>
+<summary><strong>📦 模型下载指南</strong></summary>
 
-#### 1. 推荐下载 (最稳妥)
+#### 推荐下载
 
-请下载 **标准版** 模型，文件名格式为 `ggml-[model].bin`。
+请下载 **标准版** 模型，文件名格式为 `ggml-[model].bin`：
 
-- **Base**: `ggml-base.bin` (平衡推荐)
-- **Small**: `ggml-small.bin` (精度更好)
-- **Medium**: `ggml-medium.bin` (高质量，需更多内存)
+| 模型         | 文件名              | 大小   | 内存    | 速度 | 适用场景     |
+| :----------- | :------------------ | :----- | :------ | :--- | :----------- |
+| **Tiny**     | `ggml-tiny.bin`     | 75 MB  | ~390 MB | 极快 | 快速测试     |
+| **Base**     | `ggml-base.bin`     | 142 MB | ~500 MB | 快   | 日常对话 ⭐  |
+| **Small**    | `ggml-small.bin`    | 466 MB | ~1 GB   | 中等 | 播客/视频 ⭐ |
+| **Medium**   | `ggml-medium.bin`   | 1.5 GB | ~2.6 GB | 慢   | 复杂音频     |
+| **Large-v3** | `ggml-large-v3.bin` | 2.9 GB | ~4.7 GB | 最慢 | 专业需求     |
 
-#### 2. 文件名后缀说明
+#### 文件名后缀说明
 
-- **`.en` (如 `ggml-base.en.bin`)**: **仅英语**模型。如果您只转写英文视频，它比同级的多语言模型更准；但**不支持**中文或其他语言。
-- **`q5_0`, `q8_0` (如 `ggml-base-q5_0.bin`)**: **量化版**模型。体积更小、速度更快，但精度略有下降。
-  - `q8_0`: 几乎无损，推荐。
-  - `q5_0`: 损失少量精度，体积显著减小。
-- **`.mlmodelc.zip`**: ❌ **不要下载**。这是 macOS CoreML 专用格式，Windows 无法使用。
+- **`.en`**: 仅英语模型，不支持中文等其他语言
+- **`q5_0`, `q8_0`**: 量化版，体积更小、速度更快，精度略有下降
 
-#### 3. 性能对比参考
+</details>
 
-| 模型         | 推荐文件名          | 大小   | 内存    | 速度 | 适用场景         |
-| :----------- | :------------------ | :----- | :------ | :--- | :--------------- |
-| **Tiny**     | `ggml-tiny.bin`     | 75 MB  | ~390 MB | 极快 | 快速测试         |
-| **Base**     | `ggml-base.bin`     | 142 MB | ~500 MB | 快   | 日常对话 (推荐)  |
-| **Small**    | `ggml-small.bin`    | 466 MB | ~1 GB   | 中等 | 播客/视频 (推荐) |
-| **Medium**   | `ggml-medium.bin`   | 1.5 GB | ~2.6 GB | 慢   | 复杂音频         |
-| **Large-v3** | `ggml-large-v3.bin` | 2.9 GB | ~4.7 GB | 最慢 | 专业需求         |
+<details>
+<summary><strong>🛠️ GPU 加速 (NVIDIA 显卡)</strong></summary>
 
-### 🛠️ 进阶：GPU 加速 (NVIDIA 显卡)
+**前提条件**: 已安装最新版 NVIDIA 显卡驱动
 
-如果您拥有 NVIDIA 显卡，强烈建议启用 GPU 加速以获得 5-10 倍的性能提升。
+1. 访问 [whisper.cpp Releases](https://github.com/ggerganov/whisper.cpp/releases) 下载 `whisper-cublas-bin-x64.zip`
+2. 解压获取 `whisper-cli.exe` 和 `.dll` 文件
+3. 将所有文件放入 `.exe` 同级目录的 `resources` 文件夹（如果没有这个文件夹，可以手动创建一个）
+4. 重启应用，尝试转写验证加速效果
 
-**前提条件**:
+</details>
 
-- 已安装最新版 **NVIDIA 显卡驱动**。
+<details>
+<summary><strong>❓ 常见问题</strong></summary>
 
-**安装步骤**:
+- **找不到选项？** 请确认使用的是**桌面版**，网页版不支持此功能
+- **状态错误？** 检查是否已正确选择 `.bin` 模型文件
+- **速度慢？** CPU 模式下速度取决于处理器性能，建议使用 `Base` 或 `Small` 模型
 
-1.  **下载组件**:
-    - 访问 [whisper.cpp Releases](https://github.com/ggerganov/whisper.cpp/releases)。
-    - 找到最新的 Windows GPU 版本，文件名通常为 `whisper-cublas-bin-x64.zip`。
-2.  **解压文件**:
-    - 解压下载的压缩包。您会看到 `whisper-cli.exe` 和多个 `.dll` 文件 (例如 `cublas64_12.dll`, `cudart64_12.dll` 等)。
-3.  **放置文件**:
-    - 请在 `.exe` 同级目录下创建一个名为 `resources` 的文件夹，并将解压出的所有文件放入其中；或者直接将文件放在 `.exe` 同级目录。
-    - 注意：必须确保`whisper-cli.exe`存在，且 `.dll` 动态库文件与 `whisper-cli.exe` 在同一个文件夹内。
-4.  **验证**:
-    - 重启应用。尝试转写，如果速度显著提升，即表示 GPU 加速生效。
-
-### ❓ 常见问题
-
-- **找不到选项？**: 请确认您使用的是**桌面版**,网页版不支持此功能。
-- **状态错误？**: 检查是否已正确选择了 `.bin` 模型文件。
-- **速度慢？**: CPU 模式下速度取决于处理器性能,建议使用 `Base` 或 `Small` 模型。如需极致速度请配置 GPU 加速。
+</details>
 
 ---
 
 ## 🎯 时间轴强制对齐配置
 
-使用强制对齐模型来获得更高精度的字符级时间戳，特别适合对时间轴精度有高要求的场景。
+使用强制对齐模型来获得更高精度的字符级时间戳，适合对时间轴精度有高要求的场景。
 
-1. **准备工具**:
-   - 在 Releases 页面中，此功能需要**额外下载** aligner 组件（如 `aligner-windows-x64.zip`）。
-   - 解压该压缩包，将会得到 `align.exe`。
+<details>
+<summary><strong>📋 配置步骤</strong></summary>
 
-2. **下载模型**:
-   - 访问 Hugging Face 下载 [mms-300m-1130-forced-aligner](https://huggingface.co/MahmoudAshraf/mms-300m-1130-forced-aligner)（Release也有提供）。
-   - 下载并将模型解压到本地任意位置。
-
+1. **准备工具**: 在 Releases 页面下载 `aligner-windows-x64.zip`，解压得到 `align.exe`
+2. **下载模型**: 访问 Hugging Face 下载 [mms-300m-1130-forced-aligner](https://huggingface.co/MahmoudAshraf/mms-300m-1130-forced-aligner)（Release 也有提供）
 3. **配置应用**:
-   - 打开应用 **设置**。
-   - 在 **"强制对齐"** (Alignment) 设置中：
-     - **执行文件**: 选择解压出来的 `align.exe` 文件。
-     - **模型路径**: 选择您下载并解压的模型文件夹。
-   - 开启功能即可使用。
+   - 设置 > 增强 > 时间轴对齐 > 对齐模式 选择「CTC」
+   - 设置 > 增强 > 时间轴对齐 > 对齐器执行文件: 选择 `align.exe`
+   - 设置 > 增强 > 时间轴对齐 > 模型目录: 选择模型文件夹
+4. **开启功能**: 启用后即可使用
+
+</details>
 
 ---
 
-### 🎬 视频下载支持
+## 🎬 视频下载支持
 
 支持从 YouTube 和 Bilibili 下载视频，内置 yt-dlp 引擎。
 
-#### ✅ 支持的链接格式
+<details>
+<summary><strong>✅ 支持的链接格式</strong></summary>
 
 | 平台         | 类型     | 示例                           |
 | ------------ | -------- | ------------------------------ |
@@ -171,7 +305,10 @@
 |              | 分P视频  | `bilibili.com/video/BVxxx?p=2` |
 |              | B23 短链 | `b23.tv/xxx`                   |
 
-#### ❌ 暂不支持
+</details>
+
+<details>
+<summary><strong>❌ 暂不支持</strong></summary>
 
 | 平台     | 类型            | 原因               |
 | -------- | --------------- | ------------------ |
@@ -182,35 +319,67 @@
 |          | 大会员/充电视频 | 需登录 cookies     |
 |          | 收藏夹/个人空间 | 请使用单个视频链接 |
 
----
-
-## 🚀 本地开发运行
-
-**前提条件:** Node.js 18+
-
-1. **安装依赖:**
-
-   ```bash
-   yarn install
-   ```
-
-2. **运行应用:**
-
-   ```bash
-   yarn electron:dev
-   ```
-
-3. **构建应用:**
-
-   ```bash
-   yarn electron:build
-   ```
-
-   打包完成后，您可以在 `release` 目录下找到便携版压缩包 (`.zip`)。解压后即可运行。
+</details>
 
 ---
 
-## 📚 文档
+## 🚀 本地开发
+
+**前提条件**: Node.js 18+
+
+```bash
+# 安装依赖
+yarn install
+
+# 运行应用
+yarn electron:dev
+
+# 构建应用
+yarn electron:build
+```
+
+打包完成后，可在 `release` 目录下找到便携版压缩包 (`.zip`)。
+
+---
+
+## 🤝 贡献
+
+欢迎贡献代码、报告问题或提出建议！
+
+1. Fork 本仓库
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 提交 Pull Request
+
+---
+
+## 📜 许可证
+
+本项目基于 [MIT License](LICENSE) 开源。
+
+---
+
+## 🙏 致谢
+
+- [Google Gemini](https://deepmind.google/technologies/gemini/) - AI 翻译和润色
+- [OpenAI Whisper](https://openai.com/research/whisper) - 语音识别
+- [whisper.cpp](https://github.com/ggerganov/whisper.cpp) - 本地 Whisper 推理
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - 视频下载
+- [FFmpeg](https://ffmpeg.org/) - 视频处理
+- [Electron](https://www.electronjs.org/) - 桌面应用框架
+
+---
+
+## ⭐ Star History
+
+如果这个项目对你有帮助，请给它一个 ⭐️！
+
+[![Star History Chart](https://api.star-history.com/svg?repos=corvo007/Gemini-Subtitle-Pro&type=Date)](https://star-history.com/#corvo007/Gemini-Subtitle-Pro&Date)
+
+---
+
+## 📚 更多资源
 
 - [项目架构文档](./docs/ARCHITECTURE_zh.md)
 - [English Documentation](./docs/README_en.md)

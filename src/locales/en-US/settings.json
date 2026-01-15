@@ -4,7 +4,7 @@
     "general": "General",
     "services": "Services",
     "performance": "Performance",
-    "enhance": "Enhance",
+    "enhance": "Enhancement",
     "debug": "Debug",
     "about": "About"
   },
@@ -159,8 +159,8 @@
       "selectError": "Selection failed: {{error}}",
       "selectErrorGeneric": "Selection failed",
       "instructions": "Setup Instructions:",
-      "instructionAligner": "Download align.exe from the project releases page",
-      "instructionModel": "Download the MMS model (~1.2GB) and extract to a folder"
+      "instructionAligner": "Download <a href=\"https://github.com/corvo007/Gemini-Subtitle-Pro/releases\" target=\"_blank\" class=\"text-indigo-400 hover:text-indigo-300 underline\">align.exe</a> from the project releases page",
+      "instructionModel": "Download the <a href=\"https://huggingface.co/MahmoudAshraf/mms-300m-1130-forced-aligner\" target=\"_blank\" class=\"text-indigo-400 hover:text-indigo-300 underline\">MMS model</a> (~1.2GB) and extract to a folder (also available in <a href=\"https://github.com/corvo007/Gemini-Subtitle-Pro/releases\" target=\"_blank\" class=\"text-indigo-400 hover:text-indigo-300 underline\">Releases</a>)"
     }
   },
   "debug": {
