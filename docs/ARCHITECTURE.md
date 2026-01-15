@@ -9,6 +9,8 @@
 - **Tech Stack**: React 19, Vite 6, Electron 39, TypeScript
 - **AI Engines**: Google Gemini (Translation/Polishing), OpenAI Whisper (Speech Recognition)
 
+**See also**: [https://deepwiki.com/corvo007/Gemini-Subtitle-Pro](https://deepwiki.com/corvo007/Gemini-Subtitle-Pro)
+
 ---
 
 ## 🏗️ Technology Stack Architecture

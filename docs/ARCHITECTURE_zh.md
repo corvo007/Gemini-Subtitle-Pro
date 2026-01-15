@@ -9,6 +9,8 @@
 - **技术栈**: React 19, Vite 6, Electron 39, TypeScript
 - **AI 引擎**: Google Gemini (翻译/润色), OpenAI Whisper (语音识别)
 
+**DeepWiki项目详细解析：**[https://deepwiki.com/corvo007/Gemini-Subtitle-Pro](https://deepwiki.com/corvo007/Gemini-Subtitle-Pro)
+
 ---
 
 ## 🏗️ 技术栈架构

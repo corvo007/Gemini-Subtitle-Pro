@@ -9,8 +9,10 @@
 **设计目标**：减少甚至无需人工干预，提升字幕生成质量和效率。
 
 **翻译成片（一次生成，无人工核对、修改）：**  
-[声优电台（日语，30分钟长，含说话人标注，使用版本v2.13.0）：https://www.bilibili.com/video/BV1XBrsBZE92/](https://www.bilibili.com/video/BV1XBrsBZE92/)  
-[铁道vlog（日语，29分钟长，大量地名和铁路专有术语，使用版本v2.8.3）：https://www.bilibili.com/video/BV1k1mgBJEEY/](https://www.bilibili.com/video/BV1k1mgBJEEY/)
+声优电台（日语，30分钟长，含说话人标注，使用版本v2.13.0）：  
+[https://www.bilibili.com/video/BV1XBrsBZE92/](https://www.bilibili.com/video/BV1XBrsBZE92/)  
+铁道vlog（日语，29分钟长，大量地名和铁路专有术语，使用版本v2.8.3）：  
+[https://www.bilibili.com/video/BV1k1mgBJEEY/](https://www.bilibili.com/video/BV1k1mgBJEEY/)
 
 **快速体验demo（网页版，仅包含核心功能）：**  
 [https://gemini-subtitle-pro.vercel.app/](https://gemini-subtitle-pro.vercel.app/)  
