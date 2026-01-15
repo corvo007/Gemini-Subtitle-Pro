@@ -8,6 +8,7 @@
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
+    "preinstall": "git config --global url.\"https://github.com/\".insteadOf ssh://git@github.com/",
     "dev": "vite",
     "build": "vite build",
     "docs:dev": "vitepress dev docs",
