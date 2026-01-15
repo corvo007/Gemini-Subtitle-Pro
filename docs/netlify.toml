@@ -1,7 +1,8 @@
 [build]
+  base = ".."
   command = "yarn docs:build"
   publish = "docs/.vitepress/dist"
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- docs/ package.json yarn.lock netlify.toml"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- docs/ package.json yarn.lock docs/netlify.toml"
 
 [[redirects]]
   from = "/*"
