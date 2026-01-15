@@ -60,3 +60,7 @@ scripts/test_data
 # Claude Code local settings
 .claude/settings.local.json
 config/
+
+# VitePress
+docs/.vitepress/dist
+docs/.vitepress/cache

@@ -32,9 +32,6 @@ export const STEP_MODELS = {
 
   // Batch Proofread: High quality proofreading
   batchProofread: MODELS.PRO,
-
-  // Batch Fix Timestamps: Timeline correction
-  batchFixTimestamps: MODELS.FLASH,
 } as const;
 
 export type StepName = keyof typeof STEP_MODELS;
@@ -83,12 +80,6 @@ export const STEP_CONFIGS: Record<StepName, StepConfig> = {
   batchProofread: {
     thinkingLevel: 'high',
     useSearch: true,
-    maxOutputTokens: 65536,
-  },
-
-  batchFixTimestamps: {
-    // thinkingLevel: 'medium',
-    useSearch: false,
     maxOutputTokens: 65536,
   },
 };
