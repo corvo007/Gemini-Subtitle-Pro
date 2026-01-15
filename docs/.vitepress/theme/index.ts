@@ -1,10 +1,16 @@
 import DefaultTheme from 'vitepress/theme';
-import { onMounted, watch, nextTick } from 'vue';
+import { onMounted, watch, nextTick, h } from 'vue';
 import { useRoute } from 'vitepress';
 import './custom.css';
+import GitHubStats from '../components/GitHubStats.vue';
 
 export default {
   extends: DefaultTheme,
+  Layout() {
+    return h(DefaultTheme.Layout, null, {
+      'nav-bar-content-after': () => h(GitHubStats),
+    });
+  },
   setup() {
     const route = useRoute();
 

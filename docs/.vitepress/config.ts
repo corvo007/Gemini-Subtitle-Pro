@@ -96,7 +96,7 @@ export default withMermaid(
     themeConfig: {
       logo: '/icon.png',
 
-      socialLinks: [{ icon: 'github', link: 'https://github.com/corvo007/Gemini-Subtitle-Pro' }],
+      socialLinks: [],
 
       footer: {
         message: 'Released under the MIT License.',
