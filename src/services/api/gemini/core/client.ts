@@ -1,12 +1,7 @@
 import { type GoogleGenAI, type Part, type Content } from '@google/genai';
 import { logger } from '@/services/utils/logger';
 import { SAFETY_SETTINGS } from '@/services/api/gemini/core/schemas';
-import {
-  extractJsonArray,
-  cleanJsonMarkdown,
-  parseJsonArrayStrict,
-  parseJsonObjectStrict,
-} from '@/services/subtitle/parser';
+import { safeParseJsonArray, safeParseJsonObject, isValidJson } from '@/services/utils/jsonParser';
 import { type TokenUsage } from '@/types/api';
 import i18n from '@/i18n';
 
@@ -407,9 +402,9 @@ export async function generateContentWithRetry<T = any>(
         const text = result.text || (parseJson === 'array' ? '[]' : '{}');
         try {
           if (parseJson === 'array') {
-            return parseJsonArrayStrict(text) as T;
+            return safeParseJsonArray(text) as T;
           } else {
-            return parseJsonObjectStrict(text) as T;
+            return safeParseJsonObject(text) as T;
           }
         } catch (parseError) {
           logger.warn('JSON parse failed in generateContentWithRetry', {
@@ -527,18 +522,12 @@ export async function generateContentWithLongOutput(
         );
       } else {
         try {
-          // Try to parse the current full text
-          // We remove markdown code blocks first just in case
-          const clean = cleanJsonMarkdown(fullText);
-
-          // Use robust extractor to handle extra brackets/garbage
-          const extracted = extractJsonArray(clean);
-          const textToParse = extracted || clean;
-
-          JSON.parse(textToParse);
-
-          // If parse succeeds, we are done!
-          return fullText;
+          // Try to parse the current full text using jsonrepair
+          if (isValidJson(fullText)) {
+            // If parse succeeds, we are done!
+            return fullText;
+          }
+          throw new Error('JSON validation failed');
         } catch (e) {
           // Parse failed, likely truncated
           logger.warn(
@@ -591,13 +580,11 @@ export async function generateContentWithLongOutput(
 
     // Final validation after all continuation attempts
     try {
-      const clean = cleanJsonMarkdown(fullText);
-      const extracted = extractJsonArray(clean);
-      const textToParse = extracted || clean;
-
-      JSON.parse(textToParse);
-      logger.debug('Final JSON validation passed');
-      return fullText;
+      if (isValidJson(fullText)) {
+        logger.debug('Final JSON validation passed');
+        return fullText;
+      }
+      throw new Error('JSON validation failed');
     } catch (e) {
       logger.error('Final JSON validation failed after 3 continuation attempts', {
         fullTextLength: fullText.length,

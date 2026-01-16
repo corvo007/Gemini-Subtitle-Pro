@@ -416,133 +416,11 @@ export const parseAss = (content: string): SubtitleItem[] => {
   return items;
 };
 
-export const extractJsonArray = (text: string): string | null => {
-  const firstBracket = text.indexOf('[');
-  if (firstBracket === -1) return null;
+// ============================================================================
+// Gemini Response Parsing
+// ============================================================================
 
-  let depth = 0;
-  let inString = false;
-  let escape = false;
-
-  // Start scanning from the first bracket
-  for (let i = firstBracket; i < text.length; i++) {
-    const char = text[i];
-
-    if (escape) {
-      escape = false;
-      continue;
-    }
-
-    if (char === '\\') {
-      escape = true;
-      continue;
-    }
-
-    if (char === '"') {
-      inString = !inString;
-      continue;
-    }
-
-    if (!inString) {
-      if (char === '[') {
-        depth++;
-      } else if (char === ']') {
-        depth--;
-        if (depth === 0) {
-          return text.substring(firstBracket, i + 1);
-        }
-      }
-    }
-  }
-
-  return null;
-};
-
-/**
- * Extract a JSON object from text that may contain markdown code blocks or extra text.
- * Uses the same state machine approach as extractJsonArray.
- */
-export const extractJsonObject = (text: string): string | null => {
-  const firstBrace = text.indexOf('{');
-  if (firstBrace === -1) return null;
-
-  let depth = 0;
-  let inString = false;
-  let escape = false;
-
-  // Start scanning from the first brace
-  for (let i = firstBrace; i < text.length; i++) {
-    const char = text[i];
-
-    if (escape) {
-      escape = false;
-      continue;
-    }
-
-    if (char === '\\') {
-      escape = true;
-      continue;
-    }
-
-    if (char === '"') {
-      inString = !inString;
-      continue;
-    }
-
-    if (!inString) {
-      if (char === '{') {
-        depth++;
-      } else if (char === '}') {
-        depth--;
-        if (depth === 0) {
-          return text.substring(firstBrace, i + 1);
-        }
-      }
-    }
-  }
-
-  return null;
-};
-
-/**
- * Clean markdown code blocks from JSON response text.
- * Removes ```json and ``` markers.
- */
-export function cleanJsonMarkdown(text: string): string {
-  return text
-    .replace(/```json/g, '')
-    .replace(/```/g, '')
-    .trim();
-}
-
-/**
- * Parse a JSON array from text that may contain markdown code blocks.
- * Handles common response formats: raw array, {items: []}, {subtitles: []}.
- * Throws on parse failure.
- */
-export function parseJsonArrayStrict<T = any>(text: string): T[] {
-  const clean = cleanJsonMarkdown(text);
-  const extracted = extractJsonArray(clean);
-  const toParse = extracted || clean;
-
-  const parsed = JSON.parse(toParse);
-  if (Array.isArray(parsed)) return parsed;
-  if (parsed?.items && Array.isArray(parsed.items)) return parsed.items;
-  if (parsed?.subtitles && Array.isArray(parsed.subtitles)) return parsed.subtitles;
-  return [];
-}
-
-/**
- * Parse a JSON object from text that may contain markdown code blocks.
- * Uses state machine extraction for robustness.
- * Throws on parse failure.
- */
-export function parseJsonObjectStrict<T = any>(text: string): T {
-  const clean = cleanJsonMarkdown(text);
-  const extracted = extractJsonObject(clean);
-  const toParse = extracted || clean;
-  return JSON.parse(toParse);
-}
+import { safeParseJsonArray } from '@/services/utils/jsonParser';
 
 export const parseGeminiResponse = (
   jsonResponse: string | null | undefined,
@@ -550,26 +428,8 @@ export const parseGeminiResponse = (
 ): SubtitleItem[] => {
   if (!jsonResponse) return [];
   try {
-    const cleanJson = cleanJsonMarkdown(jsonResponse);
-
-    // Robust extraction using state machine
-    let jsonToParse = extractJsonArray(cleanJson);
-
-    // Fallback to original behavior if extraction fails
-    if (!jsonToParse) {
-      jsonToParse = cleanJson;
-    }
-
-    let items: GeminiSubtitleSchema[] = [];
-    const parsed = JSON.parse(jsonToParse);
-
-    if (Array.isArray(parsed)) {
-      items = parsed;
-    } else if (parsed?.subtitles && Array.isArray(parsed.subtitles)) {
-      items = parsed.subtitles;
-    } else if (parsed?.items && Array.isArray(parsed.items)) {
-      items = parsed.items;
-    }
+    // Use unified JSON parser with jsonrepair
+    let items: GeminiSubtitleSchema[] = safeParseJsonArray<GeminiSubtitleSchema>(jsonResponse);
 
     // Filter and map
     items = items.filter((item) => {

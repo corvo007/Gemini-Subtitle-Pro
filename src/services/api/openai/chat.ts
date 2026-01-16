@@ -3,7 +3,7 @@ import { formatTime } from '@/services/subtitle/time';
 import i18n from '@/i18n';
 import { blobToBase64 } from '@/services/audio/converter';
 import { logger } from '@/services/utils/logger';
-import { extractJsonArray } from '@/services/subtitle/parser';
+import { safeParseJsonArray } from '@/services/utils/jsonParser';
 
 import { generateSubtitleId } from '@/services/utils/id';
 
@@ -79,18 +79,10 @@ export const transcribeWithOpenAIChat = async (
     const data = await response.json();
     const content = data.choices[0]?.message?.content;
 
-    // Parse the JSON from the text response
+    // Parse the JSON from the text response using unified parser
     let segments: any[] = [];
     try {
-      const cleanJson = content
-        .replace(/```json/g, '')
-        .replace(/```/g, '')
-        .trim();
-      const extracted = extractJsonArray(cleanJson);
-      const textToParse = extracted || cleanJson;
-
-      const parsed = JSON.parse(textToParse);
-      segments = parsed.segments || parsed.items || parsed;
+      segments = safeParseJsonArray(content || '[]');
     } catch (e) {
       logger.warn('Failed to parse GPT-4o JSON response', { error: e, responseText: content });
       // Fallback simple line parsing could go here, but avoiding for brevity
