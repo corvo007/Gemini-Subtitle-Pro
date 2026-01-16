@@ -139,3 +139,27 @@
 .dark .mermaid-controls {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
+
+/* 中等屏幕导航栏布局调整 */
+@media (min-width: 769px) and (max-width: 1400px) {
+  /* 减少导航菜单链接的左右padding */
+  .VPNavBarMenuLink {
+    padding: 0 10px !important;
+  }
+}
+
+/* 让搜索框占据空间，将导航菜单推到右边 */
+.VPNavBarSearch {
+  flex-grow: 1 !important;
+  padding-left: 16px !important;
+  padding-right: 0 !important;
+  justify-content: flex-start !important;
+}
+
+/* 隐藏 VitePress 默认的语言切换、主题切换和 Extra 菜单 */
+/* 因为我们使用了自定义的 NavControls 组件 */
+.VPNavBarTranslations,
+.VPNavBarAppearance,
+.VPNavBarExtra {
+  display: none !important;
+}

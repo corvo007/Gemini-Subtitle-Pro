@@ -2,13 +2,13 @@ import DefaultTheme from 'vitepress/theme';
 import { onMounted, watch, nextTick, h } from 'vue';
 import { useRoute } from 'vitepress';
 import './custom.css';
-import GitHubStats from '../components/GitHubStats.vue';
+import NavControls from '../components/NavControls.vue';
 
 export default {
   extends: DefaultTheme,
   Layout() {
     return h(DefaultTheme.Layout, null, {
-      'nav-bar-content-after': () => h(GitHubStats),
+      'nav-bar-content-after': () => h(NavControls),
     });
   },
   setup() {
