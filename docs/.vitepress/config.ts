@@ -6,6 +6,7 @@ export default withMermaid(
     title: 'Gemini Subtitle Pro',
     description: '专业级字幕，零人工校对',
     srcExclude: ['plans/**'],
+    cleanUrls: true,
 
     head: [['link', { rel: 'icon', href: '/icon.png' }]],
 
