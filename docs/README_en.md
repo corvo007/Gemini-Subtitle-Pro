@@ -19,7 +19,7 @@
 
   <p>
     <a href="./ARCHITECTURE.md">📖 Architecture</a> •
-    <a href="https://gemini-subtitle-pro-261157428277.asia-east1.run.app/">🚀 Live Demo</a> •
+    <a href="https://aisub-demo.netlify.app/">🚀 Live Demo</a> •
     <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases">📥 Download</a> •
     <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/issues">🐛 Report Bug</a> •
     <a href="../README.md">🇨🇳 中文</a>
@@ -52,7 +52,7 @@
 
 **Live Demo (Web version, core features only):**
 
-- 🌐 [Try Online](https://gemini-subtitle-pro-261157428277.asia-east1.run.app/)
+- 🌐 [Try Online](https://aisub-demo.netlify.app/)
 
 **Interface Preview:**
 

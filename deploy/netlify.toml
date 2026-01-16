@@ -1,6 +1,5 @@
 [build]
-  base = ".."
-  command = "git config --global url.\"https://github.com/\".insteadOf ssh://git@github.com/ && npm run build"
+  command = "git config --global url.\"https://github.com/\".insteadOf ssh://git@github.com/ && yarn run build"
   publish = "dist"
 
 [[redirects]]

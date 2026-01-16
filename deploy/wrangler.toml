@@ -3,4 +3,4 @@ pages_build_output_dir = "../dist"
 compatibility_date = "2024-11-25"
 
 [build]
-command = "git config --global url.\"https://github.com/\".insteadOf ssh://git@github.com/ && npm install && npm run build"
+command = "git config --global url.\"https://github.com/\".insteadOf ssh://git@github.com/ && yarn install && yarn run build"

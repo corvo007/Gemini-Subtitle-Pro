@@ -21,7 +21,7 @@ export default withMermaid(
             { text: '架构', link: '/architecture/' },
             {
               text: '在线体验',
-              link: 'https://gemini-subtitle-pro-261157428277.asia-east1.run.app/',
+              link: 'https://aisub-demo.netlify.app/',
             },
           ],
           sidebar: {
@@ -62,7 +62,7 @@ export default withMermaid(
             { text: 'Architecture', link: '/en/architecture/' },
             {
               text: 'Live Demo',
-              link: 'https://gemini-subtitle-pro-261157428277.asia-east1.run.app/',
+              link: 'https://aisub-demo.netlify.app/',
             },
           ],
           sidebar: {

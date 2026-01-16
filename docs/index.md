@@ -14,7 +14,7 @@ hero:
       link: /guide/
     - theme: alt
       text: 在线体验
-      link: https://gemini-subtitle-pro-261157428277.asia-east1.run.app/
+      link: https://aisub-demo.netlify.app/
     - theme: alt
       text: GitHub
       link: https://github.com/corvo007/Gemini-Subtitle-Pro
