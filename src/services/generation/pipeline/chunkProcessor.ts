@@ -236,6 +236,15 @@ export class ChunkProcessor {
                 : [],
       };
     } catch (e: any) {
+      // Check for cancellation
+      if (
+        context.signal?.aborted ||
+        e.message === i18n.t('services:pipeline.errors.cancelled') ||
+        e.name === 'AbortError'
+      ) {
+        throw e;
+      }
+
       logger.error(`Chunk ${index} failed`, e);
       const actionableMsg = getActionableErrorMessage(e);
       const errorMsg = actionableMsg || i18n.t('services:pipeline.status.failed');

@@ -58,6 +58,15 @@ export const transcribeWithLocalWhisper = async (
       if (signal) {
         signal.addEventListener('abort', () => {
           logger.info('[LocalWhisper] Transcription cancelled by user');
+
+          // Notify main process to abort the running whisper process
+          if (window.electronAPI?.abortLocalWhisper) {
+            logger.info('[LocalWhisper] Sending abort signal to main process');
+            window.electronAPI.abortLocalWhisper().catch((err: any) => {
+              logger.error('[LocalWhisper] Failed to abort main process whisper', { error: err });
+            });
+          }
+
           reject(new Error(i18n.t('services:pipeline.errors.cancelled')));
         });
       }
@@ -84,6 +93,11 @@ export const transcribeWithLocalWhisper = async (
       translated: '',
     }));
   } catch (error: any) {
+    if (signal?.aborted || error.message === i18n.t('services:pipeline.errors.cancelled')) {
+      logger.info('[LocalWhisper] Transcription process cancelled');
+      throw error;
+    }
+
     logger.error('[LocalWhisper] Transcription failed', {
       error: error.message,
       code: error.code,

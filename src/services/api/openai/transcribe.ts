@@ -38,6 +38,11 @@ export const transcribeAudio = async (
         customBinaryPath
       );
     } catch (error: any) {
+      // If cancelled, rethrow immediately to avoid fallback
+      if (signal?.aborted || error.message === i18n.t('services:pipeline.errors.cancelled')) {
+        throw error;
+      }
+
       logger.warn('Local Whisper failed, attempting fallback to API', {
         error: error.message,
         code: error.code,

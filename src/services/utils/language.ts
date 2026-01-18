@@ -216,6 +216,17 @@ export function isJapanese(code: string): boolean {
   return JAPANESE_LANGUAGES.includes(code.toLowerCase());
 }
 
+/**
+ * Check if text contains Japanese Kana (Hiragana or Katakana).
+ * Useful for fast synchronous content detection (e.g. for font selection).
+ *
+ * @param text - The text to check
+ * @returns true if text contains Japanese Kana characters
+ */
+export function containsJapaneseKana(text: string): boolean {
+  return /[\u3040-\u309F\u30A0-\u30FF]/.test(text);
+}
+
 // ============================================================================
 // Language Name Mapping
 // ============================================================================

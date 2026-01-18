@@ -86,7 +86,7 @@ export class ArtifactSaver {
     options?: FullSrtArtifactOptions
   ): string {
     const lines: string[] = [];
-    lines.push(`NOTE Gemini Subtitle Pro v${ARTIFACT_VERSION}`);
+    lines.push(`NOTE MioSub v${ARTIFACT_VERSION}`);
 
     if (options?.videoInfo) {
       const duration = formatTime(options.videoInfo.duration);

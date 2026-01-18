@@ -147,8 +147,14 @@ export abstract class BaseStep<TInput, TOutput> {
       await this.saveArtifact?.(finalResult, ctx);
 
       return { output: finalResult };
-    } catch (e) {
+    } catch (e: any) {
       // 13. Error handling with fallback
+      // Check for cancellation first
+      if (signal?.aborted || e.message === i18n.t('services:pipeline.errors.cancelled')) {
+        logger.info(`[Chunk ${ctx.chunk.index}] ${this.name} cancelled`);
+        throw e;
+      }
+
       logger.error(`[Chunk ${ctx.chunk.index}] ${this.name} failed`, e);
       if (this.getFallback) {
         const fallback = this.getFallback(input, e as Error, ctx);

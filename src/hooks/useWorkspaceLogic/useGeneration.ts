@@ -263,7 +263,11 @@ export function useGeneration({
     } catch (err: unknown) {
       const error = err as Error;
       // Check if it was a cancellation
-      if (error.message === 'Operation cancelled' || signal.aborted) {
+      if (
+        error.name === 'AbortError' ||
+        error.message === t('services:pipeline.errors.cancelled') ||
+        signal.aborted
+      ) {
         setStatus(GenerationStatus.CANCELLED);
         logger.info('Generation cancelled by user');
 

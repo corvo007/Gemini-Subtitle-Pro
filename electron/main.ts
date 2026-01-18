@@ -1278,7 +1278,7 @@ app.on('ready', async () => {
       lastAboutConfigHash = info.hash;
 
       console.log('========================================');
-      console.log('  Gemini Subtitle Pro - System Info');
+      console.log('  MioSub - System Info');
       console.log('========================================');
       console.log(`  Version:      v${info.version} (${info.commitHash})`);
       console.log(`  Environment:  ${info.isPackaged ? 'Production' : 'Development'}`);

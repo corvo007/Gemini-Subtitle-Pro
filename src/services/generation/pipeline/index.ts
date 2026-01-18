@@ -269,6 +269,15 @@ export const generateSubtitles = async (
       const currentAll = chunkResults.flat();
       onIntermediateResult?.(currentAll);
     } catch (e: any) {
+      // Check for cancellation
+      if (
+        context.signal?.aborted ||
+        e.message === i18n.t('services:pipeline.errors.cancelled') ||
+        e.name === 'AbortError'
+      ) {
+        throw e;
+      }
+
       // Should already be handled in ChunkProcessor, but safety net
       logger.error(`Unexpected error in Chunk ${chunk.index}`, e);
     }

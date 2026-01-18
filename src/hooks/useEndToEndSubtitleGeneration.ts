@@ -301,12 +301,14 @@ export function useEndToEndSubtitleGeneration({
           subtitleFormat: format,
         };
       } catch (error: any) {
-        logger.error('[EndToEnd] Subtitle generation failed', error);
-
         // Categorize error types
+        // Check for cancellation first to avoid error logging
         if (error.name === 'AbortError' || error.message?.includes('cancelled') || signal.aborted) {
+          logger.info('[EndToEnd] Subtitle generation cancelled');
           return { success: false, error: t('errors.cancelled'), errorCode: 'CANCELLED' };
         }
+
+        logger.error('[EndToEnd] Subtitle generation failed', error);
 
         if (error.message?.includes('API key') || error.message?.includes('密钥')) {
           return { success: false, error: t('errors.invalidApiKey'), errorCode: 'API_KEY_ERROR' };
