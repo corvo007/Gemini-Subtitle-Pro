@@ -8,7 +8,7 @@ import unusedImports from 'eslint-plugin-unused-imports';
 export default [
   js.configs.recommended,
   {
-    ignores: ['dist/**', 'dist-electron/**', 'node_modules/**', 'release/**', '.claude/**', 'scripts/**'],
+    ignores: ['dist/**', 'dist-electron/**', 'node_modules/**', 'release/**', '.claude/**', 'scripts/**', 'docs/.vitepress/dist/**', 'docs/.vitepress/cache/**'],
   },
   {
     files: ['src/**/*.{ts,tsx}', 'electron/**/*.{ts,tsx}'],

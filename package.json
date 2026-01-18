@@ -1,10 +1,10 @@
 {
-  "name": "gemini-subtitle-pro",
-  "description": "AI-powered subtitle generation tool",
+  "name": "miosub",
+  "description": "Smart, Playful, and Powerful AI Subtitle Generator",
   "author": "Corvo007",
   "license": "MIT",
   "private": true,
-  "version": "2.13.0",
+  "version": "3.0.0",
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
@@ -24,6 +24,7 @@
     "build:debug": "cross-env DEBUG_BUILD=true yarn electron:build",
     "build:main": "vite build -c vite.config.electron.ts",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\" \"electron/**/*.ts\"",
+    "lint": "eslint src electron --fix",
     "prepare": "husky"
   },
   "dependencies": {
@@ -31,6 +32,7 @@
     "@ricky0123/vad-web": "^0.0.30",
     "@uiw/react-json-view": "^2.0.0-alpha.40",
     "assjs": "^0.1.4",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "eld": "^2.0.1",
     "electron-squirrel-startup": "^1.0.1",
@@ -38,7 +40,7 @@
     "i18next": "^25.7.3",
     "i18next-browser-languagedetector": "^8.2.0",
     "jsonrepair": "^3.13.2",
-    "lucide-react": "^0.554.0",
+    "lucide-react": "^0.562.0",
     "onnxruntime-web": "^1.23.2",
     "openai": "^6.9.1",
     "p-map": "^7.0.4",
@@ -50,6 +52,7 @@
     "react-rnd": "^10.5.2",
     "react-virtuoso": "^4.17.0",
     "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
@@ -90,8 +93,8 @@
     "wait-on": "^9.0.3"
   },
   "build": {
-    "appId": "com.gemini.subtitle.pro",
-    "productName": "Gemini Subtitle Pro",
+    "appId": "com.miosub.app",
+    "productName": "MioSub",
     "directories": {
       "output": "release"
     },
@@ -126,7 +129,7 @@
       "target": [
         "zip"
       ],
-      "artifactName": "Gemini-Subtitle-Pro-${version}-win-x64.${ext}",
+      "artifactName": "MioSub-${version}-win-x64.${ext}",
       "extraResources": [
         {
           "from": "resources",
