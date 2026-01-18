@@ -61,7 +61,8 @@
     "deleteConfirmBtn": "削除",
     "editColor": "色を編集",
     "colorPicker": "色を選択",
-    "resetColor": "デフォルトにリセット"
+    "resetColor": "デフォルトにリセット",
+    "reset": "リセット"
   },
   "glossaryImport": {
     "title": "用語集をインポート",

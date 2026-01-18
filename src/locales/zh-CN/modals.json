@@ -61,7 +61,8 @@
     "deleteConfirmBtn": "删除",
     "editColor": "编辑颜色",
     "colorPicker": "选择颜色",
-    "resetColor": "重置为默认"
+    "resetColor": "重置为默认",
+    "reset": "重置"
   },
   "glossaryImport": {
     "title": "导入术语表",

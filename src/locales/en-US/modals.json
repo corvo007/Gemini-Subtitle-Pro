@@ -61,7 +61,8 @@
     "deleteConfirmBtn": "Delete",
     "editColor": "Edit Color",
     "colorPicker": "Choose Color",
-    "resetColor": "Reset to Default"
+    "resetColor": "Reset to Default",
+    "reset": "Reset"
   },
   "glossaryImport": {
     "title": "Import Glossary",
