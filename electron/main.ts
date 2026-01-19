@@ -1191,7 +1191,7 @@ const createWindow = () => {
     minWidth: 800,
     minHeight: 600, // Reduced min height to be safer on small logic screens
     icon: path.join(__dirname, '../resources/icon.png'),
-    backgroundColor: '#1a0f2e', // 深紫色背景，与主界面协调
+    backgroundColor: '#f3f4f6', // 浅色背景，与主界面协调
     webPreferences: {
       preload: path.join(__dirname, '../dist-electron/preload.cjs'),
       nodeIntegration: false,
