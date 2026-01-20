@@ -1,26 +1,31 @@
 <div align="center">
   <img src="./resources/icon.png" alt="MioSub" width="120" height="120">
-  <h1>MioSub</h1>
-  <p><strong>✨ 专业级字幕，零人工校对</strong></p>
-  <p>术语自动提取 · 说话人识别 · 毫秒对齐 · 一键完成</p>
+  <h1>MioSub (喵字幕)</h1>
+  <p><strong>Make Video Yours.</strong></p>
+  <p>真正读懂上下文的 AI 字幕编辑器 | The AI subtitle editor that actually understands context</p>
+
+  <!-- 🔥 大下载按钮 -->
+  <p>
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases">
+      <img src="https://img.shields.io/badge/⬇️_立即下载_Windows-6D28D9?style=for-the-badge&logoColor=white" height="45" alt="Download Windows">
+    </a>
+    &nbsp;
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases">
+      <img src="https://img.shields.io/badge/⬇️_立即下载_macOS-000000?style=for-the-badge&logo=apple&logoColor=white" height="45" alt="Download macOS">
+    </a>
+  </p>
 
   <!-- Badges -->
   <p>
-    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/actions"><img src="https://img.shields.io/github/actions/workflow/status/corvo007/Gemini-Subtitle-Pro/release.yml?style=for-the-badge&logo=github&label=Build" alt="Build Status"></a>
-    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/stargazers"><img src="https://img.shields.io/github/stars/corvo007/Gemini-Subtitle-Pro?style=for-the-badge&logo=github&color=yellow" alt="GitHub Stars"></a>
-    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases"><img src="https://img.shields.io/github/v/release/corvo007/Gemini-Subtitle-Pro?style=for-the-badge&logo=github&color=blue" alt="GitHub Release"></a>
-    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases"><img src="https://img.shields.io/github/downloads/corvo007/Gemini-Subtitle-Pro/total?style=for-the-badge&logo=github&color=orange" alt="Downloads"></a>
-  </p>
-  <p>
-    <img src="https://img.shields.io/badge/Electron-Desktop-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron">
-    <img src="https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/stargazers"><img src="https://img.shields.io/github/stars/corvo007/Gemini-Subtitle-Pro?style=flat-square&logo=github&color=yellow" alt="GitHub Stars"></a>
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases"><img src="https://img.shields.io/github/v/release/corvo007/Gemini-Subtitle-Pro?style=flat-square&logo=github&color=blue" alt="GitHub Release"></a>
+    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases"><img src="https://img.shields.io/github/downloads/corvo007/Gemini-Subtitle-Pro/total?style=flat-square&logo=github&color=orange" alt="Downloads"></a>
     <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/blob/main/LICENSE"><img src="https://img.shields.io/github/license/corvo007/Gemini-Subtitle-Pro?style=flat-square&color=green" alt="License"></a>
   </p>
 
   <p>
-    <a href="./docs/ARCHITECTURE_zh.md">📖 架构文档</a> •
+    <a href="https://miosub.netlify.app/docs">📖 保姆级教程</a> •
     <a href="https://aisub-demo.netlify.app/">🚀 在线体验</a> •
-    <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/releases">📥 下载</a> •
     <a href="https://github.com/corvo007/Gemini-Subtitle-Pro/issues">🐛 反馈问题</a> •
     <a href="./docs/README_en.md">🌐 English</a>
   </p>
@@ -381,5 +386,15 @@ yarn electron:build
 
 ## 📚 更多资源
 
-- [项目架构文档](./docs/ARCHITECTURE_zh.md)
+- [📖 完整文档](https://miosub.netlify.app/docs) - 保姆级使用教程
+- [🎬 效果展示](https://www.bilibili.com/video/BV1XBrsBZE92/) - 看看实际翻译效果
 - [English Documentation](./docs/README_en.md)
+
+---
+
+<details>
+<summary><strong>🔍 搜索关键词 (SEO Keywords)</strong></summary>
+
+`YouTube 视频自动加字幕` · `Bilibili 翻译工具` · `AI 字幕生成器` · `免费视频翻译软件` · `自动字幕翻译` · `UP主字幕神器` · `Best AI Subtitle Generator` · `Free Video Translation Tool` · `Auto Subtitle Generator` · `YouTube Auto Caption` · `MioSub vs SmartSub` · `剪映替代品` · `CapCut Alternative`
+
+</details>

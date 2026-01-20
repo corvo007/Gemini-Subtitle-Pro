@@ -1,0 +1,130 @@
+---
+title: "FAQ"
+description: "Frequently asked questions and solutions for MioSub"
+---
+
+## 🔑 API Issues
+
+### Getting error 429?
+
+**Meaning**: Request rate exceeded API limits.
+
+**Solutions**:
+1. **Wait a few minutes**: Free tier allows 15 requests/minute, auto-recovers
+2. **Add multiple Keys**: Comma-separate multiple API Keys in settings for rotation
+3. **Lower concurrency**: Reduce translation concurrency in settings
+
+---
+
+### "Invalid API Key" error?
+
+1. Verify the key is complete (starts with `AIza`)
+2. Check for extra spaces before/after the key
+3. Try regenerating at [AI Studio](https://aistudio.google.com/app/apikey)
+
+---
+
+### "Region not supported"?
+
+Gemini API has regional restrictions. Ensure your network can access Google services.
+
+---
+
+## 🎬 Video Processing
+
+### Video download fails?
+
+**Common causes**:
+- **Network issues**: Ensure access to YouTube/Bilibili
+- **Wrong link format**: Use single video links, not playlists
+- **Copyright restrictions**: B站 anime, paid content cannot be downloaded
+
+**Solutions**:
+1. Check network connection
+2. Use individual video links
+3. Update yt-dlp in settings
+
+---
+
+### Processing is slow?
+
+**Possible causes**:
+- Using CPU-only Whisper (slower)
+- Network latency affecting API calls
+
+**Optimization tips**:
+1. Use smaller Whisper models (Base or Small)
+2. [Configure GPU acceleration](/en/docs/guide/whisper)
+3. Use Whisper API instead of local models
+
+---
+
+### FFmpeg not found?
+
+MioSub includes FFmpeg by default, no extra setup needed.
+
+If still getting errors:
+1. Ensure you're using the full installation package
+2. Check for `ffmpeg.exe` in the `resources` folder
+3. Try re-downloading the full package
+
+---
+
+## 📝 Subtitle Issues
+
+### Subtitle timing is off?
+
+**Solutions**:
+1. Enable [forced alignment](/en/docs/guide/alignment) for millisecond precision
+2. Manually adjust timing in the editor
+3. Check if source video audio has issues
+
+---
+
+### Translation quality not ideal?
+
+**Tips**:
+1. **Choose correct scene preset**: Anime, movie, tech, etc.
+2. **Use glossary**: Ensures consistent terminology
+3. **Try polish feature**: Select subtitles and use "Polish Translation"
+
+---
+
+### Garbled text on Windows?
+
+**Possible causes**: Font or encoding issues
+
+**Solutions**:
+1. Export with UTF-8 encoding
+2. Select fonts that support your language in subtitle styles
+3. Check system language settings
+
+---
+
+## 🖥️ Software Usage
+
+### App won't open / crashes?
+
+1. Confirm you're on Windows 10 or later
+2. Try running as administrator
+3. Check if antivirus is blocking it
+4. Re-download the full installation package
+
+---
+
+### How to update?
+
+MioSub supports auto-update. If auto-update fails:
+1. Visit [Releases page](https://github.com/corvo007/Gemini-Subtitle-Pro/releases)
+2. Download the latest version
+3. Simply overwrite the old version
+
+---
+
+## 📧 Still have questions?
+
+If the above didn't solve your problem:
+
+1. **Check Issues**: [GitHub Issues](https://github.com/corvo007/Gemini-Subtitle-Pro/issues) may have answers
+2. **Submit Issue**: Include problem description + screenshots + system info
+3. **Join Community**: Discuss in Discord or groups
