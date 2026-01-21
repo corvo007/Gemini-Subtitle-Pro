@@ -12,30 +12,32 @@ import type {
   JsonModeCapability,
   ProviderConfig,
 } from '@/types/llm';
-import { isOfficialOpenAIModel } from '@/types/llm';
 import { BaseAdapter } from './BaseAdapter';
 import { logger } from '@/services/utils/logger';
 import { safeParseJsonObject } from '@/services/utils/jsonParser';
 import { STEP_CONFIGS, type StepName as ConfigStepName } from '@/config/models';
 import i18n from '@/i18n';
+import {
+  findModel,
+  parseCapabilities,
+  getMaxTokensParamName,
+  type ModelEntry,
+  type ModelCapabilities,
+} from '../ModelCapabilities';
 
 /**
- * Get max output tokens based on model name
- * o-series and gpt-5: 100,000
- * gpt-4o: 16,384
- * Fallback: 16,384
+ * Build token limit parameter with correct key name
+ * Uses ModelCapabilities to determine parameter name and value
  */
-function getMaxOutputTokens(model: string): number {
-  // O-series reasoning models: 100K
-  if (/^o[1-9]/.test(model)) {
-    return 100000;
+function buildTokensParam(
+  modelEntry: ModelEntry | null,
+  modelCaps: ModelCapabilities | null
+): Record<string, number> {
+  if (!modelEntry || !modelCaps?.maxOutputTokens) {
+    return { max_tokens: 16384 }; // Safe default
   }
-  // GPT-5 series: 128K
-  if (model.startsWith('gpt-5')) {
-    return 128000;
-  }
-  // GPT-4o default: 16K
-  return 16384;
+  const key = getMaxTokensParamName(modelEntry.created);
+  return { [key]: modelCaps.maxOutputTokens };
 }
 
 /**
@@ -47,13 +49,20 @@ export class OpenAIAdapter extends BaseAdapter {
   readonly model: string;
 
   private client: OpenAI;
-  private isOfficial: boolean;
+  private modelEntry: ModelEntry | null = null;
+  private modelCaps: ModelCapabilities | null = null;
   private cachedJsonMode: JsonModeCapability | null = null;
 
   constructor(config: ProviderConfig) {
     super(config);
     this.model = config.model;
-    this.isOfficial = isOfficialOpenAIModel(config.model);
+
+    // Lookup model capabilities from models.json
+    const matchResult = findModel(config.model);
+    if (matchResult.model) {
+      this.modelEntry = matchResult.model;
+      this.modelCaps = parseCapabilities(matchResult.model);
+    }
 
     // Initialize OpenAI client
     this.client = new OpenAI({
@@ -67,23 +76,25 @@ export class OpenAIAdapter extends BaseAdapter {
   }
 
   /**
-   * Get capabilities - official models have fixed capabilities,
-   * compatible models may have cached or default capabilities
+   * Get capabilities - determined from modelCaps or cached value
    */
   get capabilities(): AdapterCapabilities {
-    if (this.isOfficial) {
-      return {
-        jsonMode: 'full_schema',
-        audio: true,
-        search: true,
-      };
+    // Use modelCaps if available, otherwise use cached or optimistic default
+    const jsonLevel = this.modelCaps?.jsonOutputLevel;
+    let jsonMode: JsonModeCapability;
+
+    if (jsonLevel === 'strict') {
+      jsonMode = 'full_schema';
+    } else if (jsonLevel === 'json_mode') {
+      jsonMode = 'json_only';
+    } else {
+      jsonMode = this.cachedJsonMode || 'full_schema'; // Optimistic default
     }
 
-    // For compatible models, use cached or default
     return {
-      jsonMode: this.cachedJsonMode || 'full_schema', // Optimistic default
-      audio: true,
-      search: true,
+      jsonMode,
+      audio: this.modelCaps?.audioInput ?? true,
+      search: this.modelCaps?.webSearch ?? true,
     };
   }
 
@@ -102,7 +113,7 @@ export class OpenAIAdapter extends BaseAdapter {
     logger.debug(`OpenAI generateObject started`, {
       model: this.model,
       jsonMode,
-      isOfficial: this.isOfficial,
+      hasModelCaps: !!this.modelCaps,
       useWebSearch: options.useWebSearch,
       promptLength: options.prompt.length,
     });
@@ -116,8 +127,8 @@ export class OpenAIAdapter extends BaseAdapter {
         return await this.generateWithTextParsing<T>(options);
       }
     } catch (error: any) {
-      // Check if error is due to unsupported schema
-      if (this.isSchemaUnsupportedError(error) && !this.isOfficial) {
+      // Check if error is due to unsupported schema - try degradation
+      if (this.isSchemaUnsupportedError(error)) {
         logger.warn('Full schema not supported, falling back to json_only', {
           model: this.model,
           error: error.message,
@@ -181,8 +192,8 @@ export class OpenAIAdapter extends BaseAdapter {
     // Build request params (without messages, they're passed to executeWithContinuation)
     const requestParams: any = {
       model: this.model,
-      // Only pass max_tokens for official OpenAI models
-      ...(this.isOfficial && { max_tokens: getMaxOutputTokens(this.model) }),
+      // Token limit with correct parameter name for model type
+      ...buildTokensParam(this.modelEntry, this.modelCaps),
       response_format: zodResponseFormat(zodSchema, 'response'),
     };
 
@@ -219,8 +230,8 @@ export class OpenAIAdapter extends BaseAdapter {
     // Build request params (without messages)
     const requestParams: any = {
       model: this.model,
-      // Only pass max_tokens for official OpenAI models
-      ...(this.isOfficial && { max_tokens: getMaxOutputTokens(this.model) }),
+      // Token limit with correct parameter name for model type
+      ...buildTokensParam(this.modelEntry, this.modelCaps),
       response_format: { type: 'json_object' },
     };
 
@@ -259,8 +270,8 @@ export class OpenAIAdapter extends BaseAdapter {
     // Build request params (without messages)
     const requestParams: any = {
       model: this.model,
-      // Only pass max_tokens for official OpenAI models
-      ...(this.isOfficial && { max_tokens: getMaxOutputTokens(this.model) }),
+      // Token limit with correct parameter name for model type
+      ...buildTokensParam(this.modelEntry, this.modelCaps),
     };
 
     // Add web search if enabled
@@ -544,11 +555,11 @@ export class OpenAIAdapter extends BaseAdapter {
   /**
    * Determine if web search should be enabled based on stepName
    * Reads from STEP_CONFIGS if stepName is provided
-   * Only applies to official OpenAI models
+   * Only applies if model supports web search
    */
   private shouldUseWebSearch(options: GenerateOptions): boolean {
-    // Only official OpenAI models support web search
-    if (!this.isOfficial) {
+    // Check if model supports web search
+    if (!this.modelCaps?.webSearch) {
       return false;
     }
 
@@ -578,22 +589,11 @@ export class OpenAIAdapter extends BaseAdapter {
   /**
    * Get reasoning effort based on stepName's thinkingLevel
    * Maps thinkingLevel to OpenAI's reasoning_effort parameter
-   * Only works with o-series and gpt-5+ models
+   * Only works with models that support reasoning
    */
   private getReasoningEffort(options: GenerateOptions): 'low' | 'medium' | 'high' | undefined {
-    // Only official OpenAI models support reasoning_effort
-    if (!this.isOfficial) {
-      return undefined;
-    }
-
-    // Check model compatibility - only o-series and gpt-5+ support reasoning
-    const supportsReasoning =
-      this.model.startsWith('o1') ||
-      this.model.startsWith('o3') ||
-      this.model.startsWith('o4') ||
-      this.model.startsWith('gpt-5');
-
-    if (!supportsReasoning) {
+    // Check if model supports reasoning from capabilities
+    if (!this.modelCaps?.reasoning) {
       return undefined;
     }
 

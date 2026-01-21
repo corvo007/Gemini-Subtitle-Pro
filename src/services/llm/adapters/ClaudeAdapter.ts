@@ -10,23 +10,16 @@ import { safeParseJsonObject } from '@/services/utils/jsonParser';
 import { STEP_CONFIGS, type StepName as ConfigStepName } from '@/config/models';
 import { logger } from '@/services/utils/logger';
 import i18n from '@/i18n';
+import { findModel, parseCapabilities, type ModelCapabilities } from '../ModelCapabilities';
 
 /**
- * Get max output tokens based on Claude model name
- * Claude 4.5: 64,000
- * Claude 4: 16,000
- * Claude 3.x: 8,192
+ * Get max output tokens - uses modelCaps if available, otherwise fallback
  */
-function getMaxOutputTokens(model: string): number {
-  // Claude 4.5+ series (including future Claude 5, 6...): 64K
-  if (model.includes('4.5') || /claude-[5-9]/.test(model)) {
-    return 64000;
+function getMaxOutputTokens(modelCaps: ModelCapabilities | null): number {
+  if (modelCaps?.maxOutputTokens) {
+    return modelCaps.maxOutputTokens;
   }
-  // Claude 4 series: 16K
-  if (model.includes('-4')) {
-    return 16000;
-  }
-  // Claude 3.x default: 8K
+  // Fallback: 8192 (Claude 3.x default)
   return 8192;
 }
 
@@ -36,18 +29,33 @@ function getMaxOutputTokens(model: string): number {
  */
 export class ClaudeAdapter extends BaseAdapter {
   readonly type = 'claude' as const;
-  readonly capabilities: AdapterCapabilities = {
-    jsonMode: 'json_only',
-    audio: true,
-    search: true,
-  };
   readonly model: string;
 
   private client: Anthropic;
+  private modelCaps: ModelCapabilities | null = null;
+
+  /**
+   * Get capabilities - determined from modelCaps
+   */
+  get capabilities(): AdapterCapabilities {
+    // Claude uses json_only by default, but 4+ supports strict via beta
+    const jsonLevel = this.modelCaps?.jsonOutputLevel;
+    return {
+      jsonMode: jsonLevel === 'strict' ? 'full_schema' : 'json_only',
+      audio: this.modelCaps?.audioInput ?? true,
+      search: this.modelCaps?.webSearch ?? true,
+    };
+  }
 
   constructor(config: ProviderConfig) {
     super(config);
     this.model = config.model;
+
+    // Lookup model capabilities from models.json
+    const matchResult = findModel(config.model);
+    if (matchResult.model) {
+      this.modelCaps = parseCapabilities(matchResult.model);
+    }
 
     // Initialize Anthropic client
     const clientOptions: { apiKey: string; baseURL?: string } = {
@@ -89,7 +97,7 @@ export class ClaudeAdapter extends BaseAdapter {
       // Build request params (without messages)
       const requestParams: any = {
         model: this.model,
-        max_tokens: getMaxOutputTokens(this.model),
+        max_tokens: getMaxOutputTokens(this.modelCaps),
         system: options.systemInstruction,
       };
 

@@ -13,18 +13,16 @@ import {
 import { buildStepConfig, type StepName as ConfigStepName } from '@/config/models';
 import { safeParseJsonObject } from '@/services/utils/jsonParser';
 import { logger } from '@/services/utils/logger';
+import { findModel, parseCapabilities, type ModelCapabilities } from '../ModelCapabilities';
 
 /**
- * Get max output tokens based on Gemini model name
- * Gemini 3 Pro: 64,000
- * All others: 65,536
+ * Get max output tokens - uses modelCaps if available, otherwise fallback
  */
-function getMaxOutputTokens(model: string): number {
-  // Gemini 3 Pro has lower limit
-  if (model.includes('3-pro') || model.includes('gemini-3-pro')) {
-    return 64000;
+function getMaxOutputTokens(modelCaps: ModelCapabilities | null): number {
+  if (modelCaps?.maxOutputTokens) {
+    return modelCaps.maxOutputTokens;
   }
-  // Gemini 2.5 and 3 Flash: 65536
+  // Fallback: 65536 (Gemini default)
   return 65536;
 }
 
@@ -34,18 +32,31 @@ function getMaxOutputTokens(model: string): number {
  */
 export class GeminiAdapter extends BaseAdapter {
   readonly type = 'gemini' as const;
-  readonly capabilities: AdapterCapabilities = {
-    jsonMode: 'full_schema',
-    audio: true,
-    search: true,
-  };
   readonly model: string;
 
   private ai: GoogleGenAI;
+  private modelCaps: ModelCapabilities | null = null;
+
+  /**
+   * Get capabilities - determined from modelCaps
+   */
+  get capabilities(): AdapterCapabilities {
+    return {
+      jsonMode: 'full_schema',
+      audio: this.modelCaps?.audioInput ?? true,
+      search: this.modelCaps?.webSearch ?? true,
+    };
+  }
 
   constructor(config: ProviderConfig) {
     super(config);
     this.model = config.model;
+
+    // Lookup model capabilities from models.json
+    const matchResult = findModel(config.model);
+    if (matchResult.model) {
+      this.modelCaps = parseCapabilities(matchResult.model);
+    }
 
     // Initialize Gemini client
     const clientOptions: { apiKey: string; baseUrl?: string } = {
@@ -88,7 +99,7 @@ export class GeminiAdapter extends BaseAdapter {
             parts,
             options.schema,
             {
-              maxOutputTokens: getMaxOutputTokens(this.model),
+              maxOutputTokens: getMaxOutputTokens(this.modelCaps),
               // Pass through Gemini-specific settings from step config
               ...(stepConfig.safetySettings && { safetySettings: stepConfig.safetySettings }),
               ...(stepConfig.tools && { tools: stepConfig.tools }),
