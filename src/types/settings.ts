@@ -94,4 +94,39 @@ export interface AppSettings {
 
   // Display Settings
   language?: 'zh-CN' | 'en-US' | 'ja-JP'; // UI language (default: auto-detect from system)
+
+  // Multi-Provider Settings
+  stepProviders?: {
+    refinement?: {
+      type: 'gemini' | 'openai' | 'claude';
+      apiKey: string;
+      baseUrl?: string;
+      model: string;
+    };
+    translation?: {
+      type: 'gemini' | 'openai' | 'claude';
+      apiKey: string;
+      baseUrl?: string;
+      model: string;
+    };
+    proofread?: {
+      type: 'gemini' | 'openai' | 'claude';
+      apiKey: string;
+      baseUrl?: string;
+      model: string;
+    };
+    speakerExtraction?: {
+      type: 'gemini' | 'openai' | 'claude';
+      apiKey: string;
+      baseUrl?: string;
+      model: string;
+    };
+    glossaryExtraction?: {
+      type: 'gemini' | 'openai' | 'claude';
+      apiKey: string;
+      baseUrl?: string;
+      model: string;
+    };
+  };
+  providerCapabilities?: Record<string, { jsonMode: string; probedAt: number }>;
 }

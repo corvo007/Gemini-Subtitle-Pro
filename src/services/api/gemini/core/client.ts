@@ -456,7 +456,7 @@ export async function generateContentWithRetry<T = any>(
 export interface StepApiConfig {
   maxOutputTokens?: number;
   tools?: any[];
-  thinkingConfig?: { thinkingLevel: string };
+  thinkingConfig?: { thinkingLevel?: string; thinkingBudget?: number };
 }
 
 export async function generateContentWithLongOutput(
