@@ -1320,6 +1320,28 @@ ipcMain.handle('open-external', async (_event, url: string) => {
   }
 });
 
+let splashWindow: BrowserWindow | null = null;
+
+const createSplashWindow = () => {
+  splashWindow = new BrowserWindow({
+    width: 340,
+    height: 340,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    resizable: false,
+    movable: false,
+    icon: path.join(__dirname, '../resources/icon.png'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  splashWindow.loadFile(path.join(__dirname, './splash.html')).catch(console.error);
+  splashWindow.center();
+};
+
 const createWindow = () => {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
 
@@ -1334,6 +1356,7 @@ const createWindow = () => {
   const mainWindow = new BrowserWindow({
     width,
     height,
+    show: false, // Hide initially, wait for ready-to-show
     minWidth: 800,
     minHeight: 600, // Reduced min height to be safer on small logic screens
     icon: path.join(__dirname, '../resources/icon.png'),
@@ -1353,6 +1376,18 @@ const createWindow = () => {
     mainWindow.loadURL('http://localhost:3000').catch(console.error);
     mainWindow.webContents.openDevTools();
   }
+
+  // Graceful showing: Wait for content to render
+  mainWindow.once('ready-to-show', () => {
+    // Add a small delay to ensure visual smoothness (optional, can be removed if specific splash feels too long)
+    // setTimeout(() => {
+    mainWindow.show();
+    if (splashWindow) {
+      splashWindow.destroy();
+      splashWindow = null;
+    }
+    // }, 500);
+  });
 };
 
 const createMenu = () => {
@@ -1599,7 +1634,8 @@ app.on('ready', async () => {
   );
 
   createMenu();
-  createWindow();
+  createSplashWindow(); // Show splash immediately
+  createWindow(); // Create main window in background
 });
 
 // ============================================================================

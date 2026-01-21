@@ -30,6 +30,10 @@ export default defineConfig(({ mode }) => {
             src: 'electron/locales/*',
             dest: 'locales',
           },
+          {
+            src: 'electron/splash.html',
+            dest: '.',
+          },
         ],
       }),
     ],
