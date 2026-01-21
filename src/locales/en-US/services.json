@@ -37,7 +37,18 @@
       "errors": {
         "billingHardLimit": "Billing hard limit reached",
         "invalidAudioFormat": "Invalid audio format",
-        "transcriptionFailed": "Transcription failed"
+        "transcriptionFailed": "Transcription failed",
+        "invalidKey": "OpenAI API Key is invalid, please check configuration",
+        "rateLimited": "OpenAI API rate limited or quota exhausted, please try again later",
+        "permissionDenied": "OpenAI API permission denied",
+        "modelNotFound": "Model {{model}} not found or access denied"
+      }
+    },
+    "claude": {
+      "errors": {
+        "invalidKey": "Claude API Key is invalid, please check configuration",
+        "rateLimited": "Claude API rate limited, please try again later",
+        "permissionDenied": "Claude API permission denied"
       }
     }
   },

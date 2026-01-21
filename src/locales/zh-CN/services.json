@@ -37,7 +37,18 @@
       "errors": {
         "billingHardLimit": "已达到账单硬限额",
         "invalidAudioFormat": "无效的音频格式",
-        "transcriptionFailed": "转录失败"
+        "transcriptionFailed": "转录失败",
+        "invalidKey": "OpenAI API Key 无效，请检查配置",
+        "rateLimited": "OpenAI API 请求过于频繁或配额已用完，请稍后重试",
+        "permissionDenied": "OpenAI API 权限不足",
+        "modelNotFound": "模型 {{model}} 不存在或无权访问"
+      }
+    },
+    "claude": {
+      "errors": {
+        "invalidKey": "Claude API Key 无效，请检查配置",
+        "rateLimited": "Claude API 请求过于频繁，请稍后重试",
+        "permissionDenied": "Claude API 权限不足"
       }
     }
   },
