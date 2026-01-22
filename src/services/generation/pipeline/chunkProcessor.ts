@@ -251,12 +251,20 @@ export class ChunkProcessor {
       const errorMsg = actionableMsg || i18n.t('services:pipeline.status.failed');
       onProgress?.({ id: index, total: totalChunks, status: 'error', message: errorMsg });
 
-      // Sentry: Report chunk failure with context
-      Sentry.captureException(e, {
-        level: 'warning',
-        tags: { source: 'chunk_processor' },
-        extra: { chunk_index: index, total_chunks: totalChunks },
-      });
+      // Sentry: Report chunk failure with context (filter expected errors)
+      if (
+        !e.message?.includes('cancelled') &&
+        !e.message?.includes('aborted') &&
+        !e.message?.includes('API key') &&
+        !e.message?.includes('rate limit') &&
+        !e.message?.includes('timeout')
+      ) {
+        Sentry.captureException(e, {
+          level: 'warning',
+          tags: { source: 'chunk_processor' },
+          extra: { chunk_index: index, total_chunks: totalChunks },
+        });
+      }
 
       return { whisper: [], refined: [], aligned: [], translated: [], final: [] };
     }

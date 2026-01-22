@@ -14,6 +14,7 @@ import { decodeAudioWithRetry } from '@/services/audio/decoder';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { ENV } from '@/config';
 import * as Sentry from '@sentry/electron/renderer';
+import { ExpectedError } from '@/utils/expectedError';
 import {
   type GlossaryFlowProps,
   type SnapshotsValuesProps,
@@ -380,15 +381,25 @@ export function useGeneration({
             'workspace_generation_failed',
             {
               error: error.message,
+              duration_ms: Date.now() - startAt,
             },
             'interaction'
           );
         }
 
-        // Sentry: Report error with context
-        Sentry.captureException(error, {
-          tags: { source: 'workspace_generation' },
-        });
+        // Sentry: Report error with context ONLY if not expected
+        if (
+          !error.message?.includes('API key') &&
+          !error.message?.includes('密钥') &&
+          !error.message?.includes('rate limit') &&
+          !error.message?.includes('timeout') &&
+          !(error instanceof ExpectedError) &&
+          !(error as any).isExpected
+        ) {
+          Sentry.captureException(error, {
+            tags: { source: 'workspace_generation' },
+          });
+        }
       }
     } finally {
       abortControllerRef.current = null;

@@ -15,6 +15,7 @@ import type { AppSettings } from '@/types/settings';
 import type { SubtitleItem } from '@/types/subtitle';
 import type { ChunkStatus } from '@/types/api';
 import * as Sentry from '@sentry/electron/renderer';
+import { ExpectedError } from '@/utils/expectedError';
 
 interface UseEndToEndSubtitleGenerationProps {
   settings: AppSettings;
@@ -427,9 +428,21 @@ export function useEndToEndSubtitleGeneration({
         }
 
         // Sentry: Report error with context
-        Sentry.captureException(error, {
-          tags: { source: 'end_to_end_generation' },
-        });
+        // Only report if it's not a known expected error
+        if (
+          !error.message?.includes('API key') &&
+          !error.message?.includes('密钥') &&
+          !error.message?.includes('rate limit') &&
+          !error.message?.includes('429') &&
+          !error.message?.includes('timeout') &&
+          !error.message?.includes('超时') &&
+          !(error instanceof ExpectedError) &&
+          !(error as any).isExpected
+        ) {
+          Sentry.captureException(error, {
+            tags: { source: 'end_to_end_generation' },
+          });
+        }
 
         if (error.message?.includes('API key') || error.message?.includes('密钥')) {
           return { success: false, error: t('errors.invalidApiKey'), errorCode: 'API_KEY_ERROR' };

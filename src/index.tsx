@@ -7,7 +7,20 @@ import App from '@/App';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 // Initialize Sentry for error tracking in Renderer process
-Sentry.init();
+// Initialize Sentry for error tracking in Renderer process
+Sentry.init({
+  beforeSend(event, hint) {
+    const originalException = hint.originalException;
+    if (
+      originalException &&
+      (originalException instanceof Error || typeof originalException === 'object') &&
+      (originalException as any).isExpected === true
+    ) {
+      return null;
+    }
+    return event;
+  },
+});
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
