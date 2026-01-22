@@ -232,14 +232,17 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
         subtitleMode === 'none' ? 'none' : subtitleMode === 'workspace' ? 'workspace' : 'external';
 
       const cleanup = window.electronAPI.compression.onProgress((p) => setProgress(p));
-      await window.electronAPI.compression.compress(inputPath, outputPath, {
-        ...options,
-        subtitlePath: finalSubtitlePath,
-        hwAccel: hwAccelEnabled ? 'auto' : 'off',
-        videoSource,
-        subtitleSource,
-      });
-      cleanup();
+      try {
+        await window.electronAPI.compression.compress(inputPath, outputPath, {
+          ...options,
+          subtitlePath: finalSubtitlePath,
+          hwAccel: hwAccelEnabled ? 'auto' : 'off',
+          videoSource,
+          subtitleSource,
+        });
+      } finally {
+        cleanup();
+      }
       setShowSuccessModal(true);
     } catch (e: any) {
       // Don't show error for user-initiated cancellation

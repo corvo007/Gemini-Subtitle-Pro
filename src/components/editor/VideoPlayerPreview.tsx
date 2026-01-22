@@ -208,7 +208,13 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
     useEffect(() => {
       if (!assContainerRef.current || !videoRef.current) return;
       // Skip if debounced content is empty (initial state or during generation)
-      if (!debouncedAssContent) return;
+      if (!debouncedAssContent) {
+        // Defensive: ensure container is clear even if cleanup ran
+        if (assContainerRef.current) {
+          assContainerRef.current.innerHTML = '';
+        }
+        return;
+      }
 
       const video = videoRef.current;
       const wasPlaying = !video.paused && !video.ended && video.readyState > 2;
