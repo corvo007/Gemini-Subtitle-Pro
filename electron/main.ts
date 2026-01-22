@@ -1,4 +1,4 @@
-import { mainLogger } from './logger.ts'; // Must be first!
+import * as Sentry from '@sentry/electron/main';
 import {
   app,
   BrowserWindow,
@@ -12,15 +12,27 @@ import {
 } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv'; // Load dotenv
+import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables in development
+// Load environment variables BEFORE Sentry init (dev mode only)
 if (!app.isPackaged) {
   dotenv.config({ path: path.join(__dirname, '../.env') });
 }
+
+// Initialize Sentry for error tracking
+const SENTRY_DSN = process.env.VITE_SENTRY_DSN;
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    release: app.getVersion(),
+    environment: app.isPackaged ? 'production' : 'development',
+  });
+}
+
+import { mainLogger } from './logger.ts'; // Must be first after Sentry!
 
 import squirrelStartup from 'electron-squirrel-startup';
 import fs from 'fs';

@@ -31,6 +31,7 @@
     "@anthropic-ai/sdk": "^0.71.2",
     "@google/genai": "^1.30.0",
     "@ricky0123/vad-web": "^0.0.30",
+    "@sentry/electron": "^7.6.0",
     "@uiw/react-json-view": "^2.0.0-alpha.40",
     "assjs": "^0.1.4",
     "class-variance-authority": "^0.7.1",

@@ -18,6 +18,7 @@ import { MockFactory } from '@/services/generation/debug/mockFactory';
 import { logger } from '@/services/utils/logger';
 import { formatTime, timeToSeconds } from '@/services/subtitle/time';
 import { getActionableErrorMessage } from '@/services/llm/providers/gemini';
+import * as Sentry from '@sentry/electron/renderer';
 import {
   TranscriptionStep,
   WaitForDepsStep,
@@ -249,6 +250,13 @@ export class ChunkProcessor {
       const actionableMsg = getActionableErrorMessage(e);
       const errorMsg = actionableMsg || i18n.t('services:pipeline.status.failed');
       onProgress?.({ id: index, total: totalChunks, status: 'error', message: errorMsg });
+
+      // Sentry: Report chunk failure with context
+      Sentry.captureException(e, {
+        level: 'warning',
+        tags: { source: 'chunk_processor' },
+        extra: { chunk_index: index, total_chunks: totalChunks },
+      });
 
       return { whisper: [], refined: [], aligned: [], translated: [], final: [] };
     }

@@ -70,6 +70,8 @@ export default defineConfig(({ mode }) => {
       // Analytics API Keys (from .env)
       'process.env.VITE_AMPLITUDE_API_KEY': JSON.stringify(env.VITE_AMPLITUDE_API_KEY || ''),
       'process.env.VITE_MIXPANEL_TOKEN': JSON.stringify(env.VITE_MIXPANEL_TOKEN || ''),
+      // Sentry DSN (from .env)
+      'process.env.VITE_SENTRY_DSN': JSON.stringify(env.VITE_SENTRY_DSN || ''),
     },
   };
 });

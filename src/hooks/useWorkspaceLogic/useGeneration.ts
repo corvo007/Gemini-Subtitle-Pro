@@ -13,6 +13,7 @@ import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { decodeAudioWithRetry } from '@/services/audio/decoder';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { ENV } from '@/config';
+import * as Sentry from '@sentry/electron/renderer';
 import {
   type GlossaryFlowProps,
   type SnapshotsValuesProps,
@@ -124,19 +125,60 @@ export function useGeneration({
       void window.electronAPI.analytics.track(
         'workspace_generation_started',
         {
+          // File info
           file_ext: file.name.split('.').pop(),
           duration_sec: duration,
+
+          // Core settings
+          genre: settings.genre,
           target_language: settings.targetLanguage,
+          output_mode: settings.outputMode,
+
+          // Transcription
           model: settings.useLocalWhisper ? 'local' : 'api',
+
+          // Concurrency & Performance
+          concurrency_flash: settings.concurrencyFlash,
+          concurrency_pro: settings.concurrencyPro,
+          concurrency_local: settings.localConcurrency,
+          chunk_duration: settings.chunkDuration,
+          use_smart_split: settings.useSmartSplit,
+
+          // Batch sizes
+          translation_batch_size: settings.translationBatchSize,
+          proofread_batch_size: settings.proofreadBatchSize,
+
+          // Alignment
+          alignment_mode: settings.alignmentMode,
+
+          // Glossary settings
           enable_auto_glossary: settings.enableAutoGlossary,
           glossary_auto_confirm: settings.glossaryAutoConfirm,
+          glossary_sample_minutes: settings.glossarySampleMinutes,
+          has_preset_glossary: !!(settings.activeGlossaryId && settings.glossaries?.length),
+          preset_glossary_terms_count:
+            settings.glossaries?.find((g) => g.id === settings.activeGlossaryId)?.terms?.length ||
+            0,
+
+          // Diarization settings
           enable_diarization: settings.enableDiarization,
           enable_speaker_pre_analysis: settings.enableSpeakerPreAnalysis,
           min_speakers: settings.minSpeakers,
           max_speakers: settings.maxSpeakers,
           use_speaker_colors: settings.useSpeakerColors,
           use_speaker_styled_translation: settings.useSpeakerStyledTranslation,
-          output_mode: settings.outputMode,
+
+          // Third-party API detection (check if custom endpoint is set)
+          // is_third_party_openai: !!(settings.openaiEndpoint && settings.openaiEndpoint !== ''),
+          is_third_party_gemini: !!(settings.geminiEndpoint && settings.geminiEndpoint !== ''),
+
+          // Step providers (which provider for each step)
+          // provider_refinement: settings.stepProviders?.refinement?.type || 'gemini',
+          // provider_translation: settings.stepProviders?.translation?.type || 'gemini',
+
+          // Has custom prompts
+          has_custom_translation_prompt: !!settings.customTranslationPrompt?.trim(),
+          has_custom_refinement_prompt: !!settings.customRefinementPrompt?.trim(),
         },
         'interaction'
       );
@@ -342,6 +384,11 @@ export function useGeneration({
             'interaction'
           );
         }
+
+        // Sentry: Report error with context
+        Sentry.captureException(error, {
+          tags: { source: 'workspace_generation' },
+        });
       }
     } finally {
       abortControllerRef.current = null;

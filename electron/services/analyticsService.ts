@@ -1,5 +1,6 @@
 import * as Amplitude from '@amplitude/analytics-node';
 import Mixpanel from 'mixpanel';
+import * as Sentry from '@sentry/electron/main';
 import { app } from 'electron';
 import fs from 'fs';
 import path from 'path';
@@ -38,6 +39,11 @@ class AnalyticsService {
     // 1. Load or Generate User ID
     await this.loadIdentity();
 
+    // 1.5. Sync User ID to Sentry for cross-referencing with analytics
+    if (this.userId) {
+      Sentry.setUser({ id: this.userId });
+    }
+
     // 2. Get App ID from Env
     const amplitudeApiKey = process.env.VITE_AMPLITUDE_API_KEY;
     const mixpanelToken = process.env.VITE_MIXPANEL_TOKEN;
@@ -75,11 +81,13 @@ class AnalyticsService {
       }
 
       // Load initial settings for caching
+      let cachedZoomLevel: number | undefined;
       try {
         const settings = await storageService.readSettings();
         if (settings?.language) {
           this.cachedAppLanguage = settings.language;
         }
+        cachedZoomLevel = settings?.zoomLevel;
       } catch (e) {
         console.error('[Analytics] Failed to load initial settings:', e);
       }
@@ -124,6 +132,7 @@ class AnalyticsService {
         'app_launched',
         {
           ...deviceInfo,
+          zoom_level: cachedZoomLevel,
         },
         'system'
       );

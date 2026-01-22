@@ -14,6 +14,7 @@ import { logger } from '@/services/utils/logger';
 import type { AppSettings } from '@/types/settings';
 import type { SubtitleItem } from '@/types/subtitle';
 import type { ChunkStatus } from '@/types/api';
+import * as Sentry from '@sentry/electron/renderer';
 
 interface UseEndToEndSubtitleGenerationProps {
   settings: AppSettings;
@@ -180,12 +181,44 @@ export function useEndToEndSubtitleGeneration({
           void window.electronAPI.analytics.track(
             'end_to_end_generation_started',
             {
+              // File info
               file_ext: audioPath.split('.').pop() || 'unknown',
               video_duration: audioBuffer.duration,
+
+              // Core settings
+              genre: currentSettings.genre,
               target_language: currentSettings.targetLanguage,
+              output_mode: config.outputMode || 'bilingual',
+
+              // Transcription
               model: currentSettings.useLocalWhisper ? 'local' : 'api',
+
+              // Concurrency & Performance
+              concurrency_flash: currentSettings.concurrencyFlash,
+              concurrency_pro: currentSettings.concurrencyPro,
+              concurrency_local: currentSettings.localConcurrency,
+              chunk_duration: currentSettings.chunkDuration,
+              use_smart_split: currentSettings.useSmartSplit,
+
+              // Batch sizes
+              translation_batch_size: currentSettings.translationBatchSize,
+              proofread_batch_size: currentSettings.proofreadBatchSize,
+
+              // Alignment
+              alignment_mode: currentSettings.alignmentMode,
+
+              // Glossary settings
               enable_auto_glossary: config.enableGlossary ?? currentSettings.enableAutoGlossary,
               glossary_auto_confirm: true, // End-to-end always auto-confirms
+              glossary_sample_minutes: currentSettings.glossarySampleMinutes,
+              has_preset_glossary: !!(
+                currentSettings.activeGlossaryId && currentSettings.glossaries?.length
+              ),
+              preset_glossary_terms_count:
+                currentSettings.glossaries?.find((g) => g.id === currentSettings.activeGlossaryId)
+                  ?.terms?.length || 0,
+
+              // Diarization settings
               enable_diarization: config.enableDiarization ?? currentSettings.enableDiarization,
               enable_speaker_pre_analysis:
                 config.enableSpeakerPreAnalysis ?? currentSettings.enableSpeakerPreAnalysis,
@@ -194,8 +227,28 @@ export function useEndToEndSubtitleGeneration({
               use_speaker_colors: config.useSpeakerColors ?? currentSettings.useSpeakerColors,
               use_speaker_styled_translation:
                 config.useSpeakerStyledTranslation ?? currentSettings.useSpeakerStyledTranslation,
+
+              // Third-party API detection
+              // is_third_party_openai: !!(
+              //   currentSettings.openaiEndpoint && currentSettings.openaiEndpoint !== ''
+              // ),
+              is_third_party_gemini: !!(
+                currentSettings.geminiEndpoint && currentSettings.geminiEndpoint !== ''
+              ),
+
+              // Step providers
+              // provider_refinement: currentSettings.stepProviders?.refinement?.type || 'gemini',
+              // provider_translation: currentSettings.stepProviders?.translation?.type || 'gemini',
+
+              // Has custom prompts
+              has_custom_translation_prompt: !!currentSettings.customTranslationPrompt?.trim(),
+              has_custom_refinement_prompt: !!currentSettings.customRefinementPrompt?.trim(),
+
+              // End-to-end specific
               enable_compression: config.enableCompression ?? false,
-              output_mode: config.outputMode || 'bilingual',
+
+              // UI settings
+              zoom_level: currentSettings.zoomLevel,
             },
             'interaction'
           );
@@ -372,6 +425,11 @@ export function useEndToEndSubtitleGeneration({
             'interaction'
           );
         }
+
+        // Sentry: Report error with context
+        Sentry.captureException(error, {
+          tags: { source: 'end_to_end_generation' },
+        });
 
         if (error.message?.includes('API key') || error.message?.includes('密钥')) {
           return { success: false, error: t('errors.invalidApiKey'), errorCode: 'API_KEY_ERROR' };

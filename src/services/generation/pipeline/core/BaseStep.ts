@@ -159,6 +159,24 @@ export abstract class BaseStep<TInput, TOutput> {
       if (this.getFallback) {
         const fallback = this.getFallback(input, e as Error, ctx);
         await this.saveArtifact?.(fallback, ctx);
+
+        // Analytics: Track step fallback with context (using Analytics for larger quota)
+        if (typeof window !== 'undefined' && window.electronAPI?.analytics) {
+          void window.electronAPI.analytics.track(
+            'step_fallback',
+            {
+              step_name: this.name,
+              chunk_index: ctx.chunk.index,
+              total_chunks: ctx.totalChunks,
+              // Error details
+              error_name: (e as Error).name,
+              error_message: (e as Error).message?.substring(0, 300),
+              error_stack: (e as Error).stack?.split('\n').slice(0, 3).join(' | '),
+            },
+            'interaction'
+          );
+        }
+
         return { output: fallback, error: e as Error };
       }
       throw e;

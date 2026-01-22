@@ -2,6 +2,7 @@ import React, { type ErrorInfo, type ReactNode } from 'react';
 import { Translation } from 'react-i18next';
 import { AlertCircle, RefreshCcw } from 'lucide-react';
 import { logger } from '@/services/utils/logger';
+import * as Sentry from '@sentry/electron/renderer';
 
 interface Props {
   children: ReactNode;
@@ -28,6 +29,11 @@ export class ErrorBoundary extends React.Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     logger.error('Uncaught error', error);
     this.setState({ errorInfo });
+
+    // Report to Sentry with React component context
+    Sentry.captureException(error, {
+      extra: { componentStack: errorInfo.componentStack },
+    });
   }
 
   private handleRetry = () => {
