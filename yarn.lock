@@ -2811,7 +2811,7 @@ axios@^1.13.2:
 
 babel-plugin-react-compiler@^1.0.0:
   version "1.0.0"
-  resolved "https://registry.npmmirror.com/babel-plugin-react-compiler/-/babel-plugin-react-compiler-1.0.0.tgz#bdf7360a23a4d5ebfca090255da3893efd07425f"
+  resolved "https://registry.npmmirror.com/babel-plugin-react-compiler/-/babel-plugin-react-compiler-1.0.0.tgz"
   integrity sha512-Ixm8tFfoKKIPYdCCKYTsqv+Fd4IJ0DQqMyEimo+pxUOMUR9cVPlwTrFt9Avu+3cb6Zp3mAzl+t1MrG2fxxKsxw==
   dependencies:
     "@babel/types" "^7.26.0"
@@ -4235,7 +4235,7 @@ eslint-config-prettier@^10.1.8:
 
 eslint-plugin-react-hooks@^7.0.1:
   version "7.0.1"
-  resolved "https://registry.npmmirror.com/eslint-plugin-react-hooks/-/eslint-plugin-react-hooks-7.0.1.tgz#66e258db58ece50723ef20cc159f8aa908219169"
+  resolved "https://registry.npmmirror.com/eslint-plugin-react-hooks/-/eslint-plugin-react-hooks-7.0.1.tgz"
   integrity sha512-O0d0m04evaNzEPoSW+59Mezf8Qt0InfgGIBJnpC0h3NH/WjUAR7BIKUfysC6todmtiZ/A0oUVS8Gce0WhBrHsA==
   dependencies:
     "@babel/core" "^7.24.4"

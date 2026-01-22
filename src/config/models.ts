@@ -1,185 +1,100 @@
-/**
- * LLM Model Configuration
- *
- * This module provides centralized configuration for LLM model selection
- * and step-specific parameters. The configuration is provider-agnostic at
- * the step level—adapters handle the translation to provider-specific APIs.
- *
- * Architecture:
- * - STEP_MODELS: Maps pipeline steps to Gemini models (fallback defaults)
- * - STEP_CONFIGS: Step-level feature toggles (thinking, search, output limits)
- * - buildStepConfig: Gemini-specific API parameter builder
- */
+// Step-specific model configuration
+// This allows customizing which model to use for each processing step
+// without exposing this to the UI
 
 import { SAFETY_SETTINGS } from '@/services/llm/schemas';
 
-// =============================================================================
-// Model Definitions
-// =============================================================================
-
-/**
- * Available Gemini models
- * Used as default values when no per-step provider is configured
- */
+// Base model definitions
 export const MODELS = {
-  /** Gemini 2.5 Flash - Fast, reliable, good for refinement */
   FLASH: 'gemini-2.5-flash',
-  /** Gemini 3 Flash Preview - Latest fast model */
   FLASH_NEW: 'gemini-3-flash-preview',
-  /** Gemini 3 Pro Preview - Best quality reasoning */
   PRO: 'gemini-3-pro-preview',
 } as const;
 
 export type ModelName = (typeof MODELS)[keyof typeof MODELS];
 
-// =============================================================================
-// Step-to-Model Mapping
-// =============================================================================
-
-/**
- * Default Gemini model for each pipeline step
- * These are used when AppSettings.stepProviders doesn't specify a provider
- */
+// Step-to-model mapping
+// Change these values to switch models for specific steps
 export const STEP_MODELS = {
-  /**
-   * Refinement: Audio → Timestamp correction + transcript polish
-   * ⚠️ Uses 2.5 Flash due to Gemini 3 timestamp compression bug (2024-12-16)
-   */
+  // Refinement: Audio -> Timestamp correction + transcript polish
+  // ⚠️ Gemini 3 Flash 存在时间戳压缩 Bug (2024-12-16)
+  // 使用 2.5 Flash 直到问题修复
   refinement: MODELS.FLASH,
 
-  /** Translation: Multi-language text translation */
+  // Translation: Text translation
   translation: MODELS.FLASH_NEW,
 
-  /** Glossary Extraction: Extract domain terminology from audio/text */
+  // Glossary Extraction: Extract terminology from audio
   glossaryExtraction: MODELS.PRO,
 
-  /** Speaker Profile: Identify and analyze speakers from audio */
+  // Speaker Profile: Identify and analyze speakers
   speakerProfile: MODELS.PRO,
 
-  /** Batch Proofread: High-quality multi-pass proofreading */
+  // Batch Proofread: High quality proofreading
   batchProofread: MODELS.PRO,
 } as const;
 
 export type StepName = keyof typeof STEP_MODELS;
 
-// =============================================================================
-// Step Configuration Types
-// =============================================================================
+// ============================================================================
+// Step-specific model configurations
+// Configure thinking, tools, and output limits for each step
+// ============================================================================
 
-/**
- * Thinking intensity level
- * Mapped to provider-specific parameters by each adapter:
- * - Gemini 2.5: thinkingBudget (4096/8192/16384 tokens)
- * - Gemini 3: thinkingLevel ("low"/"medium"/"high")
- * - OpenAI: reasoning_effort ("low"/"medium"/"high") - only o-series/gpt-5
- * - Claude: budget_tokens (4096/8192/16384 tokens) - only Claude 4+
- */
-export type ThinkingLevel = 'none' | 'low' | 'medium' | 'high';
+type ThinkingLevel = 'none' | 'low' | 'medium' | 'high';
 
-/**
- * Step-level configuration
- * Provider-agnostic settings that adapters translate to API parameters
- */
 export interface StepConfig {
-  /**
-   * Thinking/reasoning intensity
-   * Set to 'none' or omit to disable extended thinking
-   */
+  // Thinking configuration (for models that support it)
   thinkingLevel?: ThinkingLevel;
-
-  /**
-   * Enable web search grounding
-   * - Gemini: Google Search tool
-   * - OpenAI: web_search_options (official models only)
-   * - Claude: web_search tool (Claude 4+)
-   */
+  // Enable Google Search grounding
   useSearch?: boolean;
+  // Max output tokens (default: 65536)
+  maxOutputTokens?: number;
 }
 
-// =============================================================================
-// Step Configurations
-// =============================================================================
-
-/**
- * Configuration for each pipeline step
- * These settings are read by adapters to construct API requests
- */
 export const STEP_CONFIGS: Record<StepName, StepConfig> = {
-  /**
-   * Refinement (Audio processing)
-   * - No thinking: Speed priority for real-time feedback
-   * - No search: Audio content doesn't benefit from web grounding
-   */
   refinement: {
-    thinkingLevel: 'none',
+    // thinkingLevel: 'high',
     useSearch: false,
+    maxOutputTokens: 65536,
   },
 
-  /**
-   * Translation
-   * - No thinking: Streaming UX priority
-   * - Search enabled: Helps with proper nouns, terminology
-   */
   translation: {
-    thinkingLevel: 'none',
+    // thinkingLevel: 'high',
     useSearch: true,
+    maxOutputTokens: 65536,
   },
 
-  /**
-   * Glossary Extraction
-   * - High thinking: Complex terminology analysis
-   * - Search enabled: Verify terminology accuracy
-   */
   glossaryExtraction: {
     thinkingLevel: 'high',
     useSearch: true,
+    maxOutputTokens: 65536,
   },
 
-  /**
-   * Speaker Profile
-   * - High thinking: Complex speaker identification
-   * - Search enabled: Could help identify known speakers
-   */
   speakerProfile: {
     thinkingLevel: 'high',
     useSearch: true,
+    maxOutputTokens: 65536,
   },
 
-  /**
-   * Batch Proofread
-   * - High thinking: Quality-focused multi-pass review
-   * - Search enabled: Fact-checking and terminology verification
-   */
   batchProofread: {
     thinkingLevel: 'high',
     useSearch: true,
+    maxOutputTokens: 65536,
   },
 };
 
-// =============================================================================
-// Gemini API Helpers
-// =============================================================================
-
-/**
- * Build Gemini-specific API configuration for a step
- * Used by GeminiAdapter to construct generateContent parameters
- *
- * @param step - Pipeline step name
- * @returns Gemini API configuration object
- */
+// Helper to build config object for API calls
+// Includes common parameters used by all Gemini API calls
 export function buildStepConfig(step: StepName) {
   const config = STEP_CONFIGS[step];
-
   return {
-    // Common Gemini parameters
+    // Common parameters for all API calls
     responseMimeType: 'application/json' as const,
     safetySettings: SAFETY_SETTINGS,
-
-    // Google Search tool (if enabled)
+    maxOutputTokens: config.maxOutputTokens ?? 65536,
+    // Step-specific parameters
     ...(config.useSearch && { tools: [{ googleSearch: {} }] }),
-
-    // Thinking config (if enabled)
-    // Note: GeminiAdapter further transforms this based on model version
     ...(config.thinkingLevel &&
       config.thinkingLevel !== 'none' && {
         thinkingConfig: { thinkingLevel: config.thinkingLevel },

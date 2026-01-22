@@ -10,7 +10,15 @@ import { safeParseJsonObject } from '@/services/utils/jsonParser';
 import { STEP_CONFIGS, type StepName as ConfigStepName } from '@/config/models';
 import { logger } from '@/services/utils/logger';
 import i18n from '@/i18n';
-import { findModel, parseCapabilities, type ModelCapabilities } from '../ModelCapabilities';
+import {
+  findModel,
+  parseCapabilities,
+  type ModelCapabilities,
+  type ModelEntry,
+} from '../ModelCapabilities';
+
+/** Cutoff date for web search support (2025-03-01) - Claude specific */
+export const WEB_SEARCH_CUTOFF = new Date('2025-03-01').getTime() / 1000;
 
 /**
  * Get max output tokens - uses modelCaps if available, otherwise fallback
@@ -32,6 +40,7 @@ export class ClaudeAdapter extends BaseAdapter {
   readonly model: string;
 
   private client: Anthropic;
+  private modelEntry: ModelEntry | null = null;
   private modelCaps: ModelCapabilities | null = null;
 
   /**
@@ -42,8 +51,8 @@ export class ClaudeAdapter extends BaseAdapter {
     const jsonLevel = this.modelCaps?.jsonOutputLevel;
     return {
       jsonMode: jsonLevel === 'strict' ? 'full_schema' : 'json_only',
-      audio: this.modelCaps?.audioInput ?? true,
-      search: false, // Claude doesn't support web search
+      audio: false, // Claude API does not support audio input (no Base64AudioSource in SDK)
+      search: this.modelEntry ? this.modelEntry.created >= WEB_SEARCH_CUTOFF : false,
     };
   }
 
@@ -75,6 +84,7 @@ export class ClaudeAdapter extends BaseAdapter {
     // Lookup model capabilities from models.json
     const matchResult = findModel(config.model);
     if (matchResult.model) {
+      this.modelEntry = matchResult.model;
       this.modelCaps = parseCapabilities(matchResult.model);
     }
 

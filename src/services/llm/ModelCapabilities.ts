@@ -5,7 +5,7 @@
  * based on models.json (OpenRouter API data).
  */
 
-const modelsData = require('@/config/models.json');
+import modelsData from '@/config/models.json';
 
 // =============================================================================
 // Types
