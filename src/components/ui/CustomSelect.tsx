@@ -95,7 +95,11 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     };
   }, [containerRef, isOpen]);
 
-  const selectedLabel = options.find((opt) => opt.value === value)?.label || placeholder || value;
+  // Memoize selected label to avoid .find() on every render (Audit fix)
+  const selectedLabel = React.useMemo(
+    () => options.find((opt) => opt.value === value)?.label || placeholder || value,
+    [options, value, placeholder]
+  );
 
   return (
     <div className={cn('relative', className)} ref={containerRef}>

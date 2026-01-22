@@ -97,6 +97,9 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
     const assContainerRef = useRef<HTMLDivElement>(null);
     const assRef = useRef<ASS | null>(null);
 
+    // Debounced ASS content to prevent excessive rebuilds (Issue 3 fix)
+    const [debouncedAssContent, setDebouncedAssContent] = useState('');
+
     const handleResizeStart = useCallback(
       (e: React.MouseEvent) => {
         e.preventDefault();
@@ -192,9 +195,20 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
       isGenerating,
     ]);
 
-    // Initialize ASS instance
+    // Debounce the ASS content updates (Issue 3 fix: 300ms delay)
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        setDebouncedAssContent(assContent);
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }, [assContent]);
+
+    // Initialize ASS instance (now reacts to debounced content)
     useEffect(() => {
       if (!assContainerRef.current || !videoRef.current) return;
+      // Skip if debounced content is empty (initial state or during generation)
+      if (!debouncedAssContent) return;
 
       const video = videoRef.current;
       const wasPlaying = !video.paused && !video.ended && video.readyState > 2;
@@ -221,7 +235,7 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
       // 3. Initialize new instance
       // Note: ASS library handles resize automatically via video events
       try {
-        assRef.current = new ASS(assContent, video, {
+        assRef.current = new ASS(debouncedAssContent, video, {
           container: assContainerRef.current,
           resampling: 'video_width',
         });
@@ -247,7 +261,7 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
           assRef.current = null;
         }
       };
-    }, [assContent, ready, isFloating, isCollapsed]);
+    }, [debouncedAssContent, ready, isFloating, isCollapsed]);
 
     // Update time for external sync (not handled by ASS automatically?)
     // ASS handles sync automatically via video events! We just need to manage lifecycle.

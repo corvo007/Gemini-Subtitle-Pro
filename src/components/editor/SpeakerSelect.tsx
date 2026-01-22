@@ -45,7 +45,11 @@ export const SpeakerSelect: React.FC<SpeakerSelectProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownRef]);
 
-  const currentProfile = speakerProfiles.find((p) => p.name === currentSpeaker);
+  // Memoize currentProfile to avoid .find() on every render (Audit fix)
+  const currentProfile = React.useMemo(
+    () => speakerProfiles.find((p) => p.name === currentSpeaker),
+    [speakerProfiles, currentSpeaker]
+  );
   const speakerColor = getSpeakerColorWithCustom(currentSpeaker || '', currentProfile?.color);
 
   return (

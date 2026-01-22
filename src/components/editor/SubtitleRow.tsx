@@ -167,7 +167,8 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
       // Parse current start/end times
       const start = timeToSeconds(sub.startTime);
       const end = timeToSeconds(sub.endTime);
-      return currentPlayTime >= start && currentPlayTime <= end;
+      // Use half-open interval [start, end) to prevent double-highlighting at boundaries
+      return currentPlayTime >= start && currentPlayTime < end;
     }, [currentPlayTime, sub.startTime, sub.endTime]);
 
     // Close add menu when clicking outside
@@ -736,25 +737,18 @@ export const SubtitleRow: React.FC<SubtitleRowProps> = React.memo(
       prev.addSubtitle === next.addSubtitle &&
       prev.isDeleteMode === next.isDeleteMode &&
       prev.isSelectedForDelete === next.isSelectedForDelete &&
-      // Check if current play time affects this row's active state
-      // This is a bit complex, but crucial for performance.
-      // We only need to re-render if:
-      // 1. The previous time made this row active/inactive AND the new time flips that state.
-      // OR
-      // 2. We just always re-render on time update? No, that's too heavy.
-      // Better: Check if prevTime was in range AND currTime is NOT in range (or vice versa).
-      // Or just simply:
-      (prev.sub.startTime === next.sub.startTime && prev.sub.endTime === next.sub.endTime // Time didn't change (usually)
-        ? // Did active state change?
-          (!prev.currentPlayTime || !isTimeInRange(prev.currentPlayTime, prev.sub)) ===
-          (!next.currentPlayTime || !isTimeInRange(next.currentPlayTime, next.sub))
+      // Check if current play time affects this row's active state.
+      // Use explicit null-check to avoid treating currentPlayTime=0 as falsy.
+      (prev.sub.startTime === next.sub.startTime && prev.sub.endTime === next.sub.endTime
+        ? (prev.currentPlayTime == null || !isTimeInRange(prev.currentPlayTime, prev.sub)) ===
+          (next.currentPlayTime == null || !isTimeInRange(next.currentPlayTime, next.sub))
         : true) &&
       (prev.editingCommentId === prev.sub.id) === (next.editingCommentId === next.sub.id)
     );
   }
 );
 
-// Helper for memo
+// Helper for memo (uses half-open interval [start, end) to match isActive)
 function isTimeInRange(time: number, sub: SubtitleItem): boolean {
-  return time >= timeToSeconds(sub.startTime) && time <= timeToSeconds(sub.endTime);
+  return time >= timeToSeconds(sub.startTime) && time < timeToSeconds(sub.endTime);
 }

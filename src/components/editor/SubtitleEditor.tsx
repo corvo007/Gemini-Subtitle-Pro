@@ -264,6 +264,12 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
       return c;
     }, [subtitles, settings.proofreadBatchSize]);
 
+    // Pre-compute ID-to-index map for O(1) lookups in filter mode (Issue 4 fix)
+    const idToIndexMap = React.useMemo(
+      () => new Map(subtitles.map((s, i) => [s.id, i])),
+      [subtitles]
+    );
+
     // Reset auto-scroll memory if data changes drastically
     React.useEffect(() => {
       activeBatchIndexRef.current = -1;
@@ -289,11 +295,27 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
         // (to let Virtuoso mount the new view)
         if (currentPlayTime !== undefined && virtuosoRef.current) {
           setTimeout(() => {
-            const activeBatchIndex = chunks.findIndex((chunk) => {
+            // Binary search for the chunk containing currentPlayTime (Audit fix)
+            let lo = 0;
+            let hi = chunks.length - 1;
+            let activeBatchIndex = -1;
+
+            while (lo <= hi) {
+              const mid = Math.floor((lo + hi) / 2);
+              const chunk = chunks[mid];
               const start = parseTime(chunk[0].startTime);
               const end = parseTime(chunk[chunk.length - 1].endTime);
-              return currentPlayTime >= start && currentPlayTime <= end;
-            });
+
+              // Use half-open interval [start, end) for consistency
+              if (currentPlayTime >= start && currentPlayTime < end) {
+                activeBatchIndex = mid;
+                break;
+              } else if (currentPlayTime < start) {
+                hi = mid - 1;
+              } else {
+                lo = mid + 1;
+              }
+            }
 
             if (activeBatchIndex !== -1 && virtuosoRef.current) {
               virtuosoRef.current.scrollToIndex({
@@ -324,6 +346,34 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
       if (ms) seconds += Number('0.' + ms);
       return seconds;
     };
+
+    // Binary search helper: find the active subtitle index using half-open [start, end)
+    // (Issue 5 fix: O(log N) instead of O(N))
+    const binarySearchTimeIndex = React.useCallback(
+      (items: SubtitleItem[], time: number): number => {
+        if (items.length === 0) return -1;
+
+        let lo = 0;
+        let hi = items.length - 1;
+
+        while (lo <= hi) {
+          const mid = Math.floor((lo + hi) / 2);
+          const start = parseTime(items[mid].startTime);
+          const end = parseTime(items[mid].endTime);
+
+          if (time >= start && time < end) {
+            return mid; // Found
+          } else if (time < start) {
+            hi = mid - 1;
+          } else {
+            lo = mid + 1;
+          }
+        }
+
+        return -1; // Not found
+      },
+      []
+    );
 
     // Auto-scroll logic
     const [autoScrollEnabled, setAutoScrollEnabled] = React.useState(true);
@@ -358,13 +408,9 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
       const now = Date.now();
       if (now - lastScrollTimeRef.current < 800) return;
 
-      // 1. Determine active item index
+      // 1. Determine active item index (using binary search for O(log N))
       if (filteredSubtitles) {
-        const activeIndex = filteredSubtitles.findIndex((sub) => {
-          const start = parseTime(sub.startTime);
-          const end = parseTime(sub.endTime);
-          return currentPlayTime >= start && currentPlayTime <= end;
-        });
+        const activeIndex = binarySearchTimeIndex(filteredSubtitles, currentPlayTime);
 
         if (activeIndex !== -1) {
           virtuosoRef.current.scrollToIndex({
@@ -375,12 +421,27 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
           lastScrollTimeRef.current = now;
         }
       } else {
-        // 2. Batch Mode Logic
-        const activeBatchIndex = chunks.findIndex((chunk) => {
+        // 2. Batch Mode Logic - use binary search on first/last items of chunks
+        // Binary search for the chunk containing currentPlayTime
+        let lo = 0;
+        let hi = chunks.length - 1;
+        let activeBatchIndex = -1;
+
+        while (lo <= hi) {
+          const mid = Math.floor((lo + hi) / 2);
+          const chunk = chunks[mid];
           const start = parseTime(chunk[0].startTime);
           const end = parseTime(chunk[chunk.length - 1].endTime);
-          return currentPlayTime >= start && currentPlayTime <= end;
-        });
+
+          if (currentPlayTime >= start && currentPlayTime < end) {
+            activeBatchIndex = mid;
+            break;
+          } else if (currentPlayTime < start) {
+            hi = mid - 1;
+          } else {
+            lo = mid + 1;
+          }
+        }
 
         if (activeBatchIndex !== -1) {
           // Hybrid Approach:
@@ -396,11 +457,8 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
 
           // Second, try to find the specific active subtitle row in the DOM
           // and scroll it into view for granular precision
-          const activeSub = chunks[activeBatchIndex].find((sub) => {
-            const start = parseTime(sub.startTime);
-            const end = parseTime(sub.endTime);
-            return currentPlayTime >= start && currentPlayTime <= end;
-          });
+          const activeSubIndex = binarySearchTimeIndex(chunks[activeBatchIndex], currentPlayTime);
+          const activeSub = activeSubIndex !== -1 ? chunks[activeBatchIndex][activeSubIndex] : null;
 
           if (activeSub) {
             const element = document.getElementById(`subtitle-row-${activeSub.id}`);
@@ -411,7 +469,7 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
           }
         }
       }
-    }, [currentPlayTime, filteredSubtitles, chunks, autoScrollEnabled]);
+    }, [currentPlayTime, filteredSubtitles, chunks, autoScrollEnabled, binarySearchTimeIndex]);
 
     if (chunks.length === 0) {
       return (
@@ -509,7 +567,8 @@ export const SubtitleEditor: React.FC<SubtitleEditorProps> = React.memo(
                   data={filteredSubtitles}
                   context={{ speakerProfiles }}
                   itemContent={(index, sub) => {
-                    const originalIndex = subtitles.findIndex((s) => s.id === sub.id);
+                    // O(1) lookup using pre-computed map (Issue 4 fix)
+                    const originalIndex = idToIndexMap.get(sub.id) ?? -1;
                     const prevEndTime =
                       originalIndex > 0 ? subtitles[originalIndex - 1].endTime : undefined;
                     return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n';
 import { GenerationStatus } from '@/types/api';
@@ -108,6 +108,19 @@ export default function App() {
     snapshotsValues,
     setShowSettings,
   });
+
+  // Memoize speakerCounts to avoid recomputing on every render (Audit fix)
+  const speakerCounts = useMemo(() => {
+    return workspace.subtitles.reduce(
+      (acc, sub) => {
+        if (sub.speaker) {
+          acc[sub.speaker] = (acc[sub.speaker] || 0) + 1;
+        }
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+  }, [workspace.subtitles]);
 
   // Logs State
   const [showLogs, setShowLogs] = useState(false);
@@ -444,13 +457,13 @@ export default function App() {
                   );
                 }
 
-                // 2. Restore subtitles and batch comments
-                workspace.setSubtitles(JSON.parse(JSON.stringify(snap.subtitles)));
+                // 2. Restore subtitles and batch comments (use structuredClone for perf)
+                workspace.setSubtitles(structuredClone(snap.subtitles));
                 workspace.setBatchComments({ ...snap.batchComments });
 
                 // 3. Sync speakerProfiles (use saved profiles if available, otherwise extract from subtitles)
                 if (snap.speakerProfiles && snap.speakerProfiles.length > 0) {
-                  workspace.setSpeakerProfiles(JSON.parse(JSON.stringify(snap.speakerProfiles)));
+                  workspace.setSpeakerProfiles(structuredClone(snap.speakerProfiles));
                 } else {
                   const uniqueSpeakers = Array.from(
                     new Set(snap.subtitles.map((s) => s.speaker).filter(Boolean))
@@ -519,15 +532,7 @@ export default function App() {
         isOpen={showSpeakerManager}
         onClose={() => setShowSpeakerManager(false)}
         speakerProfiles={workspace.speakerProfiles}
-        speakerCounts={workspace.subtitles.reduce(
-          (acc, sub) => {
-            if (sub.speaker) {
-              acc[sub.speaker] = (acc[sub.speaker] || 0) + 1;
-            }
-            return acc;
-          },
-          {} as Record<string, number>
-        )}
+        speakerCounts={speakerCounts}
         onRename={workspace.renameSpeaker}
         onDelete={workspace.deleteSpeaker}
         onMerge={workspace.mergeSpeakers}
