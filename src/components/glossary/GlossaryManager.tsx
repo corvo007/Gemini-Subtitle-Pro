@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Book,
@@ -48,10 +48,17 @@ export const GlossaryManager: React.FC<GlossaryManagerProps> = ({
   const [editNameValue, setEditNameValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [newTermData, setNewTermData] = useState<{
+    term: string;
+    translation: string;
+    notes: string;
+  }>({ term: '', translation: '', notes: '' });
 
   // Term Editing State
   const [editingTermIndex, setEditingTermIndex] = useState<number | null>(null);
   const [editTermData, setEditTermData] = useState<GlossaryItem | null>(null);
+
+  const termInputRef = useRef<HTMLInputElement>(null);
 
   // Import Dialog State
   const [importDialogData, setImportDialogData] = useState<{
@@ -68,6 +75,18 @@ export const GlossaryManager: React.FC<GlossaryManagerProps> = ({
   }, [glossaries, selectedGlossaryId]);
 
   const selectedGlossary = glossaries.find((g) => g.id === selectedGlossaryId);
+
+  const filteredTerms = useMemo(() => {
+    if (!selectedGlossary) return [];
+    const lowerSearch = searchTerm.toLowerCase();
+    return selectedGlossary.terms
+      .map((item, index) => ({ item, originalIndex: index }))
+      .filter(
+        ({ item }) =>
+          item.term.toLowerCase().includes(lowerSearch) ||
+          item.translation.toLowerCase().includes(lowerSearch)
+      );
+  }, [selectedGlossary, searchTerm]);
 
   const handleAddGlossary = () => {
     const newGlossary = createGlossary(
@@ -426,24 +445,20 @@ export const GlossaryManager: React.FC<GlossaryManagerProps> = ({
                       <div className="flex-1 space-y-2">
                         <div className="flex space-x-2">
                           <input
+                            ref={termInputRef}
                             placeholder={t('glossary.term')}
                             className="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm text-slate-800 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple/20 transition-all placeholder:text-slate-400"
+                            value={newTermData.term}
+                            onChange={(e) =>
+                              setNewTermData({ ...newTermData, term: e.target.value })
+                            }
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
-                                const inputs =
-                                  e.currentTarget.parentElement?.parentElement?.querySelectorAll(
-                                    'input'
-                                  );
-                                const term = inputs?.[0].value;
-                                const translation = inputs?.[1].value;
-                                const notes = inputs?.[2].value;
-                                if (term && translation) {
-                                  handleUpdateTerms([
-                                    ...selectedGlossary.terms,
-                                    { term, translation, notes },
-                                  ]);
-                                  inputs.forEach((i) => (i.value = ''));
-                                  inputs[0].focus();
+                                if (newTermData.term && newTermData.translation) {
+                                  handleUpdateTerms([...selectedGlossary.terms, newTermData]);
+                                  setNewTermData({ term: '', translation: '', notes: '' });
+                                  // Restore focus
+                                  termInputRef.current?.focus();
                                 }
                               }
                             }}
@@ -451,27 +466,45 @@ export const GlossaryManager: React.FC<GlossaryManagerProps> = ({
                           <input
                             placeholder={t('glossary.translation')}
                             className="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm text-slate-800 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple/20 transition-all placeholder:text-slate-400"
+                            value={newTermData.translation}
+                            onChange={(e) =>
+                              setNewTermData({ ...newTermData, translation: e.target.value })
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                if (newTermData.term && newTermData.translation) {
+                                  handleUpdateTerms([...selectedGlossary.terms, newTermData]);
+                                  setNewTermData({ term: '', translation: '', notes: '' });
+                                  termInputRef.current?.focus();
+                                }
+                              }
+                            }}
                           />
                         </div>
                         <input
                           placeholder={t('glossary.notes')}
                           className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-xs text-slate-600 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple/20 transition-all placeholder:text-slate-400"
+                          value={newTermData.notes}
+                          onChange={(e) =>
+                            setNewTermData({ ...newTermData, notes: e.target.value })
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              if (newTermData.term && newTermData.translation) {
+                                handleUpdateTerms([...selectedGlossary.terms, newTermData]);
+                                setNewTermData({ term: '', translation: '', notes: '' });
+                                termInputRef.current?.focus();
+                              }
+                            }
+                          }}
                         />
                       </div>
                       <button
-                        onClick={(e) => {
-                          const container = e.currentTarget.parentElement;
-                          const inputs = container?.querySelectorAll('input');
-                          const term = inputs?.[0].value;
-                          const translation = inputs?.[1].value;
-                          const notes = inputs?.[2].value;
-                          if (term && translation) {
-                            handleUpdateTerms([
-                              ...selectedGlossary.terms,
-                              { term, translation, notes },
-                            ]);
-                            inputs.forEach((i) => (i.value = ''));
-                            inputs[0].focus();
+                        onClick={() => {
+                          if (newTermData.term && newTermData.translation) {
+                            handleUpdateTerms([...selectedGlossary.terms, newTermData]);
+                            setNewTermData({ term: '', translation: '', notes: '' });
+                            termInputRef.current?.focus();
                           }
                         }}
                         className="p-2 bg-brand-purple hover:bg-brand-purple/90 text-white rounded-lg transition-colors shadow-sm"
@@ -481,121 +514,114 @@ export const GlossaryManager: React.FC<GlossaryManagerProps> = ({
                     </div>
 
                     {/* Existing Terms */}
-                    {selectedGlossary.terms
-                      .map((item, index) => ({ item, originalIndex: index })) // Keep track of original index
-                      .filter(
-                        ({ item }) =>
-                          item.term.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          item.translation.toLowerCase().includes(searchTerm.toLowerCase())
-                      )
-                      .map(({ item, originalIndex }) => (
-                        <div
-                          key={originalIndex}
-                          className={cn(
-                            'flex items-start space-x-2 p-3 rounded-xl border transition-all',
-                            editingTermIndex === originalIndex
-                              ? 'bg-brand-purple/5 border-brand-purple ring-1 ring-brand-purple/20'
-                              : 'bg-white border-transparent hover:border-slate-200 hover:shadow-sm group'
-                          )}
-                        >
-                          {editingTermIndex === originalIndex && editTermData ? (
-                            // EDIT MODE
-                            <>
-                              <div className="flex-1 space-y-2">
-                                <div className="flex space-x-2">
-                                  <input
-                                    value={editTermData.term}
-                                    onChange={(e) =>
-                                      setEditTermData({ ...editTermData, term: e.target.value })
-                                    }
-                                    className="flex-1 bg-white border border-brand-purple rounded px-2 py-1 text-sm text-slate-900 focus:outline-none shadow-sm"
-                                    placeholder={t('glossary.term')}
-                                    autoFocus
-                                  />
-                                  <input
-                                    value={editTermData.translation}
-                                    onChange={(e) =>
-                                      setEditTermData({
-                                        ...editTermData,
-                                        translation: e.target.value,
-                                      })
-                                    }
-                                    className="flex-1 bg-white border border-brand-purple rounded px-2 py-1 text-sm text-slate-900 focus:outline-none shadow-sm"
-                                    placeholder={t('glossary.translation')}
-                                  />
-                                </div>
+                    {filteredTerms.map(({ item, originalIndex }) => (
+                      <div
+                        key={originalIndex}
+                        className={cn(
+                          'flex items-start space-x-2 p-3 rounded-xl border transition-all',
+                          editingTermIndex === originalIndex
+                            ? 'bg-brand-purple/5 border-brand-purple ring-1 ring-brand-purple/20'
+                            : 'bg-white border-transparent hover:border-slate-200 hover:shadow-sm group'
+                        )}
+                      >
+                        {editingTermIndex === originalIndex && editTermData ? (
+                          // EDIT MODE
+                          <>
+                            <div className="flex-1 space-y-2">
+                              <div className="flex space-x-2">
                                 <input
-                                  value={editTermData.notes || ''}
+                                  value={editTermData.term}
                                   onChange={(e) =>
-                                    setEditTermData({ ...editTermData, notes: e.target.value })
+                                    setEditTermData({ ...editTermData, term: e.target.value })
                                   }
-                                  className="w-full bg-white border border-brand-purple rounded px-2 py-1 text-xs text-slate-600 focus:outline-none shadow-sm"
-                                  placeholder={t('glossary.notes')}
-                                  onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
+                                  className="flex-1 bg-white border border-brand-purple rounded px-2 py-1 text-sm text-slate-900 focus:outline-none shadow-sm"
+                                  placeholder={t('glossary.term')}
+                                  autoFocus
+                                />
+                                <input
+                                  value={editTermData.translation}
+                                  onChange={(e) =>
+                                    setEditTermData({
+                                      ...editTermData,
+                                      translation: e.target.value,
+                                    })
+                                  }
+                                  className="flex-1 bg-white border border-brand-purple rounded px-2 py-1 text-sm text-slate-900 focus:outline-none shadow-sm"
+                                  placeholder={t('glossary.translation')}
                                 />
                               </div>
-                              <div className="flex flex-col space-y-1">
-                                <button
-                                  onClick={handleSaveEdit}
-                                  className="p-1.5 bg-emerald-100 text-emerald-600 hover:bg-emerald-200 rounded-lg transition-colors border border-emerald-200"
-                                  title={t('glossary.save')}
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={handleCancelEdit}
-                                  className="p-1.5 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-lg transition-colors"
-                                  title={t('glossary.cancel')}
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </>
-                          ) : (
-                            // VIEW MODE
-                            <>
-                              <div className="flex-1 space-y-1">
-                                <div className="flex flex-col space-y-0.5">
-                                  <span className="font-medium text-slate-800 text-base">
-                                    {item.term}
+                              <input
+                                value={editTermData.notes || ''}
+                                onChange={(e) =>
+                                  setEditTermData({ ...editTermData, notes: e.target.value })
+                                }
+                                className="w-full bg-white border border-brand-purple rounded px-2 py-1 text-xs text-slate-600 focus:outline-none shadow-sm"
+                                placeholder={t('glossary.notes')}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
+                              />
+                            </div>
+                            <div className="flex flex-col space-y-1">
+                              <button
+                                onClick={handleSaveEdit}
+                                className="p-1.5 bg-emerald-100 text-emerald-600 hover:bg-emerald-200 rounded-lg transition-colors border border-emerald-200"
+                                title={t('glossary.save')}
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                className="p-1.5 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-lg transition-colors"
+                                title={t('glossary.cancel')}
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          // VIEW MODE
+                          <>
+                            <div className="flex-1 space-y-1">
+                              <div className="flex flex-col space-y-0.5">
+                                <span className="font-medium text-slate-800 text-base">
+                                  {item.term}
+                                </span>
+                                <span className="text-brand-purple font-medium text-sm">
+                                  {item.translation}
+                                </span>
+                                {item.notes && (
+                                  <span className="text-xs text-slate-500 italic block mt-0.5">
+                                    {item.notes}
                                   </span>
-                                  <span className="text-brand-purple font-medium text-sm">
-                                    {item.translation}
-                                  </span>
-                                  {item.notes && (
-                                    <span className="text-xs text-slate-500 italic block mt-0.5">
-                                      {item.notes}
-                                    </span>
-                                  )}
-                                </div>
+                                )}
                               </div>
-                              <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={() => {
-                                    setEditingTermIndex(originalIndex);
-                                    setEditTermData({ ...item });
-                                  }}
-                                  className="p-1.5 text-slate-400 hover:text-brand-purple hover:bg-brand-purple/10 rounded-lg transition-colors"
-                                  title={t('glossary.edit')}
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    const newItems = [...selectedGlossary.terms];
-                                    newItems.splice(originalIndex, 1);
-                                    handleUpdateTerms(newItems);
-                                  }}
-                                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                  title={t('glossary.delete')}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      ))}
+                            </div>
+                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => {
+                                  setEditingTermIndex(originalIndex);
+                                  setEditTermData({ ...item });
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-brand-purple hover:bg-brand-purple/10 rounded-lg transition-colors"
+                                title={t('glossary.edit')}
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const newItems = [...selectedGlossary.terms];
+                                  newItems.splice(originalIndex, 1);
+                                  handleUpdateTerms(newItems);
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                title={t('glossary.delete')}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

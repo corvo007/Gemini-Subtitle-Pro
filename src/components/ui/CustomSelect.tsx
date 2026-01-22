@@ -73,7 +73,15 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       }
     };
 
-    const handleScroll = () => {
+    const handleScroll = (event: Event) => {
+      // If the scroll event happened inside the dropdown, don't close it
+      if (
+        dropdownRef.current &&
+        event.target instanceof Node &&
+        dropdownRef.current.contains(event.target)
+      ) {
+        return;
+      }
       if (isOpen) setIsOpen(false);
     };
 
@@ -120,7 +128,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
           <div
             ref={dropdownRef}
             className={cn(
-              'custom-select-dropdown fixed z-[100] bg-white border border-slate-200 rounded-lg shadow-xl shadow-slate-200/50 max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100'
+              'custom-select-dropdown fixed z-100 bg-white border border-slate-200 rounded-lg shadow-xl shadow-slate-200/50 max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100'
             )}
             style={{
               left: coords.left,

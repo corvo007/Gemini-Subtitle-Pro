@@ -21,8 +21,9 @@ const SUPPORTED_FORMATS = ['mp4', 'webm', 'm4v'];
 // Singleton compressor for GPU detection
 let compressorInstance: VideoCompressorService | null = null;
 
-// Track active FFmpeg commands for cleanup on app quit
-const activeCommands: Set<ReturnType<typeof ffmpeg>> = new Set();
+// Track active FFmpeg commands for cleanup (filePath -> { command, outputPath })
+const activeCommands: Map<string, { command: ReturnType<typeof ffmpeg>; outputPath: string }> =
+  new Map();
 
 function getCompressor(): VideoCompressorService {
   if (!compressorInstance) {
@@ -32,13 +33,55 @@ function getCompressor(): VideoCompressorService {
 }
 
 /**
+ * Cancel a specific transcoding task
+ */
+export function cancelTranscode(filePath: string): boolean {
+  const active = activeCommands.get(filePath);
+  if (active) {
+    try {
+      active.command.kill('SIGKILL');
+
+      // Cleanup partial file (with retry for file locks)
+      const outputPath = active.outputPath;
+      setTimeout(() => {
+        if (fs.existsSync(outputPath)) {
+          try {
+            fs.unlinkSync(outputPath);
+            console.log(`[PreviewTranscoder] Deleted partial file: ${outputPath}`);
+          } catch (e) {
+            console.error(`[PreviewTranscoder] Failed to delete partial file ${outputPath}:`, e);
+          }
+        }
+      }, 500); // Wait 500ms for process to release lock
+
+      activeCommands.delete(filePath);
+      console.log(`[PreviewTranscoder] Cancelled transcoding for: ${filePath}`);
+      return true;
+    } catch (e) {
+      console.error(`[PreviewTranscoder] Failed to cancel transcoding for ${filePath}:`, e);
+    }
+  }
+  return false;
+}
+
+/**
  * Kill all active FFmpeg transcoding processes.
  * Call this when the app is quitting to prevent orphaned processes.
  */
+// Keep only one implementation of killAllTranscodes
 export function killAllTranscodes(): void {
-  for (const command of activeCommands) {
+  for (const [filePath, active] of activeCommands.entries()) {
     try {
-      command.kill('SIGKILL');
+      active.command.kill('SIGKILL');
+
+      // Attempt cleanup
+      try {
+        if (fs.existsSync(active.outputPath)) {
+          fs.unlinkSync(active.outputPath);
+        }
+      } catch {
+        // Ignore cleanup errors during shutdown
+      }
     } catch {
       // Ignore errors if process already exited
     }
@@ -406,12 +449,12 @@ export async function transcodeForPreview(
         onProgress?.(percent, transcodedDur);
       })
       .on('end', () => {
-        activeCommands.delete(command);
+        activeCommands.delete(filePath);
         log(`Transcode completed: ${outputPath}`);
         resolve({ outputPath, duration });
       })
       .on('error', (err, stdout, stderr) => {
-        activeCommands.delete(command);
+        activeCommands.delete(filePath);
         log(`Transcode error: ${err.message}`);
         log(`stderr: ${stderr}`);
 
@@ -428,7 +471,7 @@ export async function transcodeForPreview(
       .run();
 
     // Track this command for cleanup on app quit
-    activeCommands.add(command);
+    activeCommands.set(filePath, { command, outputPath });
   });
 }
 
@@ -494,19 +537,19 @@ async function transcodeWithCpu(
         onProgress?.(percent, transcodedDur);
       })
       .on('end', () => {
-        activeCommands.delete(command);
+        activeCommands.delete(inputPath);
         log?.('CPU transcode completed');
         resolve({ outputPath, duration });
       })
       .on('error', (err) => {
-        activeCommands.delete(command);
+        activeCommands.delete(inputPath);
         log?.(`CPU transcode error: ${err.message}`);
         reject(err);
       })
       .run();
 
     // Track this command for cleanup on app quit
-    activeCommands.add(command);
+    activeCommands.set(inputPath, { command, outputPath });
   });
 }
 

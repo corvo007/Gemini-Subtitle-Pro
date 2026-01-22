@@ -657,6 +657,10 @@ class YtDlpService {
   private process: ChildProcess | null = null;
   private binaryPath: string;
   private quickjsPath: string;
+  // Track active parse processes (url -> process)
+  private activeParseProcesses: Map<string, ChildProcess> = new Map();
+  // Track active download output path for cleanup
+  private currentDownloadOutputPath: string | null = null;
 
   constructor() {
     this.binaryPath = getBinaryPath('yt-dlp');
@@ -666,13 +670,18 @@ class YtDlpService {
     // console.log('[DEBUG] [YtDlpService] QuickJS path:', this.quickjsPath);
   }
 
-  private execute(args: string[], timeoutMs: number = 60000): Promise<string> {
+  private execute(args: string[], timeoutMs: number = 60000, trackKey?: string): Promise<string> {
     return new Promise((resolve, reject) => {
       // Force UTF-8 output
       const options = {
         env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
       };
       const proc = spawn(this.binaryPath, args, options);
+
+      if (trackKey) {
+        this.activeParseProcesses.set(trackKey, proc);
+      }
+
       let stdout = '';
       let stderr = '';
       let killed = false;
@@ -693,6 +702,7 @@ class YtDlpService {
 
       proc.on('close', (code) => {
         clearTimeout(timeoutHandle);
+        if (trackKey) this.activeParseProcesses.delete(trackKey);
         if (killed) return; // Already rejected by timeout
         if (code === 0) resolve(stdout);
         else reject(new Error(stderr || `yt-dlp exited with code ${code}`));
@@ -700,6 +710,7 @@ class YtDlpService {
 
       proc.on('error', (err) => {
         clearTimeout(timeoutHandle);
+        if (trackKey) this.activeParseProcesses.delete(trackKey);
         reject(err);
       });
     });
@@ -738,14 +749,16 @@ class YtDlpService {
 
     let output: string;
     try {
-      output = await this.execute(args);
+      // Track with original URL
+      output = await this.execute(args, 60000, url);
     } catch (error: any) {
       // Reference: Youtube-dl-REST tries with ?p=1 for Bilibili multi-part videos
       if (isBilibili && !url.includes('?p=')) {
         console.log(`[DEBUG] [Download] 尝试解析分P视频: ${url}?p=1`);
         try {
           const argsWithPart = [...args.slice(0, -1), `${url}?p=1`];
-          output = await this.execute(argsWithPart);
+          // Use same URL key for retry
+          output = await this.execute(argsWithPart, 60000, url);
         } catch {
           throw error; // Use original error if retry fails
         }
@@ -875,6 +888,8 @@ class YtDlpService {
       let fileCount = 0;
       let currentStage: 'video' | 'audio' | 'merging' = 'video';
 
+      this.currentDownloadOutputPath = null;
+
       this.process.stdout?.on('data', (data) => {
         const line = data.toString();
 
@@ -896,6 +911,8 @@ class YtDlpService {
           outputPath = mergeMatch[1].trim();
           console.log(`[DEBUG] [Download] 合并视频: ${outputPath}`);
           currentStage = 'merging';
+          // Update current path for cleanup if needed
+          this.currentDownloadOutputPath = outputPath;
           // Send a merging progress update
           onProgress({
             percent: 100,
@@ -931,8 +948,22 @@ class YtDlpService {
         this.process = null;
         if (code === 0) {
           console.log(`[DEBUG] [Download] 下载完成: ${outputPath}`);
+          this.currentDownloadOutputPath = null;
           resolve(outputPath);
         } else {
+          // Cleanup partial file on failure if we know the path
+          if (this.currentDownloadOutputPath && fs.existsSync(this.currentDownloadOutputPath)) {
+            try {
+              fs.unlinkSync(this.currentDownloadOutputPath);
+              console.log(
+                `[Download] Deleted partial file on failure: ${this.currentDownloadOutputPath}`
+              );
+            } catch (e) {
+              console.warn(`[Download] Failed to delete partial file: ${e}`);
+            }
+          }
+          this.currentDownloadOutputPath = null;
+
           console.error('[Download] 下载失败', {
             exitCode: code,
             url,
@@ -958,8 +989,39 @@ class YtDlpService {
   abort(): void {
     if (this.process) {
       this.process.kill();
+
+      // Cleanup partial file on abort
+      if (this.currentDownloadOutputPath) {
+        const pathToDelete = this.currentDownloadOutputPath;
+        // Wait briefly for process to die and release locks
+        setTimeout(() => {
+          if (fs.existsSync(pathToDelete)) {
+            try {
+              fs.unlinkSync(pathToDelete);
+              console.log(`[Download] Deleted partial file on abort: ${pathToDelete}`);
+            } catch (e) {
+              console.warn(`[Download] Failed to delete partial file on abort: ${e}`);
+            }
+          }
+        }, 500);
+      }
+      this.currentDownloadOutputPath = null;
       this.process = null;
     }
+  }
+
+  /**
+   * Cancel an active parse operation
+   */
+  cancelParse(url: string): boolean {
+    const proc = this.activeParseProcesses.get(url);
+    if (proc) {
+      proc.kill();
+      this.activeParseProcesses.delete(url);
+      console.log(`[YtDlpService] Cancelled parsing for: ${url}`);
+      return true;
+    }
+    return false;
   }
 
   getDefaultOutputDir(): string {

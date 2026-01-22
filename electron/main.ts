@@ -958,6 +958,7 @@ import {
   getCacheSize,
   clearCache,
   enforceCacheLimit,
+  cancelTranscode,
 } from './services/videoPreviewTranscoder.ts';
 import { killActiveCompression } from './services/videoCompressor.ts';
 import { killAllAudioExtractions } from './services/ffmpegAudioExtractor.ts';
@@ -1018,6 +1019,11 @@ ipcMain.handle('video-preview:needs-transcode', async (_event, filePath: string)
   return needsTranscode(filePath);
 });
 
+// IPC Handler: Cancel transcoding for a file
+ipcMain.handle('video-preview:cancel', async (_event, filePath: string) => {
+  return { success: cancelTranscode(filePath) };
+});
+
 // Cleanup old preview files and enforce cache limit on app start
 // void cleanupOldPreviews(); // Removed
 void enforceCacheLimit();
@@ -1067,6 +1073,12 @@ ipcMain.handle('download:parse', async (_event, url: string) => {
     const classifiedError = classifyError(error.message || error.toString());
     return { success: false, error: classifiedError.message, errorInfo: classifiedError };
   }
+});
+
+// IPC Handler: Video Download - Cancel Parse URL
+ipcMain.handle('download:cancel-parse', async (_event, url: string) => {
+  const success = ytDlpService.cancelParse(url);
+  return { success };
 });
 
 // IPC Handler: Video Download - Start Download

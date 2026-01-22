@@ -31,7 +31,7 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
               value={settings.debug?.mockStage || ''}
               onChange={(value) =>
                 updateSetting('debug', {
-                  ...settings.debug,
+                  ...(settings.debug || {}),
                   mockStage: (value as any) || undefined,
                 })
               }
@@ -58,7 +58,7 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                 value={settings.debug?.mockDataPath || ''}
                 onChange={(e) =>
                   updateSetting('debug', {
-                    ...settings.debug,
+                    ...(settings.debug || {}),
                     mockDataPath: e.target.value || undefined,
                   })
                 }
@@ -77,7 +77,7 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                 value={settings.debug?.mockLanguage || ''}
                 onChange={(value) =>
                   updateSetting('debug', {
-                    ...settings.debug,
+                    ...(settings.debug || {}),
                     mockLanguage: value || undefined,
                   })
                 }
@@ -100,7 +100,7 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                 value={settings.debug?.skipAfter || ''}
                 onChange={(value) =>
                   updateSetting('debug', {
-                    ...settings.debug,
+                    ...(settings.debug || {}),
                     skipAfter: (value as any) || undefined,
                   })
                 }
@@ -122,7 +122,7 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                 checked={settings.debug?.saveIntermediateArtifacts || false}
                 onChange={(v) =>
                   updateSetting('debug', {
-                    ...settings.debug,
+                    ...(settings.debug || {}),
                     saveIntermediateArtifacts: v,
                   })
                 }
@@ -146,8 +146,8 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                   checked={settings.debug?.mockApi?.glossary || false}
                   onChange={(v) =>
                     updateSetting('debug', {
-                      ...settings.debug,
-                      mockApi: { ...settings.debug?.mockApi, glossary: v },
+                      ...(settings.debug || {}),
+                      mockApi: { ...(settings.debug?.mockApi || {}), glossary: v },
                     })
                   }
                   color="amber"
@@ -161,8 +161,8 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                   checked={settings.debug?.mockApi?.speaker || false}
                   onChange={(v) =>
                     updateSetting('debug', {
-                      ...settings.debug,
-                      mockApi: { ...settings.debug?.mockApi, speaker: v },
+                      ...(settings.debug || {}),
+                      mockApi: { ...(settings.debug?.mockApi || {}), speaker: v },
                     })
                   }
                   color="amber"
@@ -178,8 +178,8 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                   checked={settings.debug?.mockApi?.transcribe || false}
                   onChange={(v) =>
                     updateSetting('debug', {
-                      ...settings.debug,
-                      mockApi: { ...settings.debug?.mockApi, transcribe: v },
+                      ...(settings.debug || {}),
+                      mockApi: { ...(settings.debug?.mockApi || {}), transcribe: v },
                     })
                   }
                   color="amber"
@@ -193,8 +193,8 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                   checked={settings.debug?.mockApi?.refinement || false}
                   onChange={(v) =>
                     updateSetting('debug', {
-                      ...settings.debug,
-                      mockApi: { ...settings.debug?.mockApi, refinement: v },
+                      ...(settings.debug || {}),
+                      mockApi: { ...(settings.debug?.mockApi || {}), refinement: v },
                     })
                   }
                   color="amber"
@@ -208,8 +208,8 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                   checked={settings.debug?.mockApi?.alignment || false}
                   onChange={(v) =>
                     updateSetting('debug', {
-                      ...settings.debug,
-                      mockApi: { ...settings.debug?.mockApi, alignment: v },
+                      ...(settings.debug || {}),
+                      mockApi: { ...(settings.debug?.mockApi || {}), alignment: v },
                     })
                   }
                   color="amber"
@@ -223,8 +223,8 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                   checked={settings.debug?.mockApi?.translation || false}
                   onChange={(v) =>
                     updateSetting('debug', {
-                      ...settings.debug,
-                      mockApi: { ...settings.debug?.mockApi, translation: v },
+                      ...(settings.debug || {}),
+                      mockApi: { ...(settings.debug?.mockApi || {}), translation: v },
                     })
                   }
                   color="amber"
@@ -246,7 +246,7 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                   value={settings.debug?.ffmpegPath || ''}
                   onChange={(e) =>
                     updateSetting('debug', {
-                      ...settings.debug,
+                      ...(settings.debug || {}),
                       ffmpegPath: e.target.value,
                     })
                   }
@@ -263,7 +263,7 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                   value={settings.debug?.ffprobePath || ''}
                   onChange={(e) =>
                     updateSetting('debug', {
-                      ...settings.debug,
+                      ...(settings.debug || {}),
                       ffprobePath: e.target.value,
                     })
                   }
@@ -280,7 +280,7 @@ export const DebugTab: React.FC<TabProps> = ({ settings, updateSetting }) => {
                   value={settings.debug?.whisperPath || ''}
                   onChange={(e) =>
                     updateSetting('debug', {
-                      ...settings.debug,
+                      ...(settings.debug || {}),
                       whisperPath: e.target.value,
                     })
                   }

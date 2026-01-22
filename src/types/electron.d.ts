@@ -191,6 +191,7 @@ export interface ElectronAPI {
         retryable: boolean;
       };
     }>;
+    cancelParse: (url: string) => Promise<{ success: boolean }>;
     start: (options: { url: string; formatId: string; outputDir: string }) => Promise<{
       success: boolean;
       outputPath?: string;
@@ -299,6 +300,7 @@ export interface ElectronAPI {
     duration?: number;
     error?: string;
   }>;
+  cancelPreviewTranscode: (filePath: string) => Promise<{ success: boolean }>;
   needsTranscode: (filePath: string) => Promise<boolean>;
   onTranscodeProgress: (
     callback: (data: { percent: number; transcodedDuration?: number }) => void

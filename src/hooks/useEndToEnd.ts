@@ -76,12 +76,17 @@ export function useEndToEnd(): UseEndToEndReturn {
 
   // Refs for cleanup
   const progressUnsubscribeRef = useRef<(() => void) | null>(null);
+  const parsingUrlRef = useRef<string | null>(null);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (progressUnsubscribeRef.current) {
         progressUnsubscribeRef.current();
+      }
+      // Cancel pending parse on unmount
+      if (parsingUrlRef.current && window.electronAPI?.download?.cancelParse) {
+        window.electronAPI.download.cancelParse(parsingUrlRef.current).catch(console.error);
       }
     };
   }, []);
@@ -174,6 +179,7 @@ export function useEndToEnd(): UseEndToEndReturn {
         // Track whether we've already handled the result to prevent double-handling
         let handled = false;
         let timeoutId: ReturnType<typeof setTimeout> | null = null;
+        parsingUrlRef.current = url;
 
         const parsePromise = window.electronAPI.download.parse(url);
 
@@ -209,12 +215,22 @@ export function useEndToEnd(): UseEndToEndReturn {
           handled = true;
           if (timeoutId) clearTimeout(timeoutId);
           throw raceError;
+        } finally {
+          parsingUrlRef.current = null;
+          setState((prev) => ({ ...prev, isParsing: false }));
         }
       } catch (error: any) {
+        // Handle timeout specifically
+        if (error.message === t('errors.parseTimeout')) {
+          if (window.electronAPI?.download?.cancelParse) {
+            window.electronAPI.download.cancelParse(url).catch(console.error);
+          }
+        }
+
         setState((prev) => ({
           ...prev,
           isParsing: false,
-          parseError: error.message || t('errors.parseException'),
+          parseError: error.message,
         }));
       }
     },

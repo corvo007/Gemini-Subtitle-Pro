@@ -4,13 +4,11 @@
 import { contextBridge, ipcRenderer, webUtils, webFrame } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // ... existing fields
   isElectron: true,
   isDebug: process.env.DEBUG_BUILD === 'true' || process.env.NODE_ENV === 'development',
   setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
   getZoomFactor: () => webFrame.getZoomFactor(),
   getFilePath: (file: File) => webUtils.getPathForFile(file),
-  // ... rest of API
 
   selectMediaFile: () => ipcRenderer.invoke('select-media-file'),
   selectSubtitleFile: () => ipcRenderer.invoke('select-subtitle-file'),
@@ -79,6 +77,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Video Download APIs
   download: {
     parse: (url: string) => ipcRenderer.invoke('download:parse', url),
+    cancelParse: (url: string) => ipcRenderer.invoke('download:cancel-parse', url),
     start: (options: { url: string; formatId: string; outputDir: string }) =>
       ipcRenderer.invoke('download:start', options),
     cancel: () => ipcRenderer.invoke('download:cancel'),
@@ -128,6 +127,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Video Preview Transcoding APIs (for streaming playback during transcode)
   transcodeForPreview: (options: { filePath: string }) =>
     ipcRenderer.invoke('video-preview:transcode', options),
+  cancelPreviewTranscode: (filePath: string) =>
+    ipcRenderer.invoke('video-preview:cancel', filePath),
   needsTranscode: (filePath: string) =>
     ipcRenderer.invoke('video-preview:needs-transcode', filePath),
   onTranscodeProgress: (

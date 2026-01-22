@@ -35,8 +35,9 @@ export function useVideoPreview(): UseVideoPreviewReturn {
   const playerRef = useRef<VideoPlayerPreviewRef>(null);
   const objectUrlRef = useRef<string | null>(null);
   const progressListenerCleanupRef = useRef<(() => void) | null>(null);
+  const currentTranscodingFileRef = useRef<string | null>(null);
 
-  // Clean up old Object URL
+  // Clean up old Object URL and cancel active transcoding
   const cleanupUrl = useCallback(() => {
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current);
@@ -45,6 +46,15 @@ export function useVideoPreview(): UseVideoPreviewReturn {
     if (progressListenerCleanupRef.current) {
       progressListenerCleanupRef.current();
       progressListenerCleanupRef.current = null;
+    }
+    // Cancel any active transcoding task in backend
+    if (currentTranscodingFileRef.current) {
+      window.electronAPI
+        ?.cancelPreviewTranscode?.(currentTranscodingFileRef.current)
+        .catch((err) => {
+          logger.error('[VideoPreview] Failed to cancel transcoding', err);
+        });
+      currentTranscodingFileRef.current = null;
     }
   }, []);
 
@@ -142,9 +152,11 @@ export function useVideoPreview(): UseVideoPreviewReturn {
           };
 
           // Start transcoding
+          currentTranscodingFileRef.current = filePath;
           const result = await window.electronAPI.transcodeForPreview({
             filePath: filePath,
           });
+          currentTranscodingFileRef.current = null; // Finished successfully
 
           // Fallback: if start event didn't fire or we missed it, set src here
           // Also set the full video duration from the result

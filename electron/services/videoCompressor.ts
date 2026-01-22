@@ -92,7 +92,7 @@ export interface CompressionProgress {
 
 export class VideoCompressorService {
   // Store active compression command for cancellation
-  private activeCommand: ReturnType<typeof ffmpeg> | null = null;
+  private activeCommand: { command: ReturnType<typeof ffmpeg>; outputPath: string } | null = null;
 
   // Flag to track if compression was cancelled by user
   private isCancelled: boolean = false;
@@ -410,7 +410,7 @@ export class VideoCompressorService {
       }
 
       // Store command reference for potential cancellation
-      this.activeCommand = command;
+      this.activeCommand = { command, outputPath };
 
       command
         .on('start', (cmdLine) => {
@@ -507,7 +507,21 @@ export class VideoCompressorService {
     if (this.activeCommand) {
       try {
         this.isCancelled = true; // Set flag before killing
-        (this.activeCommand as any).kill('SIGTERM');
+        (this.activeCommand.command as any).kill('SIGTERM');
+
+        // Cleanup output file
+        const outputPath = this.activeCommand.outputPath;
+        setTimeout(() => {
+          if (fs.existsSync(outputPath)) {
+            try {
+              fs.unlinkSync(outputPath);
+              console.log(`[VideoCompressor] Deleted partial file: ${outputPath}`);
+            } catch (e) {
+              console.warn(`[VideoCompressor] Failed to delete partial file ${outputPath}:`, e);
+            }
+          }
+        }, 500);
+
         this.activeCommand = null;
         return true;
       } catch (e) {

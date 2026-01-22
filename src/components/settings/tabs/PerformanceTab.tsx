@@ -106,7 +106,7 @@ export const PerformanceTab: React.FC<TabProps> = ({ settings, updateSetting }) 
             </label>
             <NumberInput
               value={settings.localConcurrency}
-              onChange={(v) => updateSetting('localConcurrency', v)}
+              onChange={(v) => updateSetting('localConcurrency', v ?? 1)}
               min={1}
               max={4}
               defaultOnBlur={1}

@@ -94,7 +94,11 @@ export function useBatchActions({
 }: UseBatchActionsProps): UseBatchActionsReturn {
   const { t } = useTranslation(['workspace', 'services']);
   // Use ref instead of state to avoid closure issues in async catch block
-  const snapshotBeforeOperationRef = useRef<SubtitleItem[] | null>(null);
+  const snapshotBeforeOperationRef = useRef<{
+    subtitles: SubtitleItem[];
+    selectedBatches: Set<number>;
+    batchComments: Record<number, string>;
+  } | null>(null);
 
   const handleBatchAction = useCallback(
     async (mode: BatchOperationMode, singleIndex?: number, prompts?: RegeneratePrompts) => {
@@ -111,7 +115,11 @@ export function useBatchActions({
       }
 
       // Save current state BEFORE operation (use ref for fresh value in catch block)
-      snapshotBeforeOperationRef.current = [...subtitles];
+      snapshotBeforeOperationRef.current = {
+        subtitles: [...subtitles],
+        selectedBatches: new Set(selectedBatches),
+        batchComments: { ...batchComments },
+      };
 
       // Create snapshot BEFORE AI operation for user recovery
       const actionName =
@@ -200,7 +208,9 @@ export function useBatchActions({
 
           // Restore from snapshot (read from ref for fresh value)
           if (snapshotBeforeOperationRef.current) {
-            setSubtitles(snapshotBeforeOperationRef.current);
+            setSubtitles(snapshotBeforeOperationRef.current.subtitles);
+            setSelectedBatches(snapshotBeforeOperationRef.current.selectedBatches);
+            setBatchComments(snapshotBeforeOperationRef.current.batchComments);
             addToast(t('workspace:hooks.batch.status.cancelledRestore'), 'warning');
           } else {
             addToast(t('workspace:hooks.batch.status.cancelled'), 'info');

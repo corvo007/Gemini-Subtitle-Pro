@@ -18,7 +18,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ color, onChange, class
   }, [color]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.toUpperCase();
+    const value = e.target.value.replace(/#/g, '').toUpperCase();
     // 验证是否为有效的 hex 字符（不包含 #）
     if (/^[0-9A-F]{0,6}$/.test(value)) {
       onChange(`#${value}`);

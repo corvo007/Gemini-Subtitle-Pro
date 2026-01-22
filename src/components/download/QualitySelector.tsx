@@ -1,7 +1,6 @@
 /**
  * Quality Selector Component - Tailwind CSS Version
  */
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { VideoFormat } from '@/types/download';
 import { cn } from '@/lib/cn';
