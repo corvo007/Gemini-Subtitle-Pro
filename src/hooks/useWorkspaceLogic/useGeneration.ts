@@ -9,6 +9,7 @@ import { GenerationStatus, type ChunkStatus } from '@/types/api';
 import { logger } from '@/services/utils/logger';
 import { autoConfirmGlossaryTerms } from '@/services/glossary/autoConfirm';
 import { generateSubtitles } from '@/services/generation/pipeline';
+import { type ChunkAnalytics } from '@/types/api';
 import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { decodeAudioWithRetry } from '@/services/audio/decoder';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
@@ -189,6 +190,9 @@ export function useGeneration({
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
+    // Track chunk analytics for reporting on success/failure/cancellation
+    let chunkAnalytics: ChunkAnalytics[] = [];
+
     try {
       setStatus(GenerationStatus.PROCESSING);
 
@@ -230,11 +234,20 @@ export function useGeneration({
         }
       }
 
-      const { subtitles: result } = await generateSubtitles(
+      // Wrap progress handler to collect analytics from all chunks
+      const progressWithAnalytics = (update: ChunkStatus) => {
+        handleProgress(update);
+        // Collect analytics when present (completed, error, or cancelled chunks)
+        if (update.analytics) {
+          chunkAnalytics.push(update.analytics);
+        }
+      };
+
+      const { subtitles: result, chunkAnalytics: resultAnalytics } = await generateSubtitles(
         audioSource,
         duration,
         runtimeSettings,
-        handleProgress,
+        progressWithAnalytics,
         (newSubs) => setSubtitles(newSubs),
         // onGlossaryReady callback (Blocking)
         async (metadata: GlossaryExtractionMetadata) => {
@@ -312,6 +325,9 @@ export function useGeneration({
         { filename: file.name, duration }
       );
 
+      // Capture analytics for reporting
+      chunkAnalytics = resultAnalytics;
+
       // Then check subtitle results
       if (result.length === 0) throw new Error(t('workspace:hooks.generation.errors.noSubtitles'));
 
@@ -336,6 +352,7 @@ export function useGeneration({
           {
             count: result.length,
             duration_ms: Date.now() - startAt,
+            chunk_durations: chunkAnalytics,
           },
           'interaction'
         );
@@ -353,6 +370,9 @@ export function useGeneration({
         setStatus(GenerationStatus.CANCELLED);
         logger.info('Generation cancelled by user');
 
+        // Ensure analytics are sorted by index
+        chunkAnalytics.sort((a, b) => a.index - b.index);
+
         // Keep partial results (subtitles state already updated via onIntermediateResult)
         if (subtitlesRef.current.length > 0) {
           const fileId = file ? window.electronAPI?.getFilePath?.(file) || file.name : '';
@@ -369,6 +389,19 @@ export function useGeneration({
         } else {
           addToast(t('workspace:hooks.generation.status.cancelled'), 'info');
         }
+
+        // Analytics: Cancellation (with partial chunk data)
+        if (window.electronAPI?.analytics) {
+          void window.electronAPI.analytics.track(
+            'workspace_generation_cancelled',
+            {
+              partial_count: subtitlesRef.current.length,
+              duration_ms: Date.now() - startAt,
+              chunk_durations: chunkAnalytics,
+            },
+            'interaction'
+          );
+        }
       } else {
         setStatus(GenerationStatus.ERROR);
         setError(error.message);
@@ -382,6 +415,7 @@ export function useGeneration({
             {
               error: error.message,
               duration_ms: Date.now() - startAt,
+              chunk_durations: chunkAnalytics,
             },
             'interaction'
           );

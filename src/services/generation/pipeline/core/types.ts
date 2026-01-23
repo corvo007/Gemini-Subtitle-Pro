@@ -9,6 +9,7 @@ import { type SubtitleItem } from '@/types/subtitle';
 import { type GlossaryItem } from '@/types/glossary';
 import { type GlossaryState } from '@/services/generation/extractors/glossaryState';
 import { type PostCheckResult } from '@/services/subtitle/postCheck';
+import { type ChunkAnalytics } from '@/types/api';
 
 export type StepName =
   | 'transcribe'
@@ -18,10 +19,20 @@ export type StepName =
   | 'translation'
   | 'proofread';
 
+/** Status of a step execution */
+export type StepStatus = 'success' | 'failed' | 'cancelled' | 'skipped' | 'mocked';
+
 export interface StepResult<T> {
   output: T;
+  /** Step execution status */
+  status: StepStatus;
+  /** Duration of this step execution in milliseconds (always set, even on cancel/error) */
+  durationMs: number;
+  /** @deprecated Use status === 'skipped' instead */
   skipped?: boolean;
+  /** @deprecated Use status === 'mocked' instead */
   mocked?: boolean;
+  /** Error that occurred (if status === 'failed') */
   error?: Error;
 }
 
@@ -34,6 +45,8 @@ export interface ChunkDependencies {
   audioBuffer: AudioBuffer;
   chunkDuration: number;
   totalChunks: number;
+  /** Temporary storage for chunk analytics (set during processing) */
+  chunkAnalytics?: ChunkAnalytics;
 }
 
 export interface StepContext {

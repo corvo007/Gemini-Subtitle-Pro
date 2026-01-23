@@ -1114,7 +1114,10 @@ ipcMain.handle('download:parse', async (_event, url: string) => {
     }
 
     const classifiedError = classifyError(error.message || error.toString());
-    Sentry.captureException(error);
+    // Only report unknown errors to Sentry (not expected errors like private video, geo-blocked, etc.)
+    if (classifiedError.type === 'unknown') {
+      Sentry.captureException(error, { tags: { action: 'download-parse' } });
+    }
     return { success: false, error: classifiedError.message, errorInfo: classifiedError };
   }
 });
@@ -1160,7 +1163,10 @@ ipcMain.handle(
       void analyticsService.track('download_failed', { error: error.message });
 
       const classifiedError = classifyError(error.message || error.toString());
-      Sentry.captureException(error);
+      // Only report unknown errors to Sentry (not expected errors like network, rate_limit, etc.)
+      if (classifiedError.type === 'unknown') {
+        Sentry.captureException(error, { tags: { action: 'download-start' } });
+      }
       return { success: false, error: classifiedError.message, errorInfo: classifiedError };
     }
   }
@@ -1223,7 +1229,25 @@ ipcMain.handle(
       return { success: true, thumbnailPath };
     } catch (error: any) {
       console.error('[Main] Thumbnail download failed:', error);
-      Sentry.captureException(error);
+
+      const errorMsg = error.message || error.toString();
+      const isNetworkError =
+        errorMsg.includes('HTTP 404') ||
+        errorMsg.includes('HTTP 5') || // Server errors
+        errorMsg.includes('封面下载失败: HTTP') || // Generic HTTP error from downloadThumbnail
+        errorMsg.includes('超时') ||
+        errorMsg.includes('timeout') ||
+        errorMsg.includes('ETIMEDOUT') ||
+        errorMsg.includes('ECONNRESET') ||
+        errorMsg.includes('ENOTFOUND') ||
+        errorMsg.toLowerCase().includes('ssl') ||
+        errorMsg.toLowerCase().includes('cert') ||
+        errorMsg.toLowerCase().includes('handshake');
+
+      if (!isNetworkError) {
+        Sentry.captureException(error, { tags: { action: 'download-thumbnail' } });
+      }
+
       return { success: false, error: error.message };
     }
   }
@@ -1298,6 +1322,7 @@ ipcMain.handle('end-to-end:start', async (event, config: EndToEndConfig) => {
     void analyticsService.track('pipeline_completed', {
       success: result.success,
       duration: result.duration,
+      chunk_durations: result.chunkAnalytics,
     });
 
     return result;

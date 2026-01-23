@@ -25,6 +25,34 @@ export interface ChunkStatus {
     message: string;
     type: 'info' | 'warning' | 'error' | 'success';
   };
+  analytics?: ChunkAnalytics;
+}
+
+/** Step status in analytics */
+export type StepResultStatus = 'success' | 'failed' | 'cancelled' | 'skipped' | 'mocked';
+
+/** Analytics data for a single chunk's processing */
+export interface ChunkAnalytics {
+  /** Chunk index (0-based) */
+  index: number;
+  /** Transcription: duration in ms */
+  transcribe_ms?: number;
+  /** Transcription: step status */
+  transcribe_status?: StepResultStatus;
+  /** Refinement: duration in ms */
+  refine_ms?: number;
+  /** Refinement: step status */
+  refine_status?: StepResultStatus;
+  /** Alignment: duration in ms */
+  align_ms?: number;
+  /** Alignment: step status */
+  align_status?: StepResultStatus;
+  /** Translation: duration in ms */
+  translate_ms?: number;
+  /** Translation: step status */
+  translate_status?: StepResultStatus;
+  /** Overall chunk status */
+  status: 'success' | 'failed' | 'cancelled' | 'empty' | 'skipped';
 }
 
 export interface TokenUsage {

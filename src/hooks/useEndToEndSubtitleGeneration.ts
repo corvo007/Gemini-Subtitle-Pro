@@ -6,6 +6,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { generateSubtitles } from '@/services/generation/pipeline';
+import { type ChunkAnalytics } from '@/types/api';
 import { generateAssContent, generateSrtContent } from '@/services/subtitle/generator';
 import { decodeAudioWithRetry } from '@/services/audio/decoder';
 import { autoConfirmGlossaryTerms } from '@/services/glossary/autoConfirm';
@@ -84,6 +85,7 @@ export function useEndToEndSubtitleGeneration({
       subtitleFormat?: string;
       error?: string;
       errorCode?: string;
+      chunkAnalytics?: ChunkAnalytics[];
     }> => {
       // Guard: Already processing
       if (isProcessingRef.current) {
@@ -108,6 +110,9 @@ export function useEndToEndSubtitleGeneration({
         logger.warn('[EndToEnd] Generation timeout, aborting');
         abortControllerRef.current?.abort();
       }, timeoutMs);
+
+      // Capture incremental chunk analytics for reporting
+      let accumulatedChunkAnalytics: ChunkAnalytics[] = [];
 
       try {
         logger.info('[EndToEnd] Starting subtitle generation', { audioPath, config });
@@ -276,10 +281,14 @@ export function useEndToEndSubtitleGeneration({
           return { success: false, error: t('errors.cancelled'), errorCode: 'CANCELLED' };
         }
 
-        // Send progress update
+        // Send progress update and collect analytics from all chunks
         const sendProgress = (update: ChunkStatus) => {
           if (!signal.aborted) {
             window.electronAPI?.endToEnd?.sendSubtitleProgress?.(update);
+          }
+          // Collect analytics when present (completed, error, or cancelled chunks)
+          if (update.analytics) {
+            accumulatedChunkAnalytics.push(update.analytics);
           }
         };
 
@@ -320,7 +329,7 @@ export function useEndToEndSubtitleGeneration({
         };
 
         // Generate subtitles
-        const { subtitles } = await generateSubtitles(
+        const { subtitles, chunkAnalytics } = await generateSubtitles(
           audioBuffer,
           audioBuffer.duration,
           mergedSettings,
@@ -347,6 +356,9 @@ export function useEndToEndSubtitleGeneration({
           // Video info for artifact metadata
           { filename: audioFile.name, duration: audioBuffer.duration }
         );
+
+        // Capture chunk analytics from result (should be same as accumulated but sorted)
+        accumulatedChunkAnalytics = chunkAnalytics;
 
         // Guard: No subtitles generated
         if (!subtitles || subtitles.length === 0) {
@@ -386,6 +398,7 @@ export function useEndToEndSubtitleGeneration({
             {
               count: subtitles.length,
               duration_ms: Date.now() - startTime,
+              chunk_durations: chunkAnalytics,
             },
             'interaction'
           );
@@ -397,12 +410,29 @@ export function useEndToEndSubtitleGeneration({
           subtitles,
           subtitleContent: content,
           subtitleFormat: format,
+          chunkAnalytics,
         };
       } catch (error: any) {
+        // Ensure analytics are sorted by index
+        accumulatedChunkAnalytics.sort((a, b) => a.index - b.index);
+
         // Categorize error types
         // Check for cancellation first to avoid error logging
         if (error.name === 'AbortError' || error.message?.includes('cancelled') || signal.aborted) {
           logger.info('[EndToEnd] Subtitle generation cancelled');
+
+          // Analytics: End-to-End Generation Cancelled
+          if (window.electronAPI?.analytics) {
+            void window.electronAPI.analytics.track(
+              'end_to_end_generation_cancelled',
+              {
+                duration_ms: Date.now() - startTime,
+                chunk_durations: accumulatedChunkAnalytics, // Use accumulated analytics
+              },
+              'interaction'
+            );
+          }
+
           return { success: false, error: t('errors.cancelled'), errorCode: 'CANCELLED' };
         }
 
@@ -422,6 +452,7 @@ export function useEndToEndSubtitleGeneration({
               error: error.message || 'Unknown error',
               stage: 'generation', // We are in the generation phase here
               error_code: errorCode,
+              chunk_durations: accumulatedChunkAnalytics, // Include partial chunk stats
             },
             'interaction'
           );

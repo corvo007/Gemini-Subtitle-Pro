@@ -360,7 +360,10 @@ export function classifyError(stderr: string): DownloadError {
     lowerError.includes('read timed out') ||
     lowerError.includes('network is unreachable') ||
     lowerError.includes('temporary failure in name resolution') ||
-    lowerError.includes('unable to download video data')
+    lowerError.includes('unable to download video data') ||
+    lowerError.includes('ssl') || // SSL errors
+    lowerError.includes('certificate verify failed') ||
+    lowerError.includes('handshake failure')
   ) {
     return {
       type: 'network',

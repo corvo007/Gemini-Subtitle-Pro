@@ -132,6 +132,9 @@ export class EndToEndPipeline {
       onProgress(progress);
     };
 
+    // Track chunk progress
+    const chunkProgress: Map<string | number, any> = new Map();
+
     try {
       // ========================================
       // Stage 1: 下载视频
@@ -270,9 +273,6 @@ export class EndToEndPipeline {
         throw new Error(t('endToEnd.mainWindowNotInit'));
       }
 
-      // Track chunk progress
-      const chunkProgress: Map<string | number, any> = new Map();
-
       // We'll use a promise-based approach to wait for renderer response
       const subtitleResult = await this.requestSubtitleGeneration(
         config,
@@ -341,6 +341,9 @@ export class EndToEndPipeline {
       }
 
       this.outputs.subtitles = subtitleResult.subtitles;
+
+      // Capture chunk analytics from renderer for later reporting
+      const chunkAnalytics = subtitleResult.chunkAnalytics;
 
       // Save subtitle file if content is returned
       if (subtitleResult.subtitleContent) {
@@ -423,6 +426,7 @@ export class EndToEndPipeline {
         finalStage: 'completed',
         outputs: this.outputs,
         duration: Date.now() - this.startTime,
+        chunkAnalytics,
       };
     } catch (error: any) {
       console.error('[Pipeline] Error:', error);
@@ -446,9 +450,9 @@ export class EndToEndPipeline {
       let classifiedError;
       if (errorStage === 'downloading') {
         classifiedError = classifyError(errorMessage);
-        if (classifiedError && !classifiedError.retryable) {
-          // If it's a known non-retryable download error (like private video, paid content),
-          // treat it as expected to avoid Sentry noise
+        // If it's a known download error (including network errors, rate limits, private videos),
+        // treat it as expected to avoid Sentry noise. Only report 'unknown' errors.
+        if (classifiedError && classifiedError.type !== 'unknown') {
           isExpected = true;
         }
       }
@@ -457,6 +461,13 @@ export class EndToEndPipeline {
       if (!isExpected) {
         Sentry.captureException(error, { tags: { action: 'end-to-end-pipeline' } });
       }
+
+      // Collect partial chunk analytics
+      const chunks = Array.from(chunkProgress.values());
+      const chunkAnalytics = chunks
+        .filter((c) => c.analytics)
+        .map((c) => c.analytics)
+        .sort((a, b) => a.index - b.index);
 
       return {
         success: false,
@@ -470,6 +481,7 @@ export class EndToEndPipeline {
           originalError: error.stack,
           retryable: classifiedError?.retryable || false,
         },
+        chunkAnalytics,
       };
     }
   }
@@ -490,6 +502,7 @@ export class EndToEndPipeline {
     subtitleContent?: string;
     subtitleFormat?: string;
     error?: string;
+    chunkAnalytics?: any[];
   }> {
     return new Promise((resolve, reject) => {
       if (!this.mainWindow) {
@@ -517,6 +530,7 @@ export class EndToEndPipeline {
           subtitleContent?: string;
           subtitleFormat?: string;
           error?: string;
+          chunkAnalytics?: any[];
         }
       ) => {
         // Remove listeners after response

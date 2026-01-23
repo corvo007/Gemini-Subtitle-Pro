@@ -21,6 +21,7 @@ import { type SpeakerProfile } from '@/services/generation/extractors/speakerPro
 import { mapInParallel } from '@/services/utils/concurrency';
 import { logger } from '@/services/utils/logger';
 import { ChunkProcessor } from './chunkProcessor';
+import { type ChunkAnalytics } from '@/types/api';
 import { timeToSeconds } from '@/services/subtitle/time';
 import i18n from '@/i18n';
 
@@ -33,7 +34,11 @@ export const generateSubtitles = async (
   onGlossaryReady?: (metadata: GlossaryExtractionMetadata) => Promise<GlossaryItem[]>,
   signal?: AbortSignal,
   videoInfo?: VideoInfo
-): Promise<{ subtitles: SubtitleItem[]; glossaryResults?: GlossaryExtractionResult[] }> => {
+): Promise<{
+  subtitles: SubtitleItem[];
+  glossaryResults?: GlossaryExtractionResult[];
+  chunkAnalytics: ChunkAnalytics[];
+}> => {
   // Initialize pipeline context using shared core
   const { context, usageReporter, trackUsage, semaphores, concurrency } = initializePipelineContext(
     {
@@ -239,6 +244,9 @@ export const generateSubtitles = async (
   // This array grows incrementally as chunks complete, avoiding repeated full-array allocations
   const intermediateResults: SubtitleItem[] = [];
 
+  // Accumulator for chunk analytics
+  const chunkAnalytics: ChunkAnalytics[] = [];
+
   // Use a high concurrency limit for the main loop (buffer)
   // The actual resource usage is controlled by semaphores inside
   // We use a reasonable upper bound to prevent excessive Promise creation for long videos
@@ -278,6 +286,10 @@ export const generateSubtitles = async (
         // Pass a copy to prevent external mutation of our accumulator
         onIntermediateResult?.([...intermediateResults]);
       }
+
+      // Collect analytics for this chunk (for return value sorting)
+      // Note: Analytics are also reported incrementally via onProgress for error/cancel robustness
+      chunkAnalytics.push(result.analytics);
     } catch (e: any) {
       // Check for cancellation
       if (
@@ -309,5 +321,12 @@ export const generateSubtitles = async (
   // Cleanup: Dispose SmartSegmenter singleton to free VAD Worker resources
   SmartSegmenter.disposeInstance();
 
-  return { subtitles: finalSubtitles, glossaryResults: (await glossaryTask).raw };
+  // Ensure deterministic order for analytics
+  chunkAnalytics.sort((a, b) => a.index - b.index);
+
+  return {
+    subtitles: finalSubtitles,
+    glossaryResults: (await glossaryTask).raw,
+    chunkAnalytics,
+  };
 };

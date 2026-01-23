@@ -26,6 +26,9 @@ import {
   AlignmentStep,
   TranslationStep,
 } from './steps';
+import { StepCancelledError } from './core/BaseStep';
+
+import { type ChunkAnalytics } from '@/types/api';
 
 export type { ChunkDependencies } from './core/types';
 
@@ -35,6 +38,8 @@ export interface ChunkResult {
   aligned: SubtitleItem[];
   translated: SubtitleItem[];
   final: SubtitleItem[]; // The best available version (translated > refined > whisper)
+  /** Analytics timing data for this chunk */
+  analytics: ChunkAnalytics;
 }
 
 // Step instances (stateless, can be reused)
@@ -54,6 +59,9 @@ export class ChunkProcessor {
     const { settings, isDebug, onProgress } = context;
     const { chunkDuration, totalChunks, refinementSemaphore } = deps;
 
+    // Initialize analytics incrementally - collect timing as we go
+    const analytics: ChunkAnalytics = { index, status: 'success' };
+
     try {
       // Mock Stage Logic Setup
       const mockStageOrder = ['transcribe', 'refinement', 'alignment', 'translation'];
@@ -70,7 +78,14 @@ export class ChunkProcessor {
           status: 'completed',
           message: i18n.t('services:pipeline.status.complete'),
         });
-        return { whisper: [], refined: [], aligned: [], translated: [], final: [] };
+        return {
+          whisper: [],
+          refined: [],
+          aligned: [],
+          translated: [],
+          final: [],
+          analytics: { index, status: 'skipped' },
+        };
       }
 
       // Load mock data if mockStage is set
@@ -102,6 +117,8 @@ export class ChunkProcessor {
       // ===== STEP 1: TRANSCRIPTION =====
       const transcriptionResult = await transcriptionStep.run({}, ctx);
       const rawSegments = transcriptionResult.output;
+      analytics.transcribe_ms = transcriptionResult.durationMs;
+      analytics.transcribe_status = transcriptionResult.status;
 
       // Skip if no segments
       if (rawSegments.length === 0) {
@@ -112,7 +129,14 @@ export class ChunkProcessor {
           status: 'completed',
           message: i18n.t('services:pipeline.status.completeNoContent'),
         });
-        return { whisper: [], refined: [], aligned: [], translated: [], final: [] };
+        return {
+          whisper: [],
+          refined: [],
+          aligned: [],
+          translated: [],
+          final: [],
+          analytics: { ...analytics, status: 'empty' },
+        };
       }
 
       // Check skipAfter: transcribe
@@ -131,6 +155,7 @@ export class ChunkProcessor {
           aligned: whisperGlobal,
           translated: whisperGlobal,
           final: whisperGlobal,
+          analytics: { ...analytics, status: 'success' },
         };
       }
 
@@ -155,6 +180,8 @@ export class ChunkProcessor {
           ctx
         );
         refinedSegments = refinementResult.output;
+        analytics.refine_ms = refinementResult.durationMs;
+        analytics.refine_status = refinementResult.status;
 
         // Check skipAfter: refinement
         if (settings.debug?.skipAfter === 'refinement') {
@@ -172,13 +199,17 @@ export class ChunkProcessor {
             aligned: refinedGlobal,
             translated: refinedGlobal,
             final: refinedGlobal,
+            analytics: { ...analytics, status: 'success' },
           };
         }
 
         // ===== STEP 4: ALIGNMENT =====
         // Alignment has its own semaphore (alignmentSemaphore) managed internally
         const alignmentResult = await alignmentStep.run({ segments: refinedSegments }, ctx);
-        alignedSegments = alignmentResult.skipped ? refinedSegments : alignmentResult.output;
+        alignedSegments =
+          alignmentResult.status === 'skipped' ? refinedSegments : alignmentResult.output;
+        analytics.align_ms = alignmentResult.durationMs;
+        analytics.align_status = alignmentResult.status;
 
         // Check skipAfter: alignment
         if (settings.debug?.skipAfter === 'alignment') {
@@ -196,6 +227,7 @@ export class ChunkProcessor {
             aligned: alignedGlobal,
             translated: alignedGlobal,
             final: alignedGlobal,
+            analytics: { ...analytics, status: 'success' },
           };
         }
 
@@ -204,14 +236,21 @@ export class ChunkProcessor {
           { segments: alignedSegments },
           ctx
         );
-        const translatedSegments = translationResult.skipped ? [] : translationResult.output;
+        const translatedSegments =
+          translationResult.status === 'skipped' ? [] : translationResult.output;
         finalChunkSubs = toGlobalTimestamps(translatedSegments, start);
+        analytics.translate_ms = translationResult.durationMs;
+        analytics.translate_status = translationResult.status;
+
+        // Store final analytics in deps for later aggregation
+        deps.chunkAnalytics = analytics;
 
         onProgress?.({
           id: index,
           total: totalChunks,
           status: 'completed',
           message: i18n.t('services:pipeline.status.completed'),
+          analytics,
         });
       } finally {
         refinementSemaphore.release();
@@ -235,21 +274,54 @@ export class ChunkProcessor {
               : refinedGlobal.length > 0
                 ? refinedGlobal
                 : [],
+        analytics: deps.chunkAnalytics!,
       };
     } catch (e: any) {
-      // Check for cancellation
+      // Check for cancellation - extract timing from StepCancelledError if available
       if (
         context.signal?.aborted ||
+        e.name === 'StepCancelledError' ||
         e.message === i18n.t('services:pipeline.errors.cancelled') ||
         e.name === 'AbortError'
       ) {
+        // Extract timing from StepCancelledError if it was the cancelled step
+        if (e instanceof StepCancelledError) {
+          // Set timing for the step that was cancelled (based on stepName)
+          const stepMap: Record<string, keyof ChunkAnalytics> = {
+            TranscriptionStep: 'transcribe_ms',
+            RefinementStep: 'refine_ms',
+            AlignmentStep: 'align_ms',
+            TranslationStep: 'translate_ms',
+          };
+          const timingKey = stepMap[e.stepName];
+          if (timingKey && !analytics[timingKey]) {
+            (analytics as any)[timingKey] = e.durationMs;
+          }
+        }
+
+        // Report partial analytics with 'cancelled' status before re-throwing
+        analytics.status = 'cancelled';
+        onProgress?.({
+          id: index,
+          total: totalChunks,
+          status: 'error',
+          message: i18n.t('services:pipeline.errors.cancelled'),
+          analytics,
+        });
         throw e;
       }
 
       logger.error(`Chunk ${index} failed`, e);
       const actionableMsg = getActionableErrorMessage(e);
       const errorMsg = actionableMsg || i18n.t('services:pipeline.status.failed');
-      onProgress?.({ id: index, total: totalChunks, status: 'error', message: errorMsg });
+      analytics.status = 'failed';
+      onProgress?.({
+        id: index,
+        total: totalChunks,
+        status: 'error',
+        message: errorMsg,
+        analytics,
+      });
 
       // Sentry: Report chunk failure with context (filter expected errors)
       if (
@@ -266,7 +338,14 @@ export class ChunkProcessor {
         });
       }
 
-      return { whisper: [], refined: [], aligned: [], translated: [], final: [] };
+      return {
+        whisper: [],
+        refined: [],
+        aligned: [],
+        translated: [],
+        final: [],
+        analytics,
+      };
     }
   }
 }

@@ -201,6 +201,9 @@ export interface PipelineResult {
     originalError?: string;
     retryable?: boolean;
   };
+
+  /** 字幕生成各 chunk 的阶段耗时 (用于 analytics) */
+  chunkAnalytics?: any[];
 }
 
 // ============================================================================

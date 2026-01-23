@@ -80,6 +80,7 @@ export class ProofreadStep {
   async run(input: ProofreadInput, ctx: ProofreadContext): Promise<StepResult<SubtitleItem[]>> {
     const { pipelineContext, semaphore, batchLabel, totalBatches, batchIndex } = ctx;
     const { signal, onProgress } = pipelineContext;
+    const startTime = Date.now();
 
     // 1. Check abort signal
     if (signal?.aborted) {
@@ -128,7 +129,7 @@ export class ProofreadStep {
         message: i18n.t('services:pipeline.status.completed'),
       });
 
-      return { output: finalResult };
+      return { output: finalResult, status: 'success', durationMs: Date.now() - startTime };
     } catch (error) {
       logger.error(`[Batch ${batchLabel}] Proofread failed`, error);
 
@@ -142,7 +143,12 @@ export class ProofreadStep {
       });
 
       // Return fallback (original batch)
-      return { output: input.batch, error: error as Error };
+      return {
+        output: input.batch,
+        status: 'failed',
+        durationMs: Date.now() - startTime,
+        error: error as Error,
+      };
     } finally {
       // 9. Release semaphore
       semaphore.release();

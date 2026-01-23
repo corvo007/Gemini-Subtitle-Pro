@@ -15,6 +15,18 @@ import { type StepName, type StepContext, type StepResult, type PostCheckResult 
 import { logger } from '@/services/utils/logger';
 import i18n from '@/i18n';
 
+/** Error thrown when a step is cancelled, carrying timing data */
+export class StepCancelledError extends Error {
+  readonly durationMs: number;
+  readonly stepName: string;
+  constructor(stepName: string, durationMs: number) {
+    super(i18n.t('services:pipeline.errors.cancelled'));
+    this.name = 'StepCancelledError';
+    this.stepName = stepName;
+    this.durationMs = durationMs;
+  }
+}
+
 const STEP_ORDER: StepName[] = [
   'transcribe',
   'refinement',
@@ -73,165 +85,148 @@ export abstract class BaseStep<TInput, TOutput> {
     const { pipelineContext } = ctx;
     const { signal, onProgress } = pipelineContext;
     const startTime = Date.now();
-    let status: 'success' | 'failed' | 'skipped' | 'mocked' | 'fallback' = 'failed'; // Default to failed until proven otherwise
-    let errorType: string | undefined;
 
-    // Helper to send analytics
-    const trackCompletion = () => {
-      // Only track if running in renderer with analytics available
-      if (typeof window !== 'undefined' && window.electronAPI?.analytics) {
-        void window.electronAPI.analytics.track(
-          'chunk_stage_completed',
-          {
-            chunk_index: ctx.chunk.index,
-            stage: this.stageKey, // Use stageKey as stable identifier
-            step_name: this.name, // Also include raw step name for debug
-            status,
-            duration_ms: Date.now() - startTime,
-            chunk_duration_sec: ctx.chunkDuration,
-            error_type: errorType,
-          },
-          'interaction'
-        );
-      }
-    };
+    // 1. Check abort signal (before any work)
+    if (signal?.aborted) {
+      throw new StepCancelledError(this.name, 0);
+    }
+
+    // 2. Check if should skip by mockStage
+    if (this.shouldSkipByMockStage(ctx)) {
+      logger.info(`[Chunk ${ctx.chunk.index}] Skipping ${this.name} (mockStage)`);
+      return {
+        output: ctx.mockInputSegments as unknown as TOutput,
+        status: 'skipped',
+        durationMs: Date.now() - startTime,
+        skipped: true,
+      };
+    }
+
+    // 3. Report progress: waiting
+    onProgress?.({
+      id: ctx.chunk.index,
+      total: ctx.totalChunks,
+      status: 'processing',
+      stage: this.stageKey,
+      message: i18n.t(`services:pipeline.status.waiting${this.capitalizedName}`),
+    });
+
+    // 4. Acquire semaphore if defined and useSemaphore is true
+    const semaphore = useSemaphore ? (this.getSemaphore?.(ctx) ?? null) : null;
+    if (semaphore) await semaphore.acquire();
 
     try {
-      // 1. Check abort signal
+      // 5. Check abort again after acquiring semaphore
       if (signal?.aborted) {
-        // Don't track analytics for cancellation (noise)
-        throw new Error(i18n.t('services:pipeline.errors.cancelled'));
+        throw new StepCancelledError(this.name, Date.now() - startTime);
       }
 
-      // 2. Check if should skip by mockStage
-      if (this.shouldSkipByMockStage(ctx)) {
-        logger.info(`[Chunk ${ctx.chunk.index}] Skipping ${this.name} (mockStage)`);
-        status = 'skipped';
-        return { output: ctx.mockInputSegments as unknown as TOutput, skipped: true };
-      }
-
-      // 3. Report progress: waiting
+      // 6. Report progress: processing
       onProgress?.({
         id: ctx.chunk.index,
         total: ctx.totalChunks,
         status: 'processing',
         stage: this.stageKey,
-        message: i18n.t(`services:pipeline.status.waiting${this.capitalizedName}`),
+        message: i18n.t(`services:pipeline.status.${this.stageKey}`),
       });
 
-      // 4. Acquire semaphore if defined and useSemaphore is true
-      const semaphore = useSemaphore ? (this.getSemaphore?.(ctx) ?? null) : null;
-      if (semaphore) await semaphore.acquire();
-
-      try {
-        // 5. Check abort again after acquiring semaphore
-        if (signal?.aborted) {
-          throw new Error(i18n.t('services:pipeline.errors.cancelled'));
+      if (this.preCheck) {
+        const shouldProceed = await this.preCheck(input, ctx);
+        if (!shouldProceed) {
+          logger.info(`[Chunk ${ctx.chunk.index}] ${this.name} preCheck returned false, skipping`);
+          return {
+            output: input as unknown as TOutput,
+            status: 'skipped',
+            durationMs: Date.now() - startTime,
+            skipped: true,
+          };
         }
+      }
 
-        // 6. Report progress: processing
-        onProgress?.({
-          id: ctx.chunk.index,
-          total: ctx.totalChunks,
-          status: 'processing',
-          stage: this.stageKey,
-          message: i18n.t(`services:pipeline.status.${this.stageKey}`),
-        });
+      if (this.shouldUseMockApi(ctx) && this.loadMockData) {
+        logger.info(`[Chunk ${ctx.chunk.index}] Mocking ${this.name} (mockApi enabled)`);
+        const mockResult = await this.loadMockData(ctx);
+        await this.saveArtifact?.(mockResult, ctx);
+        return {
+          output: mockResult,
+          status: 'mocked',
+          durationMs: Date.now() - startTime,
+          mocked: true,
+        };
+      }
 
-        // 7. PreCheck - can skip execution
-        if (this.preCheck) {
-          const shouldProceed = await this.preCheck(input, ctx);
-          if (!shouldProceed) {
-            logger.info(
-              `[Chunk ${ctx.chunk.index}] ${this.name} preCheck returned false, skipping`
-            );
-            status = 'skipped';
-            return { output: input as unknown as TOutput, skipped: true };
-          }
-        }
+      // 9. PreProcess
+      const processedInput = this.preProcess ? await this.preProcess(input, ctx) : input;
 
-        // 8. Check mockApi flag
-        if (this.shouldUseMockApi(ctx) && this.loadMockData) {
-          logger.info(`[Chunk ${ctx.chunk.index}] Mocking ${this.name} (mockApi enabled)`);
-          const mockResult = await this.loadMockData(ctx);
-          await this.saveArtifact?.(mockResult, ctx);
-          status = 'mocked';
-          return { output: mockResult, mocked: true };
-        }
+      // 10. Execute with optional retry (if postCheck defined)
+      let result: TOutput;
+      if (this.postCheck) {
+        result = await this.executeWithRetry(processedInput, ctx);
+      } else {
+        result = await this.execute(processedInput, ctx);
+      }
 
-        // 9. PreProcess
-        const processedInput = this.preProcess ? await this.preProcess(input, ctx) : input;
+      // 11. PostProcess
+      const finalResult = this.postProcess ? await this.postProcess(result, ctx) : result;
 
-        // 10. Execute with optional retry (if postCheck defined)
-        let result: TOutput;
-        if (this.postCheck) {
-          result = await this.executeWithRetry(processedInput, ctx);
-        } else {
-          result = await this.execute(processedInput, ctx);
-        }
+      // 12. Save artifact
+      await this.saveArtifact?.(finalResult, ctx);
 
-        // 11. PostProcess
-        const finalResult = this.postProcess ? await this.postProcess(result, ctx) : result;
+      return {
+        output: finalResult,
+        status: 'success',
+        durationMs: Date.now() - startTime,
+      };
+    } catch (e: any) {
+      const durationMs = Date.now() - startTime;
 
-        // 12. Save artifact
-        await this.saveArtifact?.(finalResult, ctx);
-
-        status = 'success';
-        return { output: finalResult };
-      } catch (e: any) {
-        // 13. Error handling with fallback
-        // Check for cancellation first
-        if (signal?.aborted || e.message === i18n.t('services:pipeline.errors.cancelled')) {
-          logger.info(`[Chunk ${ctx.chunk.index}] ${this.name} cancelled`);
-          // Don't track cancellation
-          throw e;
-        }
-
-        logger.error(`[Chunk ${ctx.chunk.index}] ${this.name} failed`, e);
-        errorType = e.name || 'UnknownError';
-        status = 'failed';
-
-        if (this.getFallback) {
-          const fallback = this.getFallback(input, e as Error, ctx);
-          await this.saveArtifact?.(fallback, ctx);
-
-          // Analytics: Track step fallback with context (using Analytics for larger quota)
-          // Note: keeping existing step_fallback event as it might have specific dashboards relying on it,
-          // but our new event will also fire with status='fallback'
-          if (typeof window !== 'undefined' && window.electronAPI?.analytics) {
-            void window.electronAPI.analytics.track(
-              'step_fallback',
-              {
-                step_name: this.name,
-                chunk_index: ctx.chunk.index,
-                total_chunks: ctx.totalChunks,
-                // Error details
-                error_name: (e as Error).name,
-                error_message: (e as Error).message?.substring(0, 300),
-                error_stack: (e as Error).stack?.split('\n').slice(0, 3).join(' | '),
-              },
-              'interaction'
-            );
-          }
-
-          status = 'fallback'; // Update status to fallback since we recovered
-          return { output: fallback, error: e as Error };
+      // 13. Error handling with fallback
+      // Check for cancellation first
+      if (
+        signal?.aborted ||
+        e.name === 'StepCancelledError' ||
+        e.message === i18n.t('services:pipeline.errors.cancelled')
+      ) {
+        logger.info(`[Chunk ${ctx.chunk.index}] ${this.name} cancelled after ${durationMs}ms`);
+        // Re-throw with timing data if not already a StepCancelledError
+        if (e.name !== 'StepCancelledError') {
+          throw new StepCancelledError(this.name, durationMs);
         }
         throw e;
-      } finally {
-        // 14. Release semaphore
-        if (semaphore) semaphore.release();
       }
+
+      logger.error(`[Chunk ${ctx.chunk.index}] ${this.name} failed`, e);
+
+      if (this.getFallback) {
+        const fallback = this.getFallback(input, e as Error, ctx);
+        await this.saveArtifact?.(fallback, ctx);
+
+        // Analytics: Track step fallback with context (keeping for error dashboards)
+        if (typeof window !== 'undefined' && window.electronAPI?.analytics) {
+          void window.electronAPI.analytics.track(
+            'step_fallback',
+            {
+              step_name: this.name,
+              chunk_index: ctx.chunk.index,
+              total_chunks: ctx.totalChunks,
+              error_name: (e as Error).name,
+              error_message: (e as Error).message?.substring(0, 300),
+            },
+            'interaction'
+          );
+        }
+
+        return {
+          output: fallback,
+          status: 'failed',
+          durationMs: Date.now() - startTime,
+          error: e as Error,
+        };
+      }
+      throw e;
     } finally {
-      // Send analytics event (unless cancelled which throws before this or inside logic)
-      // Note: If cancelled inside try block, it throws. We might want to NOT track those.
-      // The catch block re-throws cancellations, so this finally block runs.
-      // We check signal again to be sure we don't track cancelled items as failures if possible,
-      // though 'status' will be 'failed' if exception was thrown.
-      // Simplest is: if signal.aborted, don't send anything.
-      if (!signal?.aborted) {
-        trackCompletion();
-      }
+      // 14. Release semaphore
+      if (semaphore) semaphore.release();
     }
   }
 
