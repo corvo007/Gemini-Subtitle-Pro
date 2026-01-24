@@ -23,21 +23,19 @@ import { VideoPreview } from '@/components/download/VideoPreview';
 import { QualitySelector } from '@/components/download/QualitySelector';
 import { DownloadProgress } from '@/components/download/DownloadProgress';
 import { PageHeader, HeaderButton } from '@/components/layout/PageHeader';
+import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/cn';
 
 interface DownloadPageProps {
   onDownloadComplete?: (videoPath: string) => void;
   onGoBack?: () => void;
-  onShowLogs?: () => void;
-  onShowSettings?: () => void;
 }
 
-export function DownloadPage({
-  onDownloadComplete,
-  onGoBack,
-  onShowLogs,
-  onShowSettings,
-}: DownloadPageProps) {
+export function DownloadPage({ onDownloadComplete, onGoBack }: DownloadPageProps) {
+  // Store actions
+  const setShowLogs = useAppStore((s) => s.setShowLogs);
+  const setShowSettings = useAppStore((s) => s.setShowSettings);
+
   const {
     status,
     videoInfo,
@@ -129,23 +127,19 @@ export function DownloadPage({
           onBack={onGoBack}
           actions={
             <>
-              {onShowLogs && (
-                <HeaderButton
-                  onClick={onShowLogs}
-                  icon={<FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                  label={t('logs')}
-                  title={t('viewLogs')}
-                  hoverColor="blue"
-                />
-              )}
-              {onShowSettings && (
-                <HeaderButton
-                  onClick={onShowSettings}
-                  icon={<Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                  label={t('settings')}
-                  hoverColor="emerald"
-                />
-              )}
+              <HeaderButton
+                onClick={() => setShowLogs(true)}
+                icon={<FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                label={t('logs')}
+                title={t('viewLogs')}
+                hoverColor="blue"
+              />
+              <HeaderButton
+                onClick={() => setShowSettings(true)}
+                icon={<Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                label={t('settings')}
+                hoverColor="emerald"
+              />
             </>
           }
         />

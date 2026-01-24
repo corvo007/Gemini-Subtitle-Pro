@@ -25,25 +25,21 @@ import { StepConfig } from '@/components/endToEnd/wizard/steps/StepConfig';
 import { StepResult } from '@/components/endToEnd/wizard/steps/StepResult';
 import { PageHeader, HeaderButton } from '@/components/layout/PageHeader';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { useAppStore } from '@/store/useAppStore';
 
 interface EndToEndWizardProps {
   settings: AppSettings;
   onComplete?: () => void;
   onCancel: () => void;
-  onShowLogs?: () => void;
-  onShowGlossary?: () => void;
-  onShowSettings?: () => void;
 }
 
 /** 主向导组件*/
-export function EndToEndWizard({
-  settings,
-  onComplete,
-  onCancel,
-  onShowLogs,
-  onShowGlossary,
-  onShowSettings,
-}: EndToEndWizardProps) {
+export function EndToEndWizard({ settings, onComplete, onCancel }: EndToEndWizardProps) {
+  // Store actions
+  const setShowLogs = useAppStore((s) => s.setShowLogs);
+  const setShowGlossaryManager = useAppStore((s) => s.setShowGlossaryManager);
+  const setShowSettings = useAppStore((s) => s.setShowSettings);
+
   const {
     state,
     setStep,
@@ -137,32 +133,26 @@ export function EndToEndWizard({
           onBack={onCancel}
           actions={
             <>
-              {onShowLogs && (
-                <HeaderButton
-                  onClick={onShowLogs}
-                  icon={<FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                  label={t('wizard.header.logs')}
-                  title={t('wizard.header.viewLogs')}
-                  hoverColor="blue"
-                />
-              )}
-              {onShowGlossary && (
-                <HeaderButton
-                  onClick={onShowGlossary}
-                  icon={<Book className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                  label={t('wizard.header.glossary')}
-                  title={t('wizard.header.manageGlossary')}
-                  hoverColor="indigo"
-                />
-              )}
-              {onShowSettings && (
-                <HeaderButton
-                  onClick={onShowSettings}
-                  icon={<Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                  label={t('wizard.header.settings')}
-                  hoverColor="emerald"
-                />
-              )}
+              <HeaderButton
+                onClick={() => setShowLogs(true)}
+                icon={<FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                label={t('wizard.header.logs')}
+                title={t('wizard.header.viewLogs')}
+                hoverColor="blue"
+              />
+              <HeaderButton
+                onClick={() => setShowGlossaryManager(true)}
+                icon={<Book className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                label={t('wizard.header.glossary')}
+                title={t('wizard.header.manageGlossary')}
+                hoverColor="indigo"
+              />
+              <HeaderButton
+                onClick={() => setShowSettings(true)}
+                icon={<Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                label={t('wizard.header.settings')}
+                hoverColor="emerald"
+              />
             </>
           }
         />

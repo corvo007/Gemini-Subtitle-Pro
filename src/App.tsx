@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n';
 import { GenerationStatus } from '@/types/api';
@@ -16,9 +16,12 @@ import {
 import { ToastContainer, ProgressOverlay } from '@/components/ui';
 
 // Custom Hooks
-import { useSettings, useToast, useSnapshots, useGlossaryFlow, useWorkspaceLogic } from '@/hooks';
+import { useSnapshots, useGlossaryFlow, useWorkspaceLogic } from '@/hooks';
 import { getActiveGlossaryTerms } from '@/services/glossary/utils';
 import { useEndToEndSubtitleGeneration } from '@/hooks/useEndToEndSubtitleGeneration';
+
+// Global Store
+import { useAppStore, initializeSettings } from '@/store/useAppStore';
 
 // Page Components
 import { LogViewerModal } from '@/components/layout/LogViewerModal';
@@ -33,24 +36,38 @@ import { ENV } from '@/config';
 export default function App() {
   const { t } = useTranslation('app');
   // View State
-  const [view, setView] = useState<'home' | 'workspace' | 'download' | 'compression' | 'endToEnd'>(
-    'home'
-  );
-  const [activeTab, setActiveTab] = useState<'new' | 'import'>('new');
-  const [settingsTab, setSettingsTab] = useState('general');
+  // View State
+  const view = useAppStore((s) => s.view);
+  const setView = useAppStore((s) => s.setView);
 
-  const [showSnapshots, setShowSnapshots] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showGenreSettings, setShowGenreSettings] = useState(false);
-  const [showGlossaryManager, setShowGlossaryManager] = useState(false);
-  const [showSpeakerManager, setShowSpeakerManager] = useState(false);
+  const [activeTab, setActiveTab] = useState<'new' | 'import'>('new');
 
   // Downloaded video path - for passing to compression page
   const [downloadedVideoPath, setDownloadedVideoPath] = useState<string | null>(null);
 
+  // Global Store (Zustand)
+  const settings = useAppStore((s) => s.settings);
+  const isSettingsLoaded = useAppStore((s) => s.isSettingsLoaded);
+  const updateSetting = useAppStore((s) => s.updateSetting);
+  const toasts = useAppStore((s) => s.toasts);
+  const addToast = useAppStore((s) => s.addToast);
+  const removeToast = useAppStore((s) => s.removeToast);
+  const showSettings = useAppStore((s) => s.showSettings);
+  const setShowSettings = useAppStore((s) => s.setShowSettings);
+  const showLogs = useAppStore((s) => s.showLogs);
+  const setShowLogs = useAppStore((s) => s.setShowLogs);
+  const showGlossaryManager = useAppStore((s) => s.showGlossaryManager);
+  const setShowGlossaryManager = useAppStore((s) => s.setShowGlossaryManager);
+  const showSpeakerManager = useAppStore((s) => s.showSpeakerManager);
+  const setShowSpeakerManager = useAppStore((s) => s.setShowSpeakerManager);
+  const showSnapshots = useAppStore((s) => s.showSnapshots);
+  const setShowSnapshots = useAppStore((s) => s.setShowSnapshots);
+  const showGenreSettings = useAppStore((s) => s.showGenreSettings);
+  const setShowGenreSettings = useAppStore((s) => s.setShowGenreSettings);
+  const settingsTab = useAppStore((s) => s.settingsTab);
+  const setSettingsTab = useAppStore((s) => s.setSettingsTab);
+
   // Custom Hooks
-  const { settings, isSettingsLoaded, updateSetting } = useSettings();
-  const { toasts, addToast, removeToast } = useToast();
   const snapshotsValues = useSnapshots();
   const glossaryFlow = useGlossaryFlow();
 
@@ -89,19 +106,20 @@ export default function App() {
     type: 'warning',
   });
 
-  const showConfirm = (
-    title: string,
-    message: string,
-    onConfirm: () => void,
-    type: 'info' | 'warning' | 'danger' = 'warning'
-  ) => {
-    setConfirmation({ isOpen: true, title, message, onConfirm, type });
-  };
+  const showConfirm = useCallback(
+    (
+      title: string,
+      message: string,
+      onConfirm: () => void,
+      type: 'info' | 'warning' | 'danger' = 'warning'
+    ) => {
+      setConfirmation({ isOpen: true, title, message, onConfirm, type });
+    },
+    []
+  );
 
   // Workspace Logic
   const workspace = useWorkspaceLogic({
-    settings,
-    updateSetting,
     addToast,
     showConfirm,
     glossaryFlow,
@@ -122,9 +140,13 @@ export default function App() {
     );
   }, [workspace.subtitles]);
 
-  // Logs State
-  const [showLogs, setShowLogs] = useState(false);
+  // Logs State (logs array is local, showLogs comes from store)
   const [logs, setLogs] = useState<LogEntry[]>([]);
+
+  // Initialize settings from storage on mount
+  useEffect(() => {
+    void initializeSettings();
+  }, []);
 
   useEffect(() => {
     // Initial load of frontend logs
@@ -300,19 +322,12 @@ export default function App() {
         }}
       />
       <SettingsModal
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-        activeTab={settingsTab}
-        setActiveTab={setSettingsTab}
-        settings={settings}
-        updateSetting={updateSetting}
         envGeminiKey={ENV.GEMINI_API_KEY}
         envOpenaiKey={ENV.OPENAI_API_KEY}
         onOpenGlossaryManager={() => {
           setShowSettings(false);
           setShowGlossaryManager(true);
         }}
-        addToast={addToast}
       />
       {showGlossaryManager && (
         <GlossaryManager
@@ -347,12 +362,8 @@ export default function App() {
           onStartImport={() => {
             setActiveTab('import');
             setView('workspace');
-            // Preserve existing workspace state
           }}
           onStartDownload={() => setView('download')}
-          onShowLogs={() => setShowLogs(true)}
-          onShowGlossary={() => setShowGlossaryManager(true)}
-          onShowSettings={() => setShowSettings(true)}
           onStartCompression={() => setView('compression')}
           onStartEndToEnd={() => setView('endToEnd')}
         />
@@ -360,16 +371,11 @@ export default function App() {
       {view === 'download' && (
         <DownloadPage
           onGoBack={() => setView('home')}
-          onShowLogs={() => setShowLogs(true)}
-          onShowSettings={() => setShowSettings(true)}
           onDownloadComplete={(videoPath) => {
-            // Save the downloaded video path for later use (e.g., compression)
             setDownloadedVideoPath(videoPath);
-            // Switch to workspace and set the downloaded video
             setActiveTab('new');
             setView('workspace');
             workspace.resetWorkspace();
-            // Load the downloaded video
             void workspace.loadFileFromPath(videoPath);
           }}
         />
@@ -381,8 +387,6 @@ export default function App() {
           workspaceVideoFile={workspace.file}
           workspaceSpeakerProfiles={workspace.speakerProfiles}
           downloadedVideoPath={downloadedVideoPath}
-          onShowLogs={() => setShowLogs(true)}
-          onShowSettings={() => setShowSettings(true)}
         />
       )}
       {view === 'endToEnd' && (
@@ -390,42 +394,13 @@ export default function App() {
           settings={settings}
           onComplete={() => setView('home')}
           onCancel={() => setView('home')}
-          onShowLogs={() => setShowLogs(true)}
-          onShowGlossary={() => setShowGlossaryManager(true)}
-          onShowSettings={() => setShowSettings(true)}
         />
       )}
       {view === 'workspace' && (
         <WorkspacePage
           activeTab={activeTab}
-          file={workspace.file}
-          duration={workspace.duration}
-          subtitles={workspace.subtitles}
-          status={workspace.status}
-          error={workspace.error}
-          settings={settings}
           snapshots={snapshotsValues.snapshots}
-          showSnapshots={showSnapshots}
-          selectedBatches={workspace.selectedBatches}
-          batchComments={workspace.batchComments}
-          showSourceText={workspace.showSourceText}
-          editingCommentId={workspace.editingCommentId}
-          isLoadingFile={workspace.isLoadingFile}
-          isLoadingSubtitle={workspace.isLoadingSubtitle}
-          subtitleFileName={workspace.subtitleFileName}
-          onFileChange={(e) => workspace.handleFileChange(e, activeTab)}
-          onFileChangeNative={workspace.handleFileSelectNative}
-          onFileLoadingStart={() => workspace.setIsLoadingFile(true)}
-          onSubtitleImport={workspace.handleSubtitleImport}
-          onSubtitleImportNative={workspace.handleSubtitleImportNative}
-          onGenerate={workspace.handleGenerate}
-          onDownload={workspace.handleDownload}
           onGoBack={goBackHome}
-          onShowLogs={() => setShowLogs(true)}
-          onShowGlossary={() => setShowGlossaryManager(true)}
-          onShowSettings={() => setShowSettings(true)}
-          onShowGenreSettings={() => setShowGenreSettings(true)}
-          onUpdateSetting={updateSetting}
           onToggleSnapshots={() => setShowSnapshots(!showSnapshots)}
           onRestoreSnapshot={(snap) => {
             // Detect cross-file restore
@@ -488,23 +463,6 @@ export default function App() {
               'info'
             );
           }}
-          toggleAllBatches={workspace.toggleAllBatches}
-          selectBatchesWithComments={workspace.selectBatchesWithComments}
-          setShowSourceText={workspace.setShowSourceText}
-          handleBatchAction={workspace.handleBatchAction}
-          toggleBatch={workspace.toggleBatch}
-          updateBatchComment={workspace.updateBatchComment}
-          setEditingCommentId={workspace.setEditingCommentId}
-          updateLineComment={workspace.updateLineComment}
-          updateSubtitleText={workspace.updateSubtitleText}
-          updateSubtitleOriginal={workspace.updateSubtitleOriginal}
-          updateSpeaker={workspace.updateSpeaker}
-          updateSubtitleTime={workspace.updateSubtitleTime}
-          speakerProfiles={workspace.speakerProfiles}
-          deleteSubtitle={workspace.deleteSubtitle}
-          deleteMultipleSubtitles={workspace.deleteMultipleSubtitles}
-          addSubtitle={workspace.addSubtitle}
-          onManageSpeakers={() => setShowSpeakerManager(true)}
           onStartCompression={() => setView('compression')}
           onDeleteSnapshot={snapshotsValues.deleteSnapshot}
         />

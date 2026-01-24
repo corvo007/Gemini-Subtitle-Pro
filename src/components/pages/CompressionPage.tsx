@@ -20,6 +20,7 @@ import { generateOutputPath, removeExtension } from '@/services/utils/path';
 import { join } from 'pathe';
 import { formatDuration } from '@/services/subtitle/time';
 import { logger } from '@/services/utils/logger';
+import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/cn';
 
 interface CompressionPageProps {
@@ -28,8 +29,6 @@ interface CompressionPageProps {
   workspaceVideoFile?: File | null;
   workspaceSpeakerProfiles?: SpeakerUIProfile[];
   downloadedVideoPath?: string | null;
-  onShowLogs?: () => void;
-  onShowSettings?: () => void;
 }
 
 type ResolutionPreset = 'original' | '1080p' | '720p' | '480p' | 'custom';
@@ -40,9 +39,11 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
   workspaceVideoFile,
   workspaceSpeakerProfiles,
   downloadedVideoPath,
-  onShowLogs,
-  onShowSettings,
 }) => {
+  // Store actions
+  const setShowLogs = useAppStore((s) => s.setShowLogs);
+  const setShowSettings = useAppStore((s) => s.setShowSettings);
+
   const { t } = useTranslation('compression');
   const [file, setFile] = useState<File | null>(null);
   const [options, setOptions] = useState<CompressionOptions>({
@@ -266,23 +267,19 @@ export const CompressionPage: React.FC<CompressionPageProps> = ({
           onBack={onGoBack}
           actions={
             <>
-              {onShowLogs && (
-                <HeaderButton
-                  onClick={onShowLogs}
-                  icon={<FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                  label={t('logs')}
-                  title={t('viewLogs')}
-                  hoverColor="blue"
-                />
-              )}
-              {onShowSettings && (
-                <HeaderButton
-                  onClick={onShowSettings}
-                  icon={<Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                  label={t('settings')}
-                  hoverColor="emerald"
-                />
-              )}
+              <HeaderButton
+                onClick={() => setShowLogs(true)}
+                icon={<FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                label={t('logs')}
+                title={t('viewLogs')}
+                hoverColor="blue"
+              />
+              <HeaderButton
+                onClick={() => setShowSettings(true)}
+                icon={<Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                label={t('settings')}
+                hoverColor="emerald"
+              />
             </>
           }
         />

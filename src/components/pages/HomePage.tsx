@@ -9,9 +9,6 @@ interface HomePageProps {
   onStartNew: () => void;
   onStartImport: () => void;
   onStartDownload: () => void;
-  onShowLogs: () => void;
-  onShowGlossary: () => void;
-  onShowSettings: () => void;
   onStartCompression: () => void;
   onStartEndToEnd?: () => void;
 }
@@ -23,9 +20,6 @@ export const HomePage: React.FC<HomePageProps> = ({
   onStartNew,
   onStartImport,
   onStartDownload,
-  onShowLogs,
-  onShowGlossary,
-  onShowSettings,
   onStartCompression,
   onStartEndToEnd,
 }) => {
@@ -35,11 +29,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   return (
     <div className="min-h-screen-safe bg-warm-mesh flex flex-col p-4 md:p-8">
       <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
-        <Header
-          onShowLogs={onShowLogs}
-          onShowGlossary={onShowGlossary}
-          onShowSettings={onShowSettings}
-        />
+        <Header />
         <main className="flex-1 flex flex-col items-center justify-center max-w-5xl mx-auto w-full">
           {/* Workflow indicator */}
           <div className="w-full mb-10 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:pb-0 hide-scrollbar">
