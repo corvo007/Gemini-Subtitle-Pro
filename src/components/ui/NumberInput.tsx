@@ -60,9 +60,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
     // Only call onChange if it's a valid number
     const num = allowDecimals ? parseFloat(input) : parseInt(input, 10);
     if (!isNaN(num)) {
-      // Don't clamp during typing - just validate range silently
-      if (min !== undefined && num < min) return;
-      if (max !== undefined && num > max) return;
+      // Don't clamp during typing - allow OOB values temporarily
       onChange(num);
     }
   };

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { ChevronDown, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { useDropdownDirection } from '@/hooks/useDropdownDirection';
+import { useDropdown } from '@/hooks/useDropdown';
 
 interface CustomSelectProps {
   value: string;
@@ -24,79 +24,23 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   placeholder,
   forceDropUp,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [dropUp, setDropUp] = useState(false);
-  const [coords, setCoords] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    bottom: number;
-  } | null>(null);
-  const { ref: containerRef, getDirection } = useDropdownDirection<HTMLDivElement>();
-  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const {
+    isOpen,
+    setIsOpen,
+    toggle,
+    triggerRef: containerRef,
+    contentRef: dropdownRef,
+    coords,
+    direction: { dropUp: autoDropUp },
+  } = useDropdown<HTMLDivElement, HTMLDivElement>({
+    closeOnScroll: false,
+    recalculateOnScroll: true,
+  });
 
-  // Toggle open with smart direction detection
-  const toggleOpen = () => {
-    if (!isOpen && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setCoords({
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        bottom: rect.bottom,
-      });
+  const dropUp = forceDropUp !== undefined ? forceDropUp : autoDropUp;
 
-      // If forceDropUp is set, use it; otherwise auto-detect
-      if (forceDropUp !== undefined) {
-        setDropUp(forceDropUp);
-      } else {
-        const { dropUp: shouldDropUp } = getDirection();
-        setDropUp(shouldDropUp);
-      }
-      setIsOpen(true);
-    } else {
-      setIsOpen(false);
-    }
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-
-      // Check if click is on the trigger or inside the dropdown portal
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(target) &&
-        (!dropdownRef.current || !dropdownRef.current.contains(target))
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleScroll = (event: Event) => {
-      // If the scroll event happened inside the dropdown, don't close it
-      if (
-        dropdownRef.current &&
-        event.target instanceof Node &&
-        dropdownRef.current.contains(event.target)
-      ) {
-        return;
-      }
-      if (isOpen) setIsOpen(false);
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      window.addEventListener('scroll', handleScroll, true);
-      window.addEventListener('resize', handleScroll);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('scroll', handleScroll, true);
-      window.removeEventListener('resize', handleScroll);
-    };
-  }, [containerRef, isOpen]);
+  // Manual close if needed (optionally exposed)
+  // const close = () => setIsOpen(false);
 
   // Memoize selected label to avoid .find() on every render (Audit fix)
   const selectedLabel = React.useMemo(
@@ -108,7 +52,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     <div className={cn('relative', className)} ref={containerRef}>
       <button
         type="button"
-        onClick={toggleOpen}
+        onClick={toggle}
         className="w-full flex items-center justify-between bg-white border border-slate-200 rounded-lg py-2 pl-3 pr-3 text-slate-700 focus:outline-none focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10 text-sm transition-all hover:bg-slate-50 hover:border-slate-300 shadow-sm"
       >
         <div className="flex items-center text-left overflow-hidden">
