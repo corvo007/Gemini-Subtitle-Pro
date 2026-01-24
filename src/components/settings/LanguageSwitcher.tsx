@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Languages } from 'lucide-react';
 import { CustomSelect } from '@/components/ui/CustomSelect';
-import { useSettings } from '@/hooks';
+import { useAppStore } from '@/store/useAppStore';
 
 interface LanguageSwitcherProps {
   className?: string;
@@ -14,7 +14,7 @@ interface LanguageSwitcherProps {
  */
 export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ className }) => {
   const { i18n, t } = useTranslation('common');
-  const { updateSetting } = useSettings();
+  const updateSetting = useAppStore((state) => state.updateSetting);
 
   const options = [
     { value: 'zh-CN', label: t('languages.zh-CN') },
