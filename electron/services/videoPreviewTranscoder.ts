@@ -339,80 +339,111 @@ export async function transcodeForPreview(
   const duration = await getVideoDuration(filePath);
   log(`Video duration: ${duration}s`);
 
-  return new Promise((resolve, reject) => {
-    let command = ffmpeg(filePath)
-      .output(outputPath)
-      .videoCodec(encoder)
-      .audioCodec('aac')
-      .audioBitrate('75k') // Balanced bitrate for preview
-      .outputOptions([
-        // 720p scaling + Force 8-bit pixel format (CRITICAL for NVENC compatibility)
-        '-vf',
-        'scale=-2:720,format=yuv420p',
-        // Force keyframe interval for seeking (1 second)
-        '-g',
-        '30',
-        '-keyint_min',
-        '30',
-        // Fragmented MP4 for progressive playback
-        '-movflags',
-        'frag_keyframe+empty_moov+default_base_moof',
-      ]);
+  // Detect streams to check if video exists
+  const hasVideoStream = await new Promise<boolean>((resolve) => {
+    ffmpeg.ffprobe(filePath, (err, metadata) => {
+      if (err) {
+        resolve(true); // Assume video on error to be safe
+        return;
+      }
+      const videoStream = metadata.streams.find((s) => s.codec_type === 'video');
+      resolve(!!videoStream);
+    });
+  });
 
-    // Apply encoder-specific settings for speed + smaller file size
-    // Target ~750kbps video bitrate for balanced size/quality
-    if (encoder.includes('nvenc')) {
-      // NVIDIA - fastest preset, constrained bitrate
-      command.outputOptions([
-        '-preset',
-        'p1',
-        '-rc',
-        'vbr',
-        '-b:v',
-        '750k',
-        '-maxrate',
-        '900k',
-        '-bufsize',
-        '1800k',
-      ]);
-    } else if (encoder.includes('qsv')) {
-      // Intel - fastest preset
-      command.outputOptions([
-        '-preset',
-        'veryfast',
-        '-b:v',
-        '750k',
-        '-maxrate',
-        '900k',
-        '-bufsize',
-        '1800k',
-      ]);
-    } else if (encoder.includes('amf')) {
-      // AMD - fastest quality setting
-      command.outputOptions([
-        '-quality',
-        'speed',
-        '-rc',
-        'vbr_peak',
-        '-b:v',
-        '750k',
-        '-maxrate',
-        '900k',
-        '-bufsize',
-        '1800k',
-      ]);
+  log(`Has video stream: ${hasVideoStream}`);
+
+  return new Promise((resolve, reject) => {
+    let command = ffmpeg(filePath).output(outputPath);
+
+    if (hasVideoStream) {
+      // Video transcoding logic
+      command
+        .videoCodec(encoder)
+        .audioCodec('aac')
+        .audioBitrate('75k') // Balanced bitrate for preview
+        .outputOptions([
+          // 720p scaling + Force 8-bit pixel format (CRITICAL for NVENC compatibility)
+          '-vf',
+          'scale=-2:720,format=yuv420p',
+          // Force keyframe interval for seeking (1 second)
+          '-g',
+          '30',
+          '-keyint_min',
+          '30',
+          // Fragmented MP4 for progressive playback
+          '-movflags',
+          'frag_keyframe+empty_moov+default_base_moof',
+        ]);
     } else {
-      // CPU fallback - ultrafast for speed, constrained bitrate
-      command.outputOptions([
-        '-preset',
-        'ultrafast',
-        '-b:v',
-        '750k',
-        '-maxrate',
-        '900k',
-        '-bufsize',
-        '1800k',
-      ]);
+      // Audio-only transcoding logic (just convert to AAC/M4A compatible container)
+      log('Audio-only input detected, skipping video encoding...');
+      command
+        .noVideo()
+        .audioCodec('aac')
+        .audioBitrate('128k') // Higher quality for audio-only
+        .outputOptions([
+          // Fragmented MP4 for consistency with player and progressive loading
+          '-movflags',
+          'frag_keyframe+empty_moov+default_base_moof',
+        ]);
+    }
+
+    // Apply encoder-specific settings only if processing video
+    if (hasVideoStream) {
+      if (encoder.includes('nvenc')) {
+        // NVIDIA - fastest preset, constrained bitrate
+        command.outputOptions([
+          '-preset',
+          'p1',
+          '-rc',
+          'vbr',
+          '-b:v',
+          '750k',
+          '-maxrate',
+          '900k',
+          '-bufsize',
+          '1800k',
+        ]);
+      } else if (encoder.includes('qsv')) {
+        // Intel - fastest preset
+        command.outputOptions([
+          '-preset',
+          'veryfast',
+          '-b:v',
+          '750k',
+          '-maxrate',
+          '900k',
+          '-bufsize',
+          '1800k',
+        ]);
+      } else if (encoder.includes('amf')) {
+        // AMD - fastest quality setting
+        command.outputOptions([
+          '-quality',
+          'speed',
+          '-rc',
+          'vbr_peak',
+          '-b:v',
+          '750k',
+          '-maxrate',
+          '900k',
+          '-bufsize',
+          '1800k',
+        ]);
+      } else {
+        // CPU fallback - ultrafast for speed, constrained bitrate
+        command.outputOptions([
+          '-preset',
+          'ultrafast',
+          '-b:v',
+          '750k',
+          '-maxrate',
+          '900k',
+          '-bufsize',
+          '1800k',
+        ]);
+      }
     }
 
     command

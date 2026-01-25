@@ -17,6 +17,7 @@ import {
   Maximize2,
   Minimize2,
   Languages,
+  Music,
 } from 'lucide-react';
 import { Rnd } from 'react-rnd';
 import { createPortal } from 'react-dom';
@@ -131,6 +132,12 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
 
     // Debounced ASS content to prevent excessive rebuilds (Issue 3 fix)
     const [debouncedAssContent, setDebouncedAssContent] = useState('');
+
+    const isAudioMode = useMemo(
+      () =>
+        ready && videoDimensions && (videoDimensions.width === 0 || videoDimensions.height === 0),
+      [ready, videoDimensions]
+    );
 
     const handleResizeStart = useCallback(
       (e: React.MouseEvent) => {
@@ -442,9 +449,13 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
               <div
                 className="relative bg-black"
                 style={{
-                  aspectRatio: videoDimensions
-                    ? `${videoDimensions.width} / ${videoDimensions.height}`
-                    : '16 / 9',
+                  aspectRatio: !isAudioMode
+                    ? videoDimensions && videoDimensions.width > 0 && videoDimensions.height > 0
+                      ? `${videoDimensions.width} / ${videoDimensions.height}`
+                      : '16 / 9'
+                    : undefined,
+                  width: isAudioMode ? '100%' : undefined,
+                  height: isAudioMode ? '100%' : undefined,
                   maxWidth: '100%',
                   maxHeight: '100%',
                 }}
@@ -502,6 +513,38 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
                     <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   </div>
                 )}
+
+                {/* Audio Only Placeholder */}
+                {ready &&
+                  videoDimensions &&
+                  (videoDimensions.width === 0 || videoDimensions.height === 0) && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-indigo-950/40 text-indigo-100 gap-6 z-10 pointer-events-none overflow-hidden">
+                      {/* Ambient Background Glow */}
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+
+                      {/* Icon with Ring */}
+                      <div className="relative flex items-center justify-center">
+                        <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-2xl animate-pulse" />
+                        <div className="relative w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl backdrop-blur-md ring-1 ring-white/20">
+                          <Music className="w-10 h-10 text-indigo-300 drop-shadow-[0_0_15px_rgba(129,140,248,0.6)]" />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-center gap-3 relative z-10">
+                        <div className="text-lg font-medium text-slate-200 tracking-wide text-shadow-sm">
+                          {t('videoPreview.audioOnly')}
+                        </div>
+                        {/* Simple CSS Visualizer */}
+                        <div className="flex items-center gap-1.5 h-6">
+                          <div className="w-1 bg-indigo-400/80 rounded-full h-3 animate-[pulse_1s_ease-in-out_infinite]" />
+                          <div className="w-1 bg-indigo-400/80 rounded-full h-5 animate-[pulse_1.5s_ease-in-out_infinite] delay-75" />
+                          <div className="w-1 bg-indigo-400/80 rounded-full h-4 animate-[pulse_1.2s_ease-in-out_infinite] delay-150" />
+                          <div className="w-1 bg-indigo-400/80 rounded-full h-6 animate-[pulse_1.8s_ease-in-out_infinite] delay-100" />
+                          <div className="w-1 bg-indigo-400/80 rounded-full h-3 animate-[pulse_1.3s_ease-in-out_infinite] delay-200" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-slate-500 text-sm gap-2">
@@ -582,8 +625,9 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
                 )}
               </button>
               {/* Vertical volume slider popup */}
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 pb-2 hidden group-hover/volume:flex flex-col items-center">
-                <div className="bg-white/95 rounded-lg px-2 py-3 shadow-lg border border-slate-200 backdrop-blur-md">
+              {/* Vertical volume slider popup */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 pb-4 hidden group-hover/volume:flex flex-col items-center z-50">
+                <div className="bg-white/95 rounded-lg px-2 py-3 shadow-xl border border-slate-200 backdrop-blur-md">
                   <input
                     type="range"
                     min={0}
@@ -591,7 +635,7 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
                     step={0.05}
                     value={muted ? 0 : volume}
                     onChange={handleVolumeChange}
-                    className="h-20 w-1 bg-slate-200 rounded appearance-none cursor-pointer [writing-mode:vertical-lr] [direction:rtl] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-brand-purple [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
+                    className="h-24 w-1.5 bg-slate-300/60 rounded-full appearance-none cursor-pointer accent-brand-purple [writing-mode:vertical-lr] [direction:rtl] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-brand-purple [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
                   />
                 </div>
               </div>
@@ -633,26 +677,27 @@ export const VideoPlayerPreview = forwardRef<VideoPlayerPreviewRef, VideoPlayerP
       [
         isFloating,
         isResizing,
+        t,
         videoSrc,
+        isAudioMode,
+        videoDimensions,
+        handleTimeUpdate,
         ready,
+        isTranscoding,
+        togglePlay,
         playing,
         currentTime,
         displayDuration,
-        showSourceText,
         transcodedDuration,
         transcodedProgress,
         currentProgress,
-        volume,
-        muted,
-        handleTimeUpdate,
         handleSeek,
-        handleVolumeChange,
-        togglePlay,
         toggleMute,
-        t,
-        isTranscoding,
+        muted,
+        volume,
+        handleVolumeChange,
         onToggleSourceText,
-        videoDimensions,
+        showSourceText,
       ]
     ); // Removed dockedHeight dependency
 

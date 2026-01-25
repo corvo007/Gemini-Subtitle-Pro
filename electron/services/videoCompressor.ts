@@ -1,10 +1,11 @@
 import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs';
+import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
-import { getBinaryPath } from '../utils/paths.ts';
+import { getBinaryPath, getResourcesPath } from '../utils/paths.ts';
 
 // GPU Encoder definitions with priority order
 // Priority: NVIDIA (nvenc) > Intel (qsv) > AMD (amf) > CPU (lib*)
@@ -406,7 +407,25 @@ export class VideoCompressorService {
           .replace(/\[/g, '\\[')
           .replace(/\]/g, '\\]');
         logMsg(`[Compression] Subtitle path escaped: ${escapedPath}`);
-        command.videoFilters(`subtitles='${escapedPath}'`);
+
+        let subtitleFilter = `subtitles='${escapedPath}'`;
+
+        // Check for bundled fonts directory
+        const fontsDir = path.join(getResourcesPath(), 'fonts');
+        if (fs.existsSync(fontsDir)) {
+          // Escape fonts dir similar to subtitle path
+          const escapedFontsDir = fontsDir
+            .replace(/\\/g, '/')
+            .replace(/:/g, '\\:')
+            .replace(/'/g, "'\\''")
+            .replace(/\[/g, '\\[')
+            .replace(/\]/g, '\\]');
+
+          subtitleFilter += `:fontsdir='${escapedFontsDir}'`;
+          logMsg(`[Compression] Using bundled fonts from: ${escapedFontsDir}`);
+        }
+
+        command.videoFilters(subtitleFilter);
       }
 
       // Store command reference for potential cancellation
@@ -438,8 +457,9 @@ export class VideoCompressorService {
           // Skip progress lines (frame=... fps=... size=... etc)
           if (/^frame=\s*\d+\s+fps=/.test(trimmedLine)) return;
 
-          // Skip subtitle parsing events
-          if (/^\[Parsed_subtitles_\d+\s*@/.test(trimmedLine)) return;
+          // Skip subtitle parsing events (unless related to fonts)
+          if (/^\[Parsed_subtitles_\d+\s*@/.test(trimmedLine) && !trimmedLine.includes('font'))
+            return;
 
           // Skip FFmpeg version/build info
           if (/^ffmpeg version|^built with|^configuration:|^lib(av|sw|postproc)/.test(trimmedLine))

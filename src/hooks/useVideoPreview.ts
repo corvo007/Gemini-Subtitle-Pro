@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { logger } from '@/services/utils/logger';
 import type { VideoPlayerPreviewRef } from '@/components/editor/VideoPlayerPreview';
 
-const SUPPORTED_FORMATS = ['mp4', 'webm', 'm4v'];
+const SUPPORTED_FORMATS = ['mp4', 'webm', 'm4v', 'mp3', 'wav', 'flac', 'ogg', 'm4a', 'aac'];
 
 export interface UseVideoPreviewReturn {
   videoSrc: string | null;

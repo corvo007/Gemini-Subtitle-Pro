@@ -14,7 +14,7 @@ import { VideoPlayerPreview } from '@/components/editor/VideoPlayerPreview';
 import { WorkspaceSidebar } from '@/components/layout/WorkspaceSidebar';
 import { useVideoPreview } from '@/hooks/useVideoPreview';
 import { timeToSeconds } from '@/services/subtitle/time';
-import { isVideoFile } from '@/services/utils/file';
+import { isVideoFile, isAudioFile } from '@/services/utils/file';
 import { cn } from '@/lib/cn';
 import { useWorkspaceController } from '@/hooks/useWorkspaceLogic/useWorkspaceController';
 
@@ -87,7 +87,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
 
   // Prepare video for preview when file changes
   useEffect(() => {
-    if (file && isVideoFile(file)) {
+    if (file && (isVideoFile(file) || isAudioFile(file))) {
       void prepareVideo(file);
     }
   }, [file, prepareVideo]);
@@ -221,8 +221,8 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
             ></div>
             <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-xl sm:rounded-2xl overflow-hidden flex flex-col shadow-xl shadow-slate-200/40 relative flex-1 min-h-0">
               <div className="flex flex-col flex-1 relative w-full h-full min-h-0">
-                {/* Video Preview Panel - only show for video files in Electron */}
-                {window.electronAPI && file && isVideoFile(file) && (
+                {/* Video Preview Panel - show for video OR audio files in Electron */}
+                {window.electronAPI && file && (isVideoFile(file) || isAudioFile(file)) && (
                   <ErrorBoundary variant="compact">
                     <VideoPlayerPreview
                       ref={playerRef}

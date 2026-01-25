@@ -2,7 +2,7 @@
   "name": "miosub",
   "description": "Smart, Playful, and Powerful AI Subtitle Generator",
   "author": "Corvo007",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "private": true,
   "version": "3.0.0",
   "type": "module",
@@ -165,7 +165,8 @@
             "ffmpeg.exe",
             "ffprobe.exe",
             "*.dll",
-            "ggml-silero-v6.2.0.bin"
+            "ggml-silero-v6.2.0.bin",
+            "fonts/**/*"
           ]
         }
       ]
