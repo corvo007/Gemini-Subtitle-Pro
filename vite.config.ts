@@ -83,6 +83,22 @@ export default defineConfig(({ mode }) => {
           'fs',
           'child_process',
         ],
+        output: {
+          manualChunks: {
+            // React core
+            'vendor-react': ['react', 'react-dom'],
+            // UI components & virtualization
+            'vendor-ui': ['react-virtuoso', 'lucide-react', 'react-colorful', 'react-rnd', 'assjs'],
+            // Internationalization
+            'vendor-i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+            // AI SDKs
+            'vendor-ai': ['@google/genai', 'openai', '@anthropic-ai/sdk'],
+            // State & utilities
+            'vendor-utils': ['zustand', 'clsx', 'tailwind-merge', 'uuid', 'jsonrepair', 'p-map'],
+            // JSON viewer (large component, rarely used)
+            'vendor-json': ['@uiw/react-json-view'],
+          },
+        },
       },
     },
     define: {

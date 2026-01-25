@@ -99,7 +99,7 @@ export function useDropdown<
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleEvent = (event: Event) => {
+    const handleScroll = (event: Event) => {
       // If scroll happening inside contentRef, ignore
       if (
         contentRef.current &&
@@ -116,15 +116,18 @@ export function useDropdown<
       }
     };
 
-    window.addEventListener('scroll', handleEvent, true);
-
-    window.addEventListener('resize', () => {
+    // Stable reference for resize handler to ensure proper cleanup
+    const handleResize = () => {
       setIsOpen(false);
-    });
+    };
+
+    // Use passive: true to avoid blocking scroll thread
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    window.addEventListener('resize', handleResize);
 
     return () => {
-      window.removeEventListener('scroll', handleEvent, true);
-      window.removeEventListener('resize', () => setIsOpen(false));
+      window.removeEventListener('scroll', handleScroll, { capture: true });
+      window.removeEventListener('resize', handleResize);
     };
   }, [isOpen, closeOnScroll, recalculateOnScroll, calculatePosition, setIsOpen]);
 
