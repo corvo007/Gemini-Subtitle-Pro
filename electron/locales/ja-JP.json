@@ -5,6 +5,7 @@
     "selectJsonFile": "JSON ファイルを選択",
     "selectWhisperModel": "Whisper モデルファイルを選択",
     "selectWhisperModelMessage": "GGML形式の .bin モデルファイルを選んでください",
+    "selectWhisperExecutable": "Whisper 実行ファイルを選択",
     "selectAlignerExecutable": "アライナー実行ファイルを選択",
     "selectAlignerModelDir": "アライナーモデルフォルダを選択",
     "selectDownloadDir": "ダウンロードディレクトリを選択",

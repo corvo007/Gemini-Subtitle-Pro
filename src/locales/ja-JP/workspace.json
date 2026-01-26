@@ -145,7 +145,8 @@
     "noVideo": "動画が読み込まれていません",
     "resize": "ドラッグして高さを調整",
     "jumpAfterTranscode": "トランスコード完了後にジャンプ可能",
-    "unableToLoadFile": "ファイルを読み込めません: {{error}}"
+    "unableToLoadFile": "ファイルを読み込めません: {{error}}",
+    "audioOnly": "音声のみモード"
   },
   "unableToLoadFile": "ファイルを読み込めません: {{error}}"
 }

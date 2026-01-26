@@ -5,6 +5,7 @@
     "selectJsonFile": "选择 JSON 文件",
     "selectWhisperModel": "选择 Whisper 模型文件",
     "selectWhisperModelMessage": "请选择 .bin 格式的 GGML 模型文件",
+    "selectWhisperExecutable": "选择 Whisper 可执行文件",
     "selectAlignerExecutable": "选择对齐器可执行文件",
     "selectAlignerModelDir": "选择对齐器模型目录",
     "selectDownloadDir": "选择下载目录",

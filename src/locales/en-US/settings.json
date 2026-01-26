@@ -272,7 +272,7 @@
     },
     "privacy": {
       "title": "Data & Privacy",
-      "description": "This app collects anonymous diagnostic data and error reports to improve stability. No personally identifiable information is collected."
+      "description": "This application will collect anonymous diagnostic data and error reports to help us continuously improve product stability."
     }
   }
 }

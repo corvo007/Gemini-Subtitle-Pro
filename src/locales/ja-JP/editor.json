@@ -95,5 +95,8 @@
     "translationHintPlaceholder": "例：フォーマルなトーンを使用、文化的表現のローカライズ...",
     "cancel": "キャンセル",
     "confirm": "再生成"
-  }
+  },
+  "noMatchingSubtitles": "一致する字幕が見つかりませんでした",
+  "foundResults": "{{count}} 件の結果が見つかりました",
+  "filtering": "フィルタリング中..."
 }

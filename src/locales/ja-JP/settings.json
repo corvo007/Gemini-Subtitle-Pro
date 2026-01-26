@@ -64,9 +64,13 @@
         "modelPathTitle": "モデルファイル",
         "modelPathDesc": "ローカルの Whisper モデル（GGML 形式）を使用します。オフラインで動作します。",
         "modelPathPlaceholder": "モデルファイルを選択...",
+        "binaryPathTitle": "Whisper-cli.exe パス（オプション）",
+        "binaryPathDesc": "Whisper 実行ファイルのパスを手動で指定し、自動検出を上書きします。<br><strong>GPU 加速</strong>を使用する場合は、GPU 対応の whisper-cli.exe バージョンを指定してください。",
+        "binaryPathPlaceholder": "whisper-cli.exe を選択...",
         "browseButton": "📁 参照",
         "instructionsTitle": "💡 説明：",
         "instructionGgml": "<strong>GGML形式</strong> の .bin モデルファイルが必要です",
+        "instructionBinaries": "<strong>whisper-cli.exe</strong> が依存ファイル（dll など）と同じディレクトリにあることを確認してください。exe 単体で移動しないでください。解凍後のフォルダを選択することをお勧めします。",
         "instructionModel": "サポート対象は ",
         "instructionModelLink": "whisper.cpp 公式モデル",
         "instructionModelSuffix": " のみです。Faster-whisper モデルはサポートされていません。",
@@ -253,6 +257,22 @@
     "copyPath": "パスをコピー",
     "showInFolder": "フォルダで開く",
     "tagline": "AI字幕生成・翻訳ツール",
-    "whisperGpuSupported": "対応 (GPU)"
+    "whisperGpuSupported": "対応 (GPU)",
+    "update": {
+      "checking": "更新を確認中...",
+      "upToDate": "最新バージョンです",
+      "available": "新しいバージョンがあります: {{version}}",
+      "downloading": "更新をダウンロード中... {{progress}}%",
+      "downloaded": "更新のダウンロード完了、再起動してインストール",
+      "error": "更新の確認に失敗しました",
+      "checkNow": "更新を確認",
+      "download": "更新をダウンロード",
+      "restart": "再起動して更新",
+      "goToDownload": "Go to Download"
+    },
+    "privacy": {
+      "title": "データとプライバシー",
+      "description": "本アプリは、製品の安定性を継続的に向上させるために、匿名の診断データおよびエラーレポートを収集します。"
+    }
   }
 }

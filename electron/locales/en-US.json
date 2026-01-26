@@ -5,6 +5,7 @@
     "selectJsonFile": "Select JSON File",
     "selectWhisperModel": "Select Whisper Model File",
     "selectWhisperModelMessage": "Please select a .bin model file in GGML format",
+    "selectWhisperExecutable": "Select Whisper Executable",
     "selectAlignerExecutable": "Select Aligner Executable",
     "selectAlignerModelDir": "Select Aligner Model Directory",
     "selectDownloadDir": "Select Download Directory",

@@ -95,5 +95,8 @@
     "translationHintPlaceholder": "例如：使用正式语气、本地化文化表达...",
     "cancel": "取消",
     "confirm": "重新生成"
-  }
+  },
+  "noMatchingSubtitles": "未找到匹配的字幕",
+  "foundResults": "找到 {{count}} 个结果",
+  "filtering": "筛选"
 }

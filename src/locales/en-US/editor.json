@@ -87,13 +87,16 @@
   },
   "regenerateModal": {
     "title": "Regenerate Subtitles",
-    "subtitle": "Regenerating {{count}} selected batch(es)",
-    "info": "This will re-run the full pipeline (transcription → refinement → alignment → translation) for the selected batches. You can provide optional hints to guide the AI.",
+    "subtitle": "Regenerating {{count}} batches",
+    "info": "Will run the full pipeline (Transcription -> Refinement -> Alignment -> Translation) again for selected batches. You can provide optional hints to guide AI.",
     "transcriptionHint": "Transcription Hint (Optional)",
-    "transcriptionHintPlaceholder": "E.g., speaker has Japanese name pronunciations, technical terms...",
+    "transcriptionHintPlaceholder": "e.g., Speaker has Japanese pronunciation for names, technical terms...",
     "translationHint": "Translation Hint (Optional)",
-    "translationHintPlaceholder": "E.g., use formal tone, localize cultural references...",
+    "translationHintPlaceholder": "e.g., Use formal tone, localize cultural references...",
     "cancel": "Cancel",
     "confirm": "Regenerate"
-  }
+  },
+  "noMatchingSubtitles": "No matching subtitles found",
+  "foundResults": "Found {{count}} results",
+  "filtering": "Filtering"
 }

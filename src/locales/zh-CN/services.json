@@ -61,7 +61,8 @@
     "autoSave": "自动保存",
     "initialImport": "初始导入",
     "initialGeneration": "初始生成",
-    "partialGeneration": "部分生成 (已终止)"
+    "partialGeneration": "部分生成 (已终止)",
+    "autoBackup": "自动备份"
   },
   "parser": {
     "soundEffects": {

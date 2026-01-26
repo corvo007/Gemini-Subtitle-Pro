@@ -61,7 +61,8 @@
     "autoSave": "Auto Save",
     "initialImport": "Initial Import",
     "initialGeneration": "Initial Generation",
-    "partialGeneration": "Partial Generation (Terminated)"
+    "partialGeneration": "Partial Generation (Cancelled)",
+    "autoBackup": "Auto Backup"
   },
   "parser": {
     "soundEffects": {

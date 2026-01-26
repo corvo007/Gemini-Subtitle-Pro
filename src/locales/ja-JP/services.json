@@ -42,7 +42,18 @@
       "errors": {
         "billingHardLimit": "課金のハードリミットに達しました",
         "invalidAudioFormat": "無効な音声形式です",
-        "transcriptionFailed": "文字起こしに失敗しました"
+        "transcriptionFailed": "文字起こしに失敗しました",
+        "invalidKey": "OpenAI API キーが無効です。設定を確認してください",
+        "rateLimited": "OpenAI API のリクエスト頻度制限またはクォータ超過です。後ほど再試行してください",
+        "permissionDenied": "OpenAI API の権限が不足しています",
+        "modelNotFound": "モデル {{model}} が存在しないかアクセス権がありません"
+      }
+    },
+    "claude": {
+      "errors": {
+        "invalidKey": "Claude API キーが無効です。設定を確認してください",
+        "rateLimited": "Claude API のリクエスト頻度制限です。後ほど再試行してください",
+        "permissionDenied": "Claude API の権限が不足しています"
       }
     }
   },
@@ -50,7 +61,8 @@
     "autoSave": "自動保存",
     "initialImport": "初期インポート",
     "initialGeneration": "初期生成",
-    "partialGeneration": "部分生成（中止）"
+    "partialGeneration": "部分生成（中止）",
+    "autoBackup": "自動バックアップ"
   },
   "parser": {
     "soundEffects": {
