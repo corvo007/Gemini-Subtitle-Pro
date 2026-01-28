@@ -43,7 +43,7 @@ export function formatGeminiError(e: any): any {
     if (jsonMatch) {
       try {
         errorInfo.rawError = JSON.parse(jsonMatch[0]);
-      } catch (ignore) {
+      } catch (_e) {
         // Not valid JSON
       }
     }
@@ -373,7 +373,7 @@ export async function generateContentWithRetry<T = any>(
 
         const sanitizedPrompt = sanitizeValue(params.contents);
 
-        logger.debug('Gemini API Interaction', {
+        /*logger.debug('Gemini API Interaction', {
           request: {
             generationConfig: params.config,
             prompt: sanitizedPrompt,
@@ -382,7 +382,7 @@ export async function generateContentWithRetry<T = any>(
             usage: usageMeta,
             content: candidates?.[0]?.content?.parts?.[0]?.text,
           },
-        });
+        });*/
       }
 
       // Log grounding metadata (Search Grounding verification)

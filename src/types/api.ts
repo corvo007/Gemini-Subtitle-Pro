@@ -30,32 +30,38 @@ export interface ChunkStatus {
 }
 
 /** Step status in analytics */
-export type StepResultStatus = 'success' | 'failed' | 'cancelled' | 'skipped' | 'mocked';
+export type AnalyticsStepStatus =
+  | 'not_started'
+  | 'processing'
+  | 'success'
+  | 'failed'
+  | 'cancelled'
+  | 'skipped'
+  | 'mocked';
+
+export interface StepAnalytics {
+  status: AnalyticsStepStatus;
+  duration_ms: number;
+}
 
 /** Analytics data for a single chunk's processing */
 export interface ChunkAnalytics {
   /** Chunk index (0-based) */
   index: number;
-  /** Transcription: duration in ms */
-  transcribe_ms?: number;
-  /** Transcription: step status */
-  transcribe_status?: StepResultStatus;
-  /** Refinement: duration in ms */
-  refine_ms?: number;
-  /** Refinement: step status */
-  refine_status?: StepResultStatus;
-  /** Alignment: duration in ms */
-  align_ms?: number;
-  /** Alignment: step status */
-  align_status?: StepResultStatus;
-  /** Translation: duration in ms */
-  translate_ms?: number;
-  /** Translation: step status */
-  translate_status?: StepResultStatus;
   /** Overall chunk status */
-  status: 'success' | 'failed' | 'cancelled' | 'empty' | 'skipped';
-  /** Duration of the audio chunk in ms */
-  duration_ms?: number;
+  status: 'not_started' | 'processing' | 'success' | 'failed' | 'cancelled' | 'empty' | 'skipped';
+  /** Duration of the audio chunk in ms (audio length) */
+  duration_ms: number;
+  /** Total wall-clock time spent processing this chunk in ms */
+  process_ms: number;
+
+  /** Structured analytics for each processing step */
+  steps: {
+    transcription: StepAnalytics;
+    refinement: StepAnalytics;
+    alignment: StepAnalytics;
+    translation: StepAnalytics;
+  };
 }
 
 export interface TokenUsage {

@@ -64,7 +64,16 @@ export class ChunkProcessor {
       index,
       status: 'success',
       duration_ms: Math.round((chunk.end - chunk.start) * 1000),
+      process_ms: 0,
+      steps: {
+        transcription: { status: 'not_started', duration_ms: 0 },
+        refinement: { status: 'not_started', duration_ms: 0 },
+        alignment: { status: 'not_started', duration_ms: 0 },
+        translation: { status: 'not_started', duration_ms: 0 },
+      },
     };
+
+    const processStartTime = Date.now();
 
     try {
       // Mock Stage Logic Setup
@@ -88,7 +97,18 @@ export class ChunkProcessor {
           aligned: [],
           translated: [],
           final: [],
-          analytics: { index, status: 'skipped' },
+          analytics: {
+            index,
+            status: 'skipped',
+            process_ms: Date.now() - processStartTime,
+            duration_ms: analytics.duration_ms,
+            steps: {
+              transcription: { status: 'skipped', duration_ms: 0 },
+              refinement: { status: 'skipped', duration_ms: 0 },
+              alignment: { status: 'skipped', duration_ms: 0 },
+              translation: { status: 'skipped', duration_ms: 0 },
+            },
+          },
         };
       }
 
@@ -121,8 +141,10 @@ export class ChunkProcessor {
       // ===== STEP 1: TRANSCRIPTION =====
       const transcriptionResult = await transcriptionStep.run({}, ctx);
       const rawSegments = transcriptionResult.output;
-      analytics.transcribe_ms = transcriptionResult.durationMs;
-      analytics.transcribe_status = transcriptionResult.status;
+      analytics.steps.transcription = {
+        status: transcriptionResult.status as any,
+        duration_ms: transcriptionResult.durationMs,
+      };
 
       // Skip if no segments
       if (rawSegments.length === 0) {
@@ -139,7 +161,7 @@ export class ChunkProcessor {
           aligned: [],
           translated: [],
           final: [],
-          analytics: { ...analytics, status: 'empty' },
+          analytics: { ...analytics, status: 'empty', process_ms: Date.now() - processStartTime },
         };
       }
 
@@ -159,7 +181,7 @@ export class ChunkProcessor {
           aligned: whisperGlobal,
           translated: whisperGlobal,
           final: whisperGlobal,
-          analytics: { ...analytics, status: 'success' },
+          analytics: { ...analytics, status: 'success', process_ms: Date.now() - processStartTime },
         };
       }
 
@@ -184,8 +206,10 @@ export class ChunkProcessor {
           ctx
         );
         refinedSegments = refinementResult.output;
-        analytics.refine_ms = refinementResult.durationMs;
-        analytics.refine_status = refinementResult.status;
+        analytics.steps.refinement = {
+          status: refinementResult.status as any,
+          duration_ms: refinementResult.durationMs,
+        };
 
         // Check skipAfter: refinement
         if (settings.debug?.skipAfter === 'refinement') {
@@ -203,7 +227,11 @@ export class ChunkProcessor {
             aligned: refinedGlobal,
             translated: refinedGlobal,
             final: refinedGlobal,
-            analytics: { ...analytics, status: 'success' },
+            analytics: {
+              ...analytics,
+              status: 'success',
+              process_ms: Date.now() - processStartTime,
+            },
           };
         }
 
@@ -212,8 +240,10 @@ export class ChunkProcessor {
         const alignmentResult = await alignmentStep.run({ segments: refinedSegments }, ctx);
         alignedSegments =
           alignmentResult.status === 'skipped' ? refinedSegments : alignmentResult.output;
-        analytics.align_ms = alignmentResult.durationMs;
-        analytics.align_status = alignmentResult.status;
+        analytics.steps.alignment = {
+          status: alignmentResult.status as any,
+          duration_ms: alignmentResult.durationMs,
+        };
 
         // Check skipAfter: alignment
         if (settings.debug?.skipAfter === 'alignment') {
@@ -231,7 +261,11 @@ export class ChunkProcessor {
             aligned: alignedGlobal,
             translated: alignedGlobal,
             final: alignedGlobal,
-            analytics: { ...analytics, status: 'success' },
+            analytics: {
+              ...analytics,
+              status: 'success',
+              process_ms: Date.now() - processStartTime,
+            },
           };
         }
 
@@ -243,10 +277,13 @@ export class ChunkProcessor {
         const translatedSegments =
           translationResult.status === 'skipped' ? [] : translationResult.output;
         finalChunkSubs = toGlobalTimestamps(translatedSegments, start);
-        analytics.translate_ms = translationResult.durationMs;
-        analytics.translate_status = translationResult.status;
+        analytics.steps.translation = {
+          status: translationResult.status as any,
+          duration_ms: translationResult.durationMs,
+        };
 
         // Store final analytics in deps for later aggregation
+        analytics.process_ms = Date.now() - processStartTime;
         deps.chunkAnalytics = analytics;
 
         onProgress?.({
@@ -291,20 +328,24 @@ export class ChunkProcessor {
         // Extract timing from StepCancelledError if it was the cancelled step
         if (e instanceof StepCancelledError) {
           // Set timing for the step that was cancelled (based on stepName)
-          const stepMap: Record<string, keyof ChunkAnalytics> = {
-            TranscriptionStep: 'transcribe_ms',
-            RefinementStep: 'refine_ms',
-            AlignmentStep: 'align_ms',
-            TranslationStep: 'translate_ms',
+          const stepMap: Record<string, keyof ChunkAnalytics['steps']> = {
+            TranscriptionStep: 'transcription',
+            RefinementStep: 'refinement',
+            AlignmentStep: 'alignment',
+            TranslationStep: 'translation',
           };
-          const timingKey = stepMap[e.stepName];
-          if (timingKey && !analytics[timingKey]) {
-            (analytics as any)[timingKey] = e.durationMs;
+          const stepKey = stepMap[e.stepName];
+          if (stepKey && analytics.steps[stepKey]) {
+            analytics.steps[stepKey] = {
+              status: 'cancelled',
+              duration_ms: e.durationMs,
+            };
           }
         }
 
         // Report partial analytics with 'cancelled' status before re-throwing
         analytics.status = 'cancelled';
+        analytics.process_ms = Date.now() - processStartTime;
         onProgress?.({
           id: index,
           total: totalChunks,
@@ -319,6 +360,7 @@ export class ChunkProcessor {
       const actionableMsg = getActionableErrorMessage(e);
       const errorMsg = actionableMsg || i18n.t('services:pipeline.status.failed');
       analytics.status = 'failed';
+      analytics.process_ms = Date.now() - processStartTime;
       onProgress?.({
         id: index,
         total: totalChunks,

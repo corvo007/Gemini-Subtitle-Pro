@@ -279,6 +279,9 @@ export const generateSubtitles = async (
   // Cap at 50 to balance memory usage vs pipeline throughput.
   const mainLoopConcurrency = calculateMainLoopConcurrency(totalChunks, concurrency.pipeline);
 
+  // Error collector to track failures across chunks
+  const chunkErrors: Error[] = [];
+
   await mapInParallel(chunksParams, mainLoopConcurrency, async (chunk, i) => {
     try {
       // Delegate processing to ChunkProcessor
@@ -325,12 +328,23 @@ export const generateSubtitles = async (
         throw e;
       }
 
+      // Capture error for potential final reporting
+      chunkErrors.push(e);
+
       // Should already be handled in ChunkProcessor, but safety net
       logger.error(`Unexpected error in Chunk ${chunk.index}`, e);
     }
   });
 
   const finalSubtitles = chunkResults.flat();
+
+  // ERROR CHECK: If we have NO subtitles but DID have errors, it means the pipeline failed completely.
+  // We should throw the first error to give the user a useful message (e.g., "Whisper binary not found")
+  // instead of the generic "No subtitles generated" which happens later.
+  if (finalSubtitles.length === 0 && chunkErrors.length > 0) {
+    logger.error('Pipeline produced no subtitles and encountered errors. Rethrowing first error.');
+    throw chunkErrors[0];
+  }
 
   usageReporter.logReport();
 
