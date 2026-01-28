@@ -13,13 +13,16 @@ jobs:
         include:
           - os: windows-latest
             platform: win32-x64
-            artifact: MioSub-*-win-x64.zip
+            arch: x64
           - os: ubuntu-latest
             platform: linux-x64
-            artifact: MioSub-*.AppImage
+            arch: x64
           - os: macos-latest
             platform: darwin-arm64
-            artifact: MioSub-*-arm64.dmg
+            arch: arm64
+          - os: macos-latest
+            platform: darwin-x64
+            arch: x64
 
     runs-on: ${{ matrix.os }}
     permissions:
@@ -35,6 +38,10 @@ jobs:
           node-version: 20
           cache: 'yarn'
 
+      - name: Install 7zip (macOS x64 cross-compile)
+        if: matrix.platform == 'darwin-x64'
+        run: brew install p7zip
+
       - name: Configure git to use HTTPS
         run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
 
@@ -44,7 +51,7 @@ jobs:
           BINARY_PLATFORM: ${{ matrix.platform }}
 
       - name: Build Electron App
-        run: yarn electron:build
+        run: yarn electron:build --${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_AMPLITUDE_API_KEY: ${{ secrets.VITE_AMPLITUDE_API_KEY }}
