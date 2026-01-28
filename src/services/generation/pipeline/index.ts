@@ -148,8 +148,18 @@ export const generateSubtitles = async (
   let glossaryPromise: Promise<GlossaryExtractionResult[]> | null = null;
   let glossaryChunks: { index: number; start: number; end: number }[] | undefined;
 
-  // Mock glossary if any mock stage is enabled (but only if glossary is enabled)
-  if (isDebug && settings.debug?.mockApi?.glossary && settings.enableAutoGlossary !== false) {
+  const isLateStart = mockStageIndex >= 1; // Refinement or later
+
+  // Determine if we should mock glossary
+  // 1. Explicitly enabled in settings
+  // 2. Implicitly enabled if starting late (mock mode), unless explicitly disabled (false)
+  const shouldMockGlossary =
+    isDebug &&
+    (settings.debug?.mockApi?.glossary ||
+      (isLateStart && settings.debug?.mockApi?.glossary !== false));
+
+  // Mock glossary if needed (but only if glossary is generally enabled)
+  if (shouldMockGlossary && settings.enableAutoGlossary !== false) {
     logger.info('⚠️ [MOCK] Glossary Extraction ENABLED. Using MockFactory.');
     glossaryPromise = MockFactory.getMockGlossary(0);
   } else if (settings.enableAutoGlossary !== false) {
@@ -213,8 +223,19 @@ export const generateSubtitles = async (
 
   // --- SPEAKER PROFILE EXTRACTION (Parallel) ---
   let speakerProfilePromise: Promise<SpeakerProfile[]> | null = null;
-  // Only run pre-analysis if both Diarization AND Pre-analysis are enabled
-  if (settings.enableDiarization && settings.enableSpeakerPreAnalysis) {
+
+  // Determine if we should mock speaker analysis
+  // 1. Explicitly enabled in settings
+  // 2. Implicitly enabled if starting late, unless explicitly disabled
+  const shouldMockSpeaker =
+    isDebug &&
+    (settings.debug?.mockApi?.speaker ||
+      (isLateStart && settings.debug?.mockApi?.speaker !== false));
+
+  if (shouldMockSpeaker && settings.enableDiarization && settings.enableSpeakerPreAnalysis) {
+    logger.info('⚠️ [MOCK] Speaker Profile Analysis ENABLED. Using MockFactory.');
+    speakerProfilePromise = MockFactory.getMockSpeakerProfiles();
+  } else if (settings.enableDiarization && settings.enableSpeakerPreAnalysis) {
     logger.info('Starting parallel speaker profile extraction...');
     onProgress?.({
       id: 'diarization',
