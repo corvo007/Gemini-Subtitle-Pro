@@ -430,43 +430,44 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
           </div>
 
           {/* Speaker Filter */}
-          {speakerProfiles && speakerProfiles.length > 0 && (
-            <div className="relative shrink-0" ref={speakerFilterRef}>
-              <button
-                onClick={toggleSpeakerFilter}
+          <div className="relative shrink-0" ref={speakerFilterRef}>
+            <button
+              onClick={toggleSpeakerFilter}
+              className={cn(
+                'flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs transition-all border shadow-sm',
+                activeSpeakerFilterCount > 0
+                  ? 'bg-brand-purple/10 border-brand-purple/20 text-brand-purple font-medium'
+                  : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50'
+              )}
+              title={t('batchHeader.filterSpeakers')}
+            >
+              <User className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span className="hidden sm:inline">{t('batchHeader.speaker')}</span>
+              {activeSpeakerFilterCount > 0 && (
+                <span className="bg-brand-purple text-white text-[9px] sm:text-[10px] px-1.5 sm:px-1.5 py-0.5 rounded-full font-bold">
+                  {activeSpeakerFilterCount}
+                </span>
+              )}
+              <ChevronDown
                 className={cn(
-                  'flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs transition-all border shadow-sm',
-                  activeSpeakerFilterCount > 0
-                    ? 'bg-brand-purple/10 border-brand-purple/20 text-brand-purple font-medium'
-                    : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50'
+                  'w-2.5 h-2.5 sm:w-3 sm:h-3 transition-transform',
+                  isSpeakerFilterOpen && 'rotate-180'
                 )}
-                title={t('batchHeader.filterSpeakers')}
-              >
-                <User className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                <span className="hidden sm:inline">{t('batchHeader.speaker')}</span>
-                {activeSpeakerFilterCount > 0 && (
-                  <span className="bg-brand-purple text-white text-[9px] sm:text-[10px] px-1.5 sm:px-1.5 py-0.5 rounded-full font-bold">
-                    {activeSpeakerFilterCount}
-                  </span>
-                )}
-                <ChevronDown
-                  className={cn(
-                    'w-2.5 h-2.5 sm:w-3 sm:h-3 transition-transform',
-                    isSpeakerFilterOpen && 'rotate-180'
-                  )}
-                />
-              </button>
+              />
+            </button>
 
-              {isSpeakerFilterOpen && (
-                <div
-                  className={cn(
-                    'absolute left-0 bg-white border border-slate-200 rounded-lg shadow-xl z-30 min-w-50 max-h-[60vh] overflow-y-auto py-1 animate-fade-in ring-1 ring-slate-900/5',
-                    speakerDropUp
-                      ? 'bottom-full mb-1.5 origin-bottom-left'
-                      : 'top-full mt-1.5 origin-top-left'
-                  )}
-                >
-                  {speakerProfiles.map((profile) => (
+            {isSpeakerFilterOpen && (
+              <div
+                className={cn(
+                  'absolute left-0 bg-white border border-slate-200 rounded-lg shadow-xl z-30 min-w-50 max-h-[60vh] overflow-y-auto py-1 animate-fade-in ring-1 ring-slate-900/5',
+                  speakerDropUp
+                    ? 'bottom-full mb-1.5 origin-bottom-left'
+                    : 'top-full mt-1.5 origin-top-left'
+                )}
+              >
+                {
+                  /* Speaker Profiles */
+                  speakerProfiles.map((profile) => (
                     <button
                       key={profile.id}
                       onClick={() => toggleSpeaker(profile.name)}
@@ -474,7 +475,7 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                     >
                       <div className="flex items-center space-x-2 overflow-hidden">
                         <span
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          className="w-2.5 h-2.5 rounded-full shrink-0 border border-black/10"
                           style={{
                             backgroundColor: getSpeakerColorWithCustom(profile.name, profile.color),
                           }}
@@ -503,42 +504,49 @@ export const BatchHeader: React.FC<BatchHeaderProps> = ({
                         )}
                       </div>
                     </button>
-                  ))}
+                  ))
+                }
 
-                  {/* Clear Speakers */}
-                  {activeSpeakerFilterCount > 0 && (
-                    <>
-                      <div className="border-t border-slate-200 my-1" />
-                      <button
-                        onClick={clearSpeakerFilters}
-                        className="w-full flex items-center justify-center px-3 py-2 text-xs text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors"
-                      >
-                        <X className="w-3 h-3 mr-1" />
-                        {t('batchHeader.clearSpeakerFilters')}
-                      </button>
-                    </>
-                  )}
+                {/* Empty State Hint */}
+                {speakerProfiles.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-slate-400 text-center">
+                    {t('batchHeader.noSpeakers')}
+                  </div>
+                )}
 
-                  {/* Manage Speakers */}
-                  {onManageSpeakers && (
-                    <>
-                      <div className="border-t border-slate-200 my-1" />
-                      <button
-                        onClick={() => {
-                          onManageSpeakers();
-                          setIsSpeakerFilterOpen(false);
-                        }}
-                        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-brand-purple hover:text-brand-purple-dark hover:bg-slate-50 transition-colors"
-                      >
-                        <Users className="w-3 h-3" />
-                        {t('batchHeader.manageSpeakers')}
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                {/* Clear Speakers */}
+                {activeSpeakerFilterCount > 0 && (
+                  <>
+                    <div className="border-t border-slate-200 my-1" />
+                    <button
+                      onClick={clearSpeakerFilters}
+                      className="w-full flex items-center justify-center px-3 py-2 text-xs text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      {t('batchHeader.clearSpeakerFilters')}
+                    </button>
+                  </>
+                )}
+
+                {/* Manage Speakers */}
+                {onManageSpeakers && (
+                  <>
+                    <div className="border-t border-slate-200 my-1" />
+                    <button
+                      onClick={() => {
+                        onManageSpeakers();
+                        setIsSpeakerFilterOpen(false);
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-brand-purple hover:text-brand-purple-dark hover:bg-slate-50 transition-colors"
+                    >
+                      <Users className="w-3 h-3" />
+                      {t('batchHeader.manageSpeakers')}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right: Primary Actions */}

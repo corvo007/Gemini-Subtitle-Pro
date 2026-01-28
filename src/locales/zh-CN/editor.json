@@ -67,6 +67,7 @@
     "speaker": "说话人",
     "clearSpeakerFilters": "清除说话人筛选",
     "manageSpeakers": "管理说话人",
+    "noSpeakers": "暂无说话人",
     "regenerateDesc": "重新生成字幕 (转录 + 优化 + 对齐 + 翻译)",
     "regenerate": "重新生成",
     "polishTranslationDesc": "润色翻译 (保留时间轴)",

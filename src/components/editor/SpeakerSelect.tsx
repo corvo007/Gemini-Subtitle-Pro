@@ -43,9 +43,9 @@ export const SpeakerSelect: React.FC<SpeakerSelectProps> = ({ currentSpeakerId, 
         onClick={toggleOpen}
         className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium cursor-pointer hover:opacity-90 transition-opacity"
         style={{
-          backgroundColor: speakerColor + '20',
-          color: '#334155', // slate-700 for readability
-          borderColor: speakerColor,
+          backgroundColor: currentProfile ? speakerColor + '20' : '#f1f5f9', // slate-100 for default
+          color: '#334155',
+          borderColor: currentProfile ? speakerColor : '#cbd5e1', // slate-300 for default
           borderWidth: '1px',
         }}
       >
