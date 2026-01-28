@@ -54,7 +54,7 @@ export interface AlignmentStrategy {
  * Configuration for the CTC aligner strategy
  */
 export interface CTCAlignmentConfig {
-  alignerPath: string; // Path to align.exe
+  alignerPath?: string; // Path to align.exe, optional if using built-in
   modelPath: string; // Path to MMS model directory
   batchSize?: number; // Inference batch size (default: 4)
   romanize?: boolean; // Romanize CJK text (default: true for CJK languages)

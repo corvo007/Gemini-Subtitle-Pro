@@ -15,6 +15,7 @@ import { formatTime } from '@/services/subtitle/time';
 import { logger } from '@/services/utils/logger';
 import { generateSubtitleId } from '@/services/utils/id';
 import { toAlignmentPayloads } from '@/services/subtitle/payloads';
+import { resolveBinaryPath } from '@/services/utils/binary';
 
 // Re-export language utilities for backward compatibility
 export { detectLanguage, iso639_1To3 } from '@/services/utils/language';
@@ -80,13 +81,20 @@ export class CTCAligner implements AlignmentStrategy {
         });
       }
 
+      // Resolve aligner path
+      const alignerPath = await resolveBinaryPath(
+        this.config.alignerPath,
+        'cpp-ort-aligner',
+        'CTC Aligner'
+      );
+
       // Call main process via IPC
       const ipcPromise = window.electronAPI.alignment.ctc({
         segments: alignmentSegments,
         audioPath,
         language,
         config: {
-          alignerPath: this.config.alignerPath,
+          alignerPath,
           modelPath: this.config.modelPath,
           batchSize: this.config.batchSize,
           romanize: requiresRomanization(language),

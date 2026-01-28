@@ -22,16 +22,7 @@ export function createAligner(settings: AppSettings): AlignmentStrategy {
   switch (mode) {
     case 'ctc':
       // Validate CTC configuration
-      if (!settings.alignerPath) {
-        logger.warn(
-          'CTC alignment requested but alignerPath not configured, falling back to none',
-          {
-            toast: true,
-            toastType: 'warning',
-          }
-        );
-        return new NoAligner();
-      }
+
       if (!settings.alignmentModelPath) {
         logger.warn(
           'CTC alignment requested but alignmentModelPath not configured, falling back to none',
