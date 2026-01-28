@@ -147,6 +147,7 @@ export const AboutTab: React.FC = () => {
             { label: t('about.ytdlp', 'yt-dlp'), value: info?.versions.ytdlp },
             { label: t('about.qjs', 'QuickJS'), value: info?.versions.qjs },
             { label: t('about.whisper', 'Whisper.cpp'), value: info?.versions.whisper },
+            { label: t('about.aligner', 'Aligner'), value: info?.versions.aligner },
           ].map((item) => (
             <div
               key={item.label}

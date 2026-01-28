@@ -27,26 +27,6 @@ export const AlignmentSettings: React.FC<AlignmentSettingsProps> = ({
     ...(isElectron ? [{ value: 'ctc', label: t('enhance.alignment.modeOptions.ctc') }] : []),
   ];
 
-  // Handle aligner executable selection
-  const handleSelectAligner = async () => {
-    if (!window.electronAPI) {
-      logger.error('[AlignmentSettings] electronAPI not available for selection');
-      return;
-    }
-    try {
-      const result = await window.electronAPI.selectAlignerExecutable();
-      if (result && result.success && result.path) {
-        updateSetting('alignerPath', result.path);
-      } else if (result && result.error) {
-        addToast(t('enhance.alignment.selectError', { error: result.error }), 'error');
-        logger.error('[AlignmentSettings] Aligner selection error', result.error);
-      }
-    } catch (error: any) {
-      logger.error('[AlignmentSettings] Aligner selection failed', error);
-      addToast(t('enhance.alignment.selectErrorGeneric'), 'error');
-    }
-  };
-
   // Handle model directory selection
   const handleSelectModelDir = async () => {
     if (!window.electronAPI) {
@@ -93,28 +73,6 @@ export const AlignmentSettings: React.FC<AlignmentSettingsProps> = ({
             <p className="text-xs text-slate-500">{t('enhance.alignment.ctcConfigDesc')}</p>
           </div>
 
-          {/* Aligner Path */}
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">
-              {t('enhance.alignment.alignerPath')}
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={settings.alignerPath || ''}
-                placeholder={t('enhance.alignment.alignerPathPlaceholder')}
-                readOnly
-                className="flex-1 px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-700 placeholder-slate-400 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple text-sm shadow-sm transition-all"
-              />
-              <button
-                onClick={handleSelectAligner}
-                className="px-4 py-2 bg-brand-purple hover:bg-brand-purple/90 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"
-              >
-                {t('enhance.alignment.browseButton')}
-              </button>
-            </div>
-          </div>
-
           {/* Model Path */}
           <div>
             <label className="block text-xs text-slate-600 mb-1">
@@ -141,7 +99,6 @@ export const AlignmentSettings: React.FC<AlignmentSettingsProps> = ({
           <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200">
             <p className="font-medium mb-1 text-slate-800">{t('enhance.alignment.instructions')}</p>
             <ul className="list-disc list-inside space-y-1">
-              <li dangerouslySetInnerHTML={{ __html: t('enhance.alignment.instructionAligner') }} />
               <li dangerouslySetInnerHTML={{ __html: t('enhance.alignment.instructionModel') }} />
             </ul>
           </div>
