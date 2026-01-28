@@ -131,6 +131,8 @@ jobs:
             release/*.dmg
             release/*.AppImage
             release/*.exe
+            release/*.yml
+            release/*.blockmap
           body: ${{ steps.changelog.outputs.content }}
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
