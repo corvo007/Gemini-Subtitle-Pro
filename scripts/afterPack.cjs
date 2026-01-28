@@ -7,13 +7,29 @@ const path = require('path');
  * Default is "installed" - afterAllArtifactBuild will change ZIP to "portable".
  */
 exports.default = async function (context) {
-  const configPath = path.join(context.appOutDir, 'resources', 'distribution.json');
+  let resourcesDir;
+
+  // macOS: resources are inside .app bundle
+  if (context.packager.platform.name === 'mac') {
+    const appName = context.packager.appInfo.productFilename;
+    resourcesDir = path.join(context.appOutDir, `${appName}.app`, 'Contents', 'Resources');
+  } else {
+    // Windows/Linux: resources are directly in appOutDir
+    resourcesDir = path.join(context.appOutDir, 'resources');
+  }
+
+  const configPath = path.join(resourcesDir, 'distribution.json');
 
   const config = {
     mode: 'installed', // Default to installed, ZIP will be patched to portable
     buildTime: new Date().toISOString(),
   };
 
+  // Ensure directory exists
+  if (!fs.existsSync(resourcesDir)) {
+    fs.mkdirSync(resourcesDir, { recursive: true });
+  }
+
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-  console.log(`Distribution mode: ${config.mode} (written to resources/distribution.json)`);
+  console.log(`Distribution mode: ${config.mode} (written to ${configPath})`);
 };
