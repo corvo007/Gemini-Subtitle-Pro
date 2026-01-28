@@ -49,6 +49,13 @@ export class LocalWhisperService {
       path.join(process.resourcesPath, binaryName),
     ];
 
+    // Add dev mode check
+    if (!app.isPackaged) {
+      possiblePaths.push(path.join(process.cwd(), 'resources', binaryName));
+      // Also check adjacent to main entry resources if needed
+      possiblePaths.push(path.join(app.getAppPath(), '..', 'resources', binaryName));
+    }
+
     for (const p of possiblePaths) {
       if (fs.existsSync(p)) return p;
     }
@@ -99,7 +106,7 @@ export class LocalWhisperService {
         return { valid: false, error: t('localWhisper.modelTooSmall') };
       }
       return { valid: true };
-    } catch (error) {
+    } catch (_error) {
       return { valid: false, error: t('localWhisper.modelReadError') };
     }
   }
@@ -198,24 +205,19 @@ export class LocalWhisperService {
         const process = spawn(binaryPath, args);
         this.activeProcesses.set(jobId, process);
 
-        let stdout = '';
         let stderr = '';
         let stdoutBuffer = '';
         let stderrBuffer = '';
 
         process.stdout?.on('data', (data) => {
           const chunk = data.toString();
-          stdout += chunk;
           stdoutBuffer += chunk;
 
           const lines = stdoutBuffer.split('\n');
           stdoutBuffer = lines.pop() || ''; // Keep the last incomplete line
 
-          lines.forEach((line) => {
-            if (line.trim()) {
-              // Intermediate output from stdout (if any) -> DEBUG
-              // if (onLog) onLog(`[DEBUG] [Whisper CLI] ${line}`);
-            }
+          lines.forEach((_line) => {
+            // stdout processing if needed in future
           });
         });
 

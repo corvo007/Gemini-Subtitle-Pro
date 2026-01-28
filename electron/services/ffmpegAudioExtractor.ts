@@ -22,12 +22,16 @@ const getBinaryPath = (binaryName: string) => {
 };
 
 // 设置 FFmpeg 路径
-ffmpeg.setFfmpegPath(getBinaryPath('ffmpeg.exe'));
-ffmpeg.setFfprobePath(getBinaryPath('ffprobe.exe'));
+const ffmpegPath = getBinaryPath('ffmpeg');
+// Log the ffmpeg path for debugging
+console.log('[FFmpeg] Initializing with path:', ffmpegPath);
+
+ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfprobePath(getBinaryPath('ffprobe'));
 
 // 导出获取函数供其他模块使用（如日志）
-export const getFFmpegPath = () => getBinaryPath('ffmpeg.exe');
-export const getFFprobePath = () => getBinaryPath('ffprobe.exe');
+export const getFFmpegPath = () => getBinaryPath('ffmpeg');
+export const getFFprobePath = () => getBinaryPath('ffprobe');
 
 // Track active audio extraction commands for cleanup on app quit
 const activeAudioCommands: Set<ReturnType<typeof ffmpeg>> = new Set();

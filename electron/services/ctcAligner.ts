@@ -10,6 +10,7 @@ import * as path from 'path';
 import { spawn, type ChildProcess } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
 import { writeTempFile } from './fileUtils.ts';
+import { getBinaryPath } from '../utils/paths.ts';
 
 // ============================================================================
 // Type Definitions
@@ -233,6 +234,56 @@ export class CTCAlignerService {
       proc.kill();
     }
     this.activeProcesses.clear();
+  }
+
+  /**
+   * Get the version string of the aligner binary.
+   */
+  async getVersion(customPath?: string): Promise<string> {
+    const alignerPath = customPath || getBinaryPath('cpp-ort-aligner');
+
+    if (!fs.existsSync(alignerPath)) {
+      return 'Not found';
+    }
+
+    return new Promise((resolve) => {
+      try {
+        const proc = spawn(alignerPath, ['-v'], {
+          windowsHide: true,
+        });
+
+        let output = '';
+        proc.stdout.on('data', (d) => {
+          output += d.toString();
+        });
+
+        // Also capture stderr just in case
+        proc.stderr?.on('data', (d) => {
+          output += d.toString();
+        });
+
+        proc.on('close', () => {
+          // Parse: cpp-ort-aligner 0.1.2 (582ff15-dirty) -> 0.1.2
+          const match = output.trim().match(/cpp-ort-aligner\s+([\d.]+)/);
+          resolve(match ? match[1] : output.trim() || 'Unknown');
+        });
+
+        proc.on('error', (err) => {
+          console.warn(`[CTCAligner] Failed to get version: ${err.message}`);
+          resolve('Error');
+        });
+
+        // Timeout to prevent hanging
+        setTimeout(() => {
+          if (!proc.killed) {
+            proc.kill();
+            resolve('Timeout');
+          }
+        }, 3000);
+      } catch (e) {
+        resolve('Error');
+      }
+    });
   }
 }
 
