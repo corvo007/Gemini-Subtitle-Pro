@@ -22,6 +22,8 @@ if (!app.isPackaged) {
   dotenv.config({ path: path.join(__dirname, '../.env') });
 }
 
+import { isPortableMode } from './utils/paths.ts';
+
 // Initialize Sentry for error tracking
 const SENTRY_DSN = process.env.VITE_SENTRY_DSN;
 if (SENTRY_DSN) {
@@ -41,8 +43,12 @@ if (SENTRY_DSN) {
       return event;
     },
   });
+
+  const appMode = !app.isPackaged ? 'development' : isPortableMode() ? 'portable' : 'installed';
+  Sentry.setTag('app_mode', appMode);
+
   console.log(
-    `[Main] Sentry initialized in ${app.isPackaged ? 'production' : 'development'} mode, release: ${process.env.APP_VERSION || app.getVersion()}`
+    `[Main] Sentry initialized in ${app.isPackaged ? 'production' : 'development'} mode, release: ${process.env.APP_VERSION || app.getVersion()}, mode: ${appMode}`
   );
 }
 

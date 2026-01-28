@@ -8,6 +8,7 @@ import crypto from 'crypto';
 
 import os from 'os';
 import { storageService } from './storage.ts';
+import { isPortableMode } from '../utils/paths.ts';
 
 const ANALYTICS_FILE = 'gemini-subtitle-pro-analytics.json';
 
@@ -335,6 +336,7 @@ class AnalyticsService {
       system_language: app.getLocale(),
       app_language: this.cachedAppLanguage,
       time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      app_mode: !app.isPackaged ? 'development' : isPortableMode() ? 'portable' : 'installed',
     };
   }
 
