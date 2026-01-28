@@ -51,7 +51,7 @@ jobs:
           BINARY_PLATFORM: ${{ matrix.platform }}
 
       - name: Build Electron App
-        run: yarn electron:build --${{ matrix.arch }}
+        run: yarn electron:build --${{ matrix.arch }} --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_AMPLITUDE_API_KEY: ${{ secrets.VITE_AMPLITUDE_API_KEY }}
