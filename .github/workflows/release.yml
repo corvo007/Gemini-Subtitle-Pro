@@ -48,10 +48,18 @@ jobs:
       - name: Configure git to use HTTPS
         run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
 
+      - name: Cache binary dependencies
+        uses: actions/cache@v4
+        id: binary-cache
+        with:
+          path: resources
+          key: binaries-${{ matrix.platform }}-${{ hashFiles('scripts/binary-config.mjs', 'scripts/download-binaries.mjs') }}
+
       - name: Install dependencies
         run: yarn install --frozen-lockfile
         env:
           BINARY_PLATFORM: ${{ matrix.platform }}
+          SKIP_BINARY_DOWNLOAD: ${{ steps.binary-cache.outputs.cache-hit }}
 
       - name: Build Electron App
         run: yarn electron:build --${{ matrix.arch }} --publish never
